@@ -1,0 +1,66 @@
+# Mode 2：分体部署（前端 nginx + 后端 jar，两个容器）
+# 适用：前端频繁迭代 / 前端团队独立 / 需要 CDN 缓存前端
+#
+# 启动：cd deploy && docker compose -f docker-compose.split.yml up -d
+# 访问：http://localhost
+# 停止：docker compose -f docker-compose.split.yml down
+
+services:
+  z-ctc-backend:
+    container_name: z-ctc-backend
+    image: ghcr.io/yuku123/z-ctc-admin:1.0.1
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+      args:
+        JAR_FILE: z-ctc-admin/target/z-ctc-admin-1.0.1-exec.jar
+    restart: unless-stopped
+    expose:
+      - "8080"
+    # 不映射 8080 到 host（仅 internal network 访问）
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:zschedule;DB_CLOSE_DELAY=-1
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ""
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    networks:
+      - z-ctc-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/ctc/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  z-ctc-frontend:
+    container_name: z-ctc-frontend
+    image: ghcr.io/yuku123/z-ctc-frontend:1.0.1
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      # nginx.conf.template 里的 ${BACKEND_SERVICE} 通过这里注入
+      BACKEND_SERVICE: z-ctc-backend
+    networks:
+      - z-ctc-net
+    depends_on:
+      z-ctc-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  z-ctc-net:
+    driver: bridge
+
+# 验证步骤：
+# 1. docker compose -f docker-compose.split.yml ps（两个容器都 healthy）
+# 2. 访问：http://localhost/（前端 SPA）
+# 3. 验证前端能反代到后端：curl http://localhost/api/actuator/health（应返回 UP）
+# 4. 验证后端独立可访问：docker exec -it z-ctc-backend curl http://127.0.0.1:8080/ctc/actuator/health

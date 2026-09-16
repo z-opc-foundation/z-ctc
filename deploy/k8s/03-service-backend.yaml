@@ -1,0 +1,21 @@
+# 03-service-backend.yaml
+# 后端 Service（ClusterIP + 多端口暴露，给 frontend nginx 反代 + Ingress 用）
+# 占位符：${NAMESPACE}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: z-ctc-backend
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: z-ctc
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/name: z-ctc
+    app.kubernetes.io/component: backend

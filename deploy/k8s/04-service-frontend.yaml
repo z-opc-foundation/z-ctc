@@ -1,0 +1,21 @@
+# 04-service-frontend.yaml
+# 前端 Service（ClusterIP + Ingress 暴露对外）
+# 占位符：${NAMESPACE}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: z-ctc-frontend
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: z-ctc
+    app.kubernetes.io/component: frontend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  selector:
+    app.kubernetes.io/name: z-ctc
+    app.kubernetes.io/component: frontend

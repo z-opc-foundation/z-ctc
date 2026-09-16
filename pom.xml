@@ -48,6 +48,12 @@
         <module>z-ctc-core</module>
         <module>z-ctc-sso</module>
         <module>z-ctc-web</module>
+        <!--
+            z-ctc-admin: 留 reactor 以享受统一构建，但 maven.deploy.skip=true，
+            永远不上 Maven Central（产物仅作 docker 镜像源 / 本地 java -jar 演示）。
+            详见 lead/005_技术架构/005_前端工程与中间件部署架构规范.md §2
+        -->
+        <module>z-ctc-admin</module>
         <!-- bootstrap 不参与 Maven 发布 -->
     </modules>
 
@@ -144,6 +150,17 @@
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-boot-starter</artifactId>
                 <version>3.5.7</version>
+            </dependency>
+            <!-- z-ctc admin 用 druid + knife4j（业务 web 层不依赖） -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid-spring-boot-starter</artifactId>
+                <version>1.2.23</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.xiaoymin</groupId>
+                <artifactId>knife4j-openapi3-spring-boot-starter</artifactId>
+                <version>4.1.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

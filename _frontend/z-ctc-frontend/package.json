@@ -1,0 +1,28 @@
+{
+  "name": "z-ctc-frontend",
+  "version": "1.0.1",
+  "description": "z-ctc 4A 中心管理 SPA（应用层）—— 与 z-schedule-frontend 同规范",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:component": "cd ../z-ctc-frontend-component && npm run build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@yuku123/z-ctc-frontend-component": "file:../z-ctc-frontend-component",
+    "antd": "^5.10.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.21.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.1.0"
+  },
+  "keywords": ["z-ctc", "4a", "spa", "yuku123"],
+  "license": "MIT"
+}

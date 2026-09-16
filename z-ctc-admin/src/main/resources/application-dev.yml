@@ -1,0 +1,107 @@
+# z-ctc-admin dev profile 配置 —— 覆盖 application.yml 的关键项用于本地无 MySQL 启动
+# 启动命令：SPRING_PROFILES_ACTIVE=dev java -jar z-ctc-admin-1.0.1-exec.jar
+#
+# 关键覆盖：
+#   1. DevDataSourceConfig 抢先注册 dataSourceCtc（同 z-ctc-web starter 同名），
+#      触发 @ConditionalOnMissingBean → starter 跳过 MySQL 初始化
+#   2. 关掉 druid-spring-boot-starter 自动 DataSource 配置（避免争抢 dataSourceCtc 名）
+#   3. 改端口为 8888 + context-path /ctc（与 V2 前端 base 一致）
+#   4. knife4j 仍开启（开发时方便看 OpenAPI 文档）
+
+server:
+  port: 8888
+  servlet:
+    context-path: /ctc
+
+spring:
+  application:
+    name: z-ctc-admin
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  # FEATURE: dev profile 下排除 z-ctc-web 自动装配（强制 MySQL DruidDataSource）
+  # DevDataSourceConfig 在 admin 内重新注册 H2 dataSourceCtc（详见 DevDataSourceConfig.java）
+  autoconfigure:
+    exclude:
+      - com.zifang.ctc.web.config.ZCompanyCtcWebAutoConfiguration
+
+# dev profile 下用 H2 内存数据库（z-ctc-web starter 会自动 new DruidDataSource，
+# 这里只需要配置它走 H2 URL + H2 driver 即可，无需 DevDataSourceConfig 介入）
+z:
+  base:
+    db:
+      ctc:
+        url: jdbc:h2:mem:zctc_dev;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;NON_KEYWORDS=USER
+        username: sa
+        password: sa
+        driver-class-name: org.h2.Driver
+        initial-size: 1
+        min-idle: 1
+        max-active: 5
+        max-wait: 10000
+      default:
+        host: localhost
+        port: 9092  # 故意让 default 端口不通，避免 buildDataSource fallback
+        database: x
+        username: x
+        password: x
+
+# 仍允许 druid 监控（生产）但 dev 模式不打开
+druid:
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.zifang.ctc.core.domain.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.log4j2.Log4j2Impl
+
+# z-ctc SSO 配置 (SsoAutoConfiguration 读取 sso.* 前缀)
+sso:
+  enabled: false  # dev 下关掉 SSO，免得 SsoInterceptor 在启动后疯狂跳转
+  callback-url: http://localhost:8888/ctc/api/sso/callback
+  cookie-domain: localhost
+  cookie-secure: false
+  login-url: http://localhost:8888/ctc/login
+  exclude-paths:
+    - /api/ctc/authn/login
+    - /api/auth/login
+    - /api/auth/register
+    - /api/auth/reset-password
+    - /api/sso/callback
+    - /api/sso/login
+    - /api/uc/login
+    - /api/uc/register
+    - /api/uc/phone-login
+    - /api/uc/reset-password
+    - /doc.html
+    - /webjars/**
+    - /swagger-resources/**
+    - /v3/api-docs/**
+    - /actuator/**
+  intercept-paths:
+    - /api/**
+
+# knife4j
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    enable-version: false
+
+# 健康检查
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.zifang.ctc: DEBUG
+    org.springframework: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

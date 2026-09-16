@@ -1,0 +1,45 @@
+# Z-CTC 前端 nginx 镜像（Mode 2 分体 / Mode 3 集群用）
+# 输入：_frontend/z-ctc-frontend/dist/（vite build 产物）
+# 输出：nginx 静态服务 + /api 反代到 backend
+#
+# 构建前置：
+#   (cd ../_frontend/z-ctc-frontend && npm ci && npm run build)
+#
+# 构建命令：
+#   docker build -f deploy/Dockerfile.frontend \
+#     -t ghcr.io/yuku123/z-ctc-frontend:1.0.1 ..
+
+# ---- 构建阶段：基于 node 跑 vite build ----
+FROM node:18-alpine AS builder
+
+WORKDIR /build
+
+# 仅拷 package.json 利用 docker layer 缓存
+COPY _frontend/z-ctc-frontend/package.json ./
+COPY _frontend/z-ctc-frontend/package-lock.json* ./
+RUN npm ci --no-audit --no-fund
+
+# 拷源码 + build
+COPY _frontend/z-ctc-frontend/ ./
+RUN npm run build
+
+# ---- 运行阶段：nginx 静态服务 ----
+FROM nginx:1.25-alpine
+
+# 拷 nginx 配置 + 反代模板
+COPY deploy/nginx.conf.template /etc/nginx/templates/default.conf.template
+
+# 拷 build 产物
+COPY --from=builder /build/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+# 通过 envsubst 渲染 nginx 配置（BACKEND_SERVICE 在 compose 中注入）
+# nginx:1.25-alpine 自带 envsubst-on-templates.sh 在 /docker-entrypoint.d/
+# 这里我们用 envsubst 手动渲染到 /etc/nginx/conf.d/default.conf
+CMD ["/bin/sh", "-c", "envsubst '$$BACKEND_SERVICE' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+
+LABEL org.opencontainers.image.title="z-ctc-frontend" \
+      org.opencontainers.image.description="Z-CTC admin 前端 nginx 镜像" \
+      org.opencontainers.image.source="https://github.com/yuku123/z-ctc" \
+      org.opencontainers.image.licenses="MIT"

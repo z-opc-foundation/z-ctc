@@ -1,0 +1,48 @@
+{
+  "name": "@yuku123/z-ctc-frontend-component",
+  "version": "1.0.1",
+  "description": "z-ctc 4A 中心共享 UI 组件层（library mode）—— 与 z-schedule-frontend-component 同规范",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "antd": "^5.10.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "antd": "^5.10.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.0",
+    "vite-plugin-dts": "^3.7.3"
+  },
+  "keywords": [
+    "z-ctc",
+    "4a",
+    "antd",
+    "component-library",
+    "yuku123"
+  ],
+  "license": "MIT"
+}

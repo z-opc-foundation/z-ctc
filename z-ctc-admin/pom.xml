@@ -5,9 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.zifang</groupId>
+        <groupId>io.github.yuku123</groupId>
         <artifactId>z-ctc</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>z-ctc-admin</artifactId>
@@ -19,6 +19,19 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!--
+            admin 是 standalone demo + docker 镜像源，永远不上 Maven Central。
+            保留在 reactor 以享受统一构建（mvn package / install / -pl admin -am 都能用），
+            但 deploy 阶段自动跳过。
+            详见 lead/005_技术架构/005_前端工程与中间件部署架构规范.md §2
+        -->
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <!--
+            admin 引用 z-ctc 同仓 web starter（注意：与 z-schedule-admin 不同，z-ctc 没有独立的
+            z-ctc-spring-boot-starter，admin 直接依赖 z-ctc-web）。
+        -->
+        <z-ctc.version>${revision}</z-ctc.version>
     </properties>
 
     <dependencyManagement>
@@ -47,21 +60,18 @@
                 <version>3.5.3.1</version>
             </dependency>
             <dependency>
-                <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-spring-boot-autoconfigure</artifactId>
-                <version>3.5.3.1</version>
-            </dependency>
-            <dependency>
                 <groupId>com.github.jsqlparser</groupId>
                 <artifactId>jsqlparser</artifactId>
+                <version>4.6</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
         <dependency>
-            <groupId>com.zifang</groupId>
+            <groupId>io.github.yuku123</groupId>
             <artifactId>z-ctc-web</artifactId>
+            <version>${z-ctc.version}</version>
         </dependency>
 
         <!--
@@ -115,6 +125,7 @@
         <dependency>
             <groupId>com.github.jsqlparser</groupId>
             <artifactId>jsqlparser</artifactId>
+            <version>4.6</version>
         </dependency>
 
         <dependency>
@@ -144,6 +155,16 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+
+        <!--
+            Dev profile: H2 内存数据库 + dev profile 用 DevDataSourceConfig 绕过
+            z-boot-datasource-starter 强制 MySQL. 生产用真 MySQL, 不引入 H2 也行。
+        -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -157,6 +178,86 @@
                     <target>${java.version}</target>
                 </configuration>
             </plugin>
+
+            <!--
+                V2 改造：frontend-maven-plugin 在 generate-resources 阶段跑 npm build
+                workingDirectory 指向 _frontend/z-ctc-frontend/（仓根下，不在 reactor 内）
+                产物 dist/ → 由下面 maven-resources-plugin 复制到 src/main/resources/static/
+                详见 lead/005_技术架构/005_前端工程与中间件部署架构规范.md §1.2 / §6.1 V2
+            -->
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.15.0</version>
+                <configuration>
+                    <workingDirectory>${project.basedir}/../_frontend/z-ctc-frontend</workingDirectory>
+                    <installDirectory>${project.build.directory}/frontend</installDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install-node-and-npm</id>
+                        <goals>
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <nodeVersion>v18.17.0</nodeVersion>
+                            <npmVersion>9.6.7</npmVersion>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-install</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <arguments>install --install-links</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-run-build</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                V2 改造：把 _frontend/z-ctc-frontend/dist/ 复制到 target/classes/static/
+                （不复制到 src/main/resources/static/，避免污染源码目录 + git 噪声）
+                必须在 frontend-maven-plugin 跑完之后（process-resources > generate-resources）
+                且在默认 maven-resources-plugin 之后（process-resources 阶段默认 src/main/resources -> target/classes）
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-frontend-dist</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+                            <overwrite>true</overwrite>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../_frontend/z-ctc-frontend/dist</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!--
                 与 z-meta-admin 一致: repackage 产出 *-exec.jar (Spring Boot 可执行 fat jar)
                 普通 jar 仍作为 library 暴露, 不影响 z-opc-main-starter 通过 spring.factories

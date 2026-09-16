@@ -25,11 +25,14 @@ import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGe
  */
 @SpringBootApplication(scanBasePackages = {
         "com.zifang.ctc",
-        "com.zifang.z.ctc"
+        "com.zifang.z.ctc",
+        // V2 改造：扫新 namespace 包（DevDataSourceConfig 等放在这里）
+        "io.github.yuku123.z.ctc.admin"
 }, nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class)
 @ComponentScan(basePackages = {
         "com.zifang.ctc",
-        "com.zifang.z.ctc"
+        "com.zifang.z.ctc",
+        "io.github.yuku123.z.ctc.admin"
 }, nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class)
 public class ZCtcAdminApplication {
 

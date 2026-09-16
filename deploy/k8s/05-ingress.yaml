@@ -1,0 +1,30 @@
+# 05-ingress.yaml
+# Ingress 把 frontend Service 暴露到集群外（HTTPS + 自动证书）
+# 占位符：${NAMESPACE}, ${INGRESS_DOMAIN}, ${TLS_SECRET_NAME}
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: z-ctc
+  namespace: ${NAMESPACE}
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - schedule.${INGRESS_DOMAIN}
+      secretName: ${TLS_SECRET_NAME}
+  rules:
+    - host: schedule.${INGRESS_DOMAIN}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: z-ctc-frontend
+                port:
+                  number: 80

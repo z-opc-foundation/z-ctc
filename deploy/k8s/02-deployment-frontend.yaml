@@ -1,0 +1,56 @@
+# 02-deployment-frontend.yaml
+# 前端 Deployment（nginx 静态服务，replicas 1 即可）
+# 占位符：${NAMESPACE}, ${OCI_REGISTRY}, ${IMAGE_VERSION}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: z-ctc-frontend
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: z-ctc
+    app.kubernetes.io/component: frontend
+    z.opc.io/layer: L3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: z-ctc
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: z-ctc
+        app.kubernetes.io/component: frontend
+        z.opc.io/layer: L3
+    spec:
+      containers:
+        - name: nginx
+          image: ${OCI_REGISTRY}/yuku123/z-ctc-frontend:${IMAGE_VERSION}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            # nginx.conf.template 通过 BACKEND_SERVICE env 注入 Service DNS 名
+            - name: BACKEND_SERVICE
+              value: z-ctc-backend
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5

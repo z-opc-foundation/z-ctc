@@ -1,0 +1,67 @@
+# Mode 3：集群部署（1 前端 nginx + N 后端 jar）
+# 适用：生产 / 多高副本 / 灰度发布
+#
+# 启动：cd deploy && docker compose -f docker-compose.cluster.yml up -d
+# 访问：http://localhost
+# 调整后端副本：docker compose -f docker-compose.cluster.yml up -d --scale z-ctc-backend=3
+# 停止：docker compose -f docker-compose.cluster.yml down
+
+services:
+  z-ctc-backend:
+    image: ghcr.io/yuku123/z-ctc-admin:1.0.1
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+      args:
+        JAR_FILE: z-ctc-admin/target/z-ctc-admin-1.0.1-exec.jar
+    restart: unless-stopped
+    # 不固定 replicas，命令行 --scale 决定（默认 1）
+    expose:
+      - "8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:zschedule;DB_CLOSE_DELAY=-1
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ""
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    networks:
+      - z-ctc-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/ctc/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  z-ctc-frontend:
+    image: ghcr.io/yuku123/z-ctc-frontend:1.0.1
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      # nginx 反代到 backend service（docker compose 自动 DNS）
+      BACKEND_SERVICE: z-ctc-backend
+    networks:
+      - z-ctc-net
+    depends_on:
+      z-ctc-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  z-ctc-net:
+    driver: bridge
+
+# 验证步骤：
+# 1. 启动 3 副本：docker compose -f docker-compose.cluster.yml up -d --scale z-ctc-backend=3
+# 2. docker compose -f docker-compose.cluster.yml ps（应看到 1 个 frontend + 3 个 backend 容器）
+# 3. 访问前端：http://localhost/（nginx 自动负载均衡到 3 个后端）
+# 4. 查看后端轮询：curl http://localhost/api/actuator/health（连续多次，看是否命中不同后端实例）
+# 5. 验证某个后端挂了还能服务：docker stop z-ctc-backend-z-ctc-backend-1，
+#    再 curl http://localhost/api/actuator/health（应仍返回 UP，nginx 自动跳过挂了的后端）
