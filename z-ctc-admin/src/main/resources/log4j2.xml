@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    z-ctc-admin 独立部署时的日志配置.
+
+    适用场景: z-ctc-admin 通过 Docker 独立发布 (ghcr.io/yuku123/z-ctc:*)。
+    在 z-opc-main-starter 聚合部署时, 该配置会被 main-starter 的 log4j2.xml 覆盖.
+
+    日志输出:
+      - 控制台 (stdout, 容器日志收集)
+      - /app/logs/app.log (业务日志, 100MB 分卷, 保留 30 个)
+      - /app/logs/error.log (ERROR 及以上, 100MB 分卷, 保留 30 个)
+
+    与 z-opc-main-starter 同名, 但配置独立, 避免冲突.
+-->
+<Configuration status="WARN" monitorInterval="30">
+
+    <Properties>
+        <Property name="LOG_PATH">${sys:z.log.path:-/app/logs}</Property>
+        <Property name="CONSOLE_PATTERN">%d{HH:mm:ss.SSS} %-5level [%thread] %logger{40} - %msg%n</Property>
+        <Property name="FILE_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50}{%method:%line} -
+            %msg%n
+        </Property>
+    </Properties>
+
+    <Appenders>
+
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${CONSOLE_PATTERN}"/>
+        </Console>
+
+        <RollingFile name="AppLog"
+                     fileName="${LOG_PATH}/app.log"
+                     filePattern="${LOG_PATH}/app-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${FILE_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+
+        <RollingFile name="ErrorLog"
+                     fileName="${LOG_PATH}/error.log"
+                     filePattern="${LOG_PATH}/error-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${FILE_PATTERN}"/>
+            <Filters>
+                <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+
+    </Appenders>
+
+    <Loggers>
+        <Logger name="com.zifang.ctc" level="DEBUG" additivity="true"/>
+        <Logger name="com.zifang.z.ctc" level="DEBUG" additivity="true"/>
+        <Logger name="org.springframework" level="INFO" additivity="true"/>
+        <Logger name="com.alibaba.druid" level="WARN" additivity="true"/>
+        <Logger name="com.baomidou.mybatisplus" level="WARN" additivity="true"/>
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AppLog"/>
+            <AppenderRef ref="ErrorLog"/>
+        </Root>
+    </Loggers>
+
+</Configuration>

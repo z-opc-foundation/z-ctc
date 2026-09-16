@@ -1,0 +1,70 @@
+# ============ Java / Maven ============
+*.class
+/build/
+**/target/
+**/*.flattened-pom.xml
+.flattened-pom.xml
+**/*.lst
+**/*.jar
+dependency-reduced-pom.xml
+release.properties
+pom.xml.releaseBackup
+mvnw
+mvnw.cmd
+
+# ============ IDE ============
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.project
+.classpath
+.settings/
+
+# ============ OS ============
+.DS_Store
+**/.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============ Node / 前端 ============
+**/node_modules/
+**/dist/
+**/.vite/
+**/.cache/
+**/.parcel-cache/
+**/.next/
+**/.nuxt/
+**/.output/
+**/coverage/
+**/*.tsbuildinfo
+
+# ============ Logs ============
+**/logs/
+**/*.log
+
+# ============ Maven Central 发布凭证 (本地) ============
+.env
+.env.local
+.env.*.local
+.gnupg/
+.gpg-keyring/
+
+# ============ Docker ============
+.build-context/
+docker-compose.override.yml
+
+# ============ 系统与临时 ============
+*~
+*.bak
+*.tmp
+*.pid.lock
+.cache/
+.tmp/
+.temp/
+.playwright-mcp/
+*.swp
+*.swo
+# ===== Git 本地备份目录 (历史塌缩用) =====
+.git.bak.*/

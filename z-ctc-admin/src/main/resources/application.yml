@@ -1,0 +1,114 @@
+# 本地 dev 启动端口(standalone 模式, 与 docker-compose.yml 一致: 8888)。
+# 可通过 --server.port=... 覆盖。
+server:
+  port: 8888
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: z-ctc-admin
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+# z-ctc 数据源走 z.base.db.ctc.* 模块化配置 (ZCompanyCtcWebAutoConfiguration#buildDataSource).
+# 当 z.base.db.ctc.* 缺省时回退到 z.base.db.default.*. 所有凭据通过环境变量注入,
+# 避免硬编码密码进 jar / 镜像层.
+z:
+  base:
+    db:
+      ctc:
+        # FEATURE: 阿里云 RDS 直连,加 allowPublicKeyRetrieval=true 解决 mysql 8 公钥问题
+        url: jdbc:mysql://rm-bp108uqlgwn712k54ho.mysql.rds.aliyuncs.com:3306/oc?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+        username: ${CTC_DB_USERNAME:zifang}
+        password: ${CTC_DB_PASSWORD:Hhzemol!}
+        initial-size: 5
+        min-idle: 5
+        max-active: 20
+        max-wait: 60000
+      # 兼容其他模块 (z-ctc-core 等) 通过 host/port/database 拼 URL 的回退
+      default:
+        host: ${DB_HOST:localhost}
+        port: ${DB_PORT:3306}
+        database: ${DB_DATABASE:oc}
+        username: ${DB_USERNAME:root}
+        password: ${DB_PASSWORD:}
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.zifang.ctc.core.domain.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.log4j2.Log4j2Impl
+
+# FEATURE: z-ctc-adam 启动后, druid 连接阿里云 RDS 需 allowPublicKeyRetrieval=true
+# 直接覆盖 z.base.db.ctc.url 路径在 ModuleDataSourceTemplate 里没暴露, 通过 druid.connection-properties
+# 注入到所有连接(虽然已建的 url 不变,但 mysql connector 8 会优先用 connection-properties)
+druid:
+  initial-size: 5
+  min-idle: 5
+  max-active: 20
+  max-wait: 60000
+  # 通过 connection-properties 给已建连接追加 allowPublicKeyRetrieval=true
+  connection-properties: allowPublicKeyRetrieval=true;useSSL=false;serverTimezone=Asia%2FShanghai
+
+# z-ctc SSO 配置 (SsoAutoConfiguration 读取 sso.* 前缀)
+# 生产部署需在容器环境变量里覆盖 callback-url 等
+sso:
+  enabled: ${SSO_ENABLED:true}
+  callback-url: ${SSO_CALLBACK_URL:http://localhost:8080/api/sso/callback}
+  # 登录成功下发的 sso_token cookie 写到 .zopc.local 二级域下,
+  # 这样 opc.zopc.local / team.zopc.local / api.opc / api.team 共用同一个 cookie。
+  # 默认是当前 host (request.host),浏览器跨子域时不发送 → 鉴权失败 → 反复重定向 login。
+  # 生产环境应改为 .your-domain.com 等真实根域。
+  cookie-domain: ${SSO_COOKIE_DOMAIN:.zopc.local}
+  cookie-secure: ${SSO_COOKIE_SECURE:false}
+  # 登录入口 (SsoInterceptor.sendRedirect 跳这里),指向 z-opc 前端 SPA。
+  # 生产环境改成 https://opc.zopc.top/login
+  login-url: ${SSO_LOGIN_URL:http://opc.zopc.local:8088/login}
+  exclude-paths:
+    # FEATURE: 本地 z-ctc-admin 启动需要放行登录端点
+    - /api/ctc/authn/login
+    # FEATURE: whoami 需要 SsoInterceptor 注入 ssoUser, 不能 exclude
+    # - /api/ctc/authn/whoami
+    - /api/auth/login
+    - /api/auth/register
+    - /api/auth/reset-password
+    - /api/sso/callback
+    - /api/sso/login
+    - /api/uc/login
+    - /api/uc/register
+    - /api/uc/phone-login
+    - /api/uc/reset-password
+    - /doc.html
+    - /webjars/**
+    - /swagger-resources/**
+    - /v3/api-docs/**
+    - /actuator/**
+  intercept-paths:
+    - /api/**
+
+# knife4j
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    enable-version: false
+
+# 健康检查详情
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.zifang.ctc: DEBUG
+    org.springframework: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0.33
+    container_name: ctc-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: biz_service
+      MYSQL_USER: ctc_user
+      MYSQL_PASSWORD: ctc_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-database.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - ctc-network
+
+  # Redis 缓存（可选，用于会话管理）
+  redis:
+    image: redis:7-alpine
+    container_name: ctc-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ctc-network
+
+  # CTC 应用服务
+  ctc-app:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: ctc-app
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/biz_service?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false
+      SPRING_DATASOURCE_USERNAME: ctc_user
+      SPRING_DATASOURCE_PASSWORD: ctc_pass
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+    networks:
+      - ctc-network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  ctc-network:
+    driver: bridge
