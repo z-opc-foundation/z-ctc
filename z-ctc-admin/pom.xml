@@ -131,7 +131,7 @@
         <dependency>
                 <groupId>io.github.yuku123</groupId>
                 <artifactId>z-boot-datasource-starter</artifactId>
-<version>1.0.3</version>
+<version>1.0.16</version>
             </dependency>
 
         <dependency>
