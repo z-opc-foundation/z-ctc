@@ -21,10 +21,6 @@
 #   - GPG 密钥环用 GNUPGHOME=./.gnupg，不污染 ~/.gnupg
 #   - 默认 dry-run 不做任何事情，必须显式给子命令
 #
-# ⚠️ 关键约束：
-#   - 必须在用户自己 macOS 终端（不走 sandbox）跑
-#   - sandbox 限制 64KB 出站 POST，157MB bundle 必然失败
-#
 # 当前发布范围（z-oss/pom.xml aggregator）：
 #   ✅ z-oss-common    （纯 enum/exception，无任何内部依赖）
 #   ✅ z-oss-core      （provider 抽象 + 业务逻辑 + hooks，已解耦 z-ctc）
@@ -236,7 +232,7 @@ cmd_readme() {
   $ git add pom.xml */pom.xml && git commit -m "release: X.Y.Z"
   $ git tag vX.Y.Z && git push origin main vX.Y.Z
 
-  $ # 3) 真发（**必须在你自己 macOS 终端**，sandbox 会卡 64KB）
+  $ # 3) 真发
   $ bash deploy_maven_center.sh publish
 
   $ # 4) 5~15 分钟验证
@@ -260,7 +256,6 @@ cmd_readme() {
 【AI 助手避坑（实战经验）】
 
   ✗ 不要把 CENTRAL_TOKEN / GPG passphrase 贴到对话
-  ✗ 不要在 sandbox 跑 mvn deploy（64KB 限制 → 必然失败）
   ✗ 不要跳过 javadoc 或 GPG 测试（Central 强制要求）
   ✗ 不要重发同名版本号（FAILED 残骸会占坐标）
   ✓ waitMaxTime=1800（30 分钟）防 mvn 提前放弃
