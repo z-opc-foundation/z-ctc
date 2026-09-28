@@ -1,25 +1,36 @@
 package com.zifang.ctc.sso;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.Base64.Decoder;
-import java.util.Base64.Encoder;
+import com.zifang.util.core.jwt.Claims;
+import com.zifang.util.core.jwt.Jwt;
+import com.zifang.util.core.jwt.JwtException;
+
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
- * 极简JWT工具类 - 仅依赖JDK，支持HS256算法
+ * 极简 JWT 工具类 —— HS256 三段式 token。
+ * <p>
+ * 2026-09-28 收编：签名(HmacSHA256)、base64url(无填充)、claims 的 JSON 序列化/解析、
+ * exp 校验全部委托 {@code com.zifang.util.core.jwt.Jwt}（z-util 1.0.13），
+ * 本类只保留历史对外形状：实例持密钥 + {@code generateToken(Map, long)} +
+ * {@code verifyToken(String) -> VerificationResult}（不抛异常，用 valid 位表达失败）。
+ * <p>
+ * 兼容性结论（对拍尺见 {@code src/test/java/com/zifang/ctc/sso/JwtCompatCrossCheckTest}）：
+ * <ul>
+ *   <li>签名原文 = {@code headerB64 + "." + payloadB64} 的字面 UTF-8 字节，算法 HmacSHA256、
+ *       密钥取 secret 的 UTF-8 字节 —— 与收编前完全一致，故历史 token 照常验签；</li>
+ *   <li>payload 段逐字节相同：{@link #generateToken} 刻意先把入参过一遍 {@code HashMap}，
+ *       复刻收编前 {@code new HashMap<>(claims)} 的迭代顺序（勿改成 LinkedHashMap/TreeMap）；</li>
+ *   <li>header 段仅键序不同：收编前 HashMap 迭代出 {@code {"typ":"JWT","alg":"HS256"}}，
+ *       z-util 固定 {@code {"alg":"HS256","typ":"JWT"}}。验签读的是字面段，不影响互验；</li>
+ *   <li>过期语义：有 exp 且 {@code now > exp} 判过期，与收编前一致；
+ *       无 exp 时不判过期（未开 requireExp），亦与收编前一致。</li>
+ * </ul>
+ * 已知收紧（不放宽校验）：{@code exp <= 0} 的 token 现在按过期处理（收编前 {@code exp > 0} 才判）；
+ * nbf 若存在会被校验（签发链路从不写 nbf）；payload 非法 JSON（如历史手写的 List claim
+ * 被 {@code toString()} 成 {@code [a, b]}）现在判无效——签发链路只写 String/Integer/Boolean，不产生该类 token。
  */
 public class JwtUtil {
-
-    private static final String HMAC_SHA256 = "HmacSHA256";
-    private static final Encoder BASE64_URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
-    private static final Decoder BASE64_URL_DECODER = Base64.getUrlDecoder();
 
     private final String secretKey;
 
@@ -36,24 +47,17 @@ public class JwtUtil {
      */
     public String generateToken(Map<String, Object> claims, long expiresIn) {
         try {
-            // 构建头部
-            Map<String, Object> header = new HashMap<>();
-            header.put("alg", "HS256");
-            header.put("typ", "JWT");
-            String encodedHeader = encodeJson(header);
+            // 见类注释：走 HashMap 迭代顺序，保证 payload 段与收编前逐字节一致
+            Map<String, Object> payload = new HashMap<String, Object>(claims);
+            long now = System.currentTimeMillis() / 1000;
+            payload.put("iat", now);
+            payload.put("exp", now + expiresIn);
 
-            // 构建载荷
-            Map<String, Object> payload = new HashMap<>(claims);
-            payload.put("iat", System.currentTimeMillis() / 1000);
-            payload.put("exp", System.currentTimeMillis() / 1000 + expiresIn);
-            String encodedPayload = encodeJson(payload);
-
-            // 构建签名
-            String data = encodedHeader + "." + encodedPayload;
-            String signature = hmacSha256(data, secretKey);
-
-            // 组合JWT
-            return data + "." + signature;
+            Claims claimsObj = new Claims();
+            for (Map.Entry<String, Object> entry : payload.entrySet()) {
+                claimsObj.put(entry.getKey(), entry.getValue());
+            }
+            return Jwt.builder().algorithm(Jwt.HS256).secret(secretKey).claims(claimsObj).build();
         } catch (Exception e) {
             throw new RuntimeException("生成JWT失败", e);
         }
@@ -67,39 +71,10 @@ public class JwtUtil {
      */
     public VerificationResult verifyToken(String token) {
         try {
-            // 分割JWT
-            String[] parts = token.split("\\.");
-            if (parts.length != 3) {
-                return new VerificationResult(false, null, "JWT格式不正确");
-            }
-
-            String encodedHeader = parts[0];
-            String encodedPayload = parts[1];
-            String signature = parts[2];
-
-            // 验证签名
-            String data = encodedHeader + "." + encodedPayload;
-            String expectedSignature = hmacSha256(data, secretKey);
-            if (!signature.equals(expectedSignature)) {
-                return new VerificationResult(false, null, "签名验证失败");
-            }
-
-            // 解析头部
-            Map<String, Object> header = decodeJson(encodedHeader);
-            if (!"HS256".equals(header.get("alg"))) {
-                return new VerificationResult(false, null, "不支持的算法");
-            }
-
-            // 解析载荷
-            Map<String, Object> payload = decodeJson(encodedPayload);
-
-            // 验证过期时间
-            long exp = getLongClaim(payload, "exp");
-            if (exp > 0 && System.currentTimeMillis() / 1000 > exp) {
-                return new VerificationResult(false, null, "令牌已过期");
-            }
-
-            return new VerificationResult(true, payload, null);
+            Claims parsed = Jwt.parser().algorithm(Jwt.HS256).secret(secretKey).parse(token);
+            return new VerificationResult(true, toLegacyClaims(parsed), null);
+        } catch (JwtException e) {
+            return new VerificationResult(false, null, describe(e.getMessage()));
         } catch (Exception e) {
             return new VerificationResult(false, null, "验证过程发生异常: " + e.getMessage());
         }
@@ -117,134 +92,41 @@ public class JwtUtil {
     }
 
     /**
-     * HMAC-SHA256签名
+     * z-util 的失败文案映射回收编前的中文提示（前端 401 文案与日志 grep 口径不变）。
      */
-    private String hmacSha256(String data, String secret) {
-        try {
-            Mac mac = Mac.getInstance(HMAC_SHA256);
-            SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_SHA256);
-            mac.init(secretKey);
-            byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-            return BASE64_URL_ENCODER.encodeToString(hash);
-        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-            throw new RuntimeException("签名失败", e);
+    private static String describe(String zUtilMessage) {
+        String msg = zUtilMessage == null ? "" : zUtilMessage;
+        if (msg.startsWith("malformed JWT")) {
+            return "JWT格式不正确";
         }
+        if (msg.startsWith("signature mismatch")) {
+            return "签名验证失败";
+        }
+        if (msg.startsWith("alg mismatch")) {
+            return "不支持的算法";
+        }
+        if (msg.startsWith("token expired")) {
+            return "令牌已过期";
+        }
+        if (msg.startsWith("token not yet valid")) {
+            return "令牌尚未生效";
+        }
+        return "验证过程发生异常: " + msg;
     }
 
     /**
-     * 编码JSON对象为Base64URL字符串
+     * claims 回读形状对齐收编前：整数统一 Long（收编前的暴力解析不产 Integer）。
      */
-    private String encodeJson(Map<String, Object> json) {
-        String jsonString = toJsonString(json);
-        return BASE64_URL_ENCODER.encodeToString(jsonString.getBytes(StandardCharsets.UTF_8));
-    }
-
-    /**
-     * 解码Base64URL字符串为JSON对象
-     */
-    private Map<String, Object> decodeJson(String encoded) {
-        byte[] bytes = BASE64_URL_DECODER.decode(encoded);
-        String jsonString = new String(bytes, StandardCharsets.UTF_8);
-        return fromJsonString(jsonString);
-    }
-
-    /**
-     * 简易JSON转字符串（仅支持Map<String, Object>）
-     */
-    private String toJsonString(Map<String, Object> map) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{");
-        boolean first = true;
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            if (!first) { sb.append(","); }
-
-            sb.append("\"").append(entry.getKey()).append("\":");
-
+    private static Map<String, Object> toLegacyClaims(Claims parsed) {
+        Map<String, Object> claims = new HashMap<String, Object>();
+        for (Map.Entry<String, Object> entry : parsed.asMap().entrySet()) {
             Object value = entry.getValue();
-            if (value == null) {
-                sb.append("null");
-            } else if (value instanceof String) {
-                sb.append("\"").append(value).append("\"");
-            } else if (value instanceof Number || value instanceof Boolean) {
-                sb.append(value);
-            } else if (value instanceof List) {
-                // 处理List类型，转为JSON数组
-                sb.append(value.toString());
-            } else {
-                sb.append("\"").append(value.toString()).append("\"");
+            if (value instanceof Integer || value instanceof Short || value instanceof Byte) {
+                value = Long.valueOf(((Number) value).longValue());
             }
-
-            first = false;
+            claims.put(entry.getKey(), value);
         }
-        sb.append("}");
-        return sb.toString();
-    }
-
-    /**
-     * 简易字符串转JSON（仅支持简单对象）
-     */
-    private Map<String, Object> fromJsonString(String json) {
-        Map<String, Object> map = new HashMap<>();
-        json = json.trim();
-
-        if (json.startsWith("{") && json.endsWith("}")) {
-            json = json.substring(1, json.length() - 1);
-            String[] keyValues = json.split(",");
-
-            for (String keyValue : keyValues) {
-                keyValue = keyValue.trim();
-                if (keyValue.isEmpty()) { continue; }
-
-
-                int colonIndex = keyValue.indexOf(":");
-                if (colonIndex > 0) {
-                    String key = keyValue.substring(0, colonIndex).trim();
-                    String value = keyValue.substring(colonIndex + 1).trim();
-
-                    // 去除引号
-                    if (key.startsWith("\"") && key.endsWith("\"")) {
-                        key = key.substring(1, key.length() - 1);
-                    }
-
-                    // 解析值类型
-                    Object parsedValue;
-                    if (value.startsWith("\"") && value.endsWith("\"")) {
-                        parsedValue = value.substring(1, value.length() - 1);
-                    } else if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
-                        parsedValue = Boolean.valueOf(value);
-                    } else {
-                        try {
-                            parsedValue = Long.valueOf(value);
-                        } catch (NumberFormatException e) {
-                            try {
-                                parsedValue = Double.valueOf(value);
-                            } catch (NumberFormatException ex) {
-                                parsedValue = value;
-                            }
-                        }
-                    }
-
-                    map.put(key, parsedValue);
-                }
-            }
-        }
-
-        return map;
-    }
-
-    /**
-     * 安全获取long类型声明
-     */
-    private long getLongClaim(Map<String, Object> claims, String claimName) {
-        Object value = claims.get(claimName);
-        if (value instanceof Number) {
-            return ((Number) value).longValue();
-        }
-        try {
-            return Long.parseLong(value.toString());
-        } catch (Exception e) {
-            return -1;
-        }
+        return claims;
     }
 
     /**
@@ -274,6 +156,4 @@ public class JwtUtil {
         }
     }
 
-    // 示例使用
-
-}    
+}
