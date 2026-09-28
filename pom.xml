@@ -69,7 +69,7 @@
         <!-- 内部依赖版本 -->
         <z-ctc.version>${revision}</z-ctc.version>
         <z-boot.version>1.0.17</z-boot.version>
-        <z-util.version>1.0.10</z-util.version>
+        <z-util.version>1.0.13</z-util.version>
         <!-- 2026-09-28「同坐标单版本」：2.7.12 → 2.7.18（2.7 线最后一版，Java 8 可用），
              与 z-boot-dependencies 1.0.18 / z-opc 根 pom 同一口径；12→18 含 CVE 修复，纯上行。 -->
         <spring-boot.version>2.7.18</spring-boot.version>
