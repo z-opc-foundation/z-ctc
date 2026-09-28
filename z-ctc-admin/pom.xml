@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>z-ctc-admin</artifactId>
+    <name>z-ctc-admin</name>
     <description>4A 中心 - admin 入口：依赖 z-ctc-web, 复用其自动装配; 同时作为独立 Spring Boot 启动模块
         (z-ctc-admin-*-exec.jar) 供 Docker 部署
     </description>
@@ -49,10 +50,12 @@
             <dependency>
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-core</artifactId>
+                <version>3.5.3.1</version>
             </dependency>
             <dependency>
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-extension</artifactId>
+                <version>3.5.3.1</version>
             </dependency>
             <dependency>
                 <groupId>com.baomidou</groupId>
@@ -237,6 +240,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
                 <executions>
                     <execution>
                         <id>copy-frontend-dist</id>
@@ -266,6 +270,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <!-- 不写版本时 Maven 会去解析"最新可用"版本(实测抓到 4.2.0-M2,其 mojo 是 class 61,
+                     JDK 8 上直接跑不起来)。钉回本仓的 Boot 线。 -->
+                <version>${spring-boot.version}</version>
                 <configuration>
                     <mainClass>com.zifang.z.ctc.admin.ZCtcAdminApplication</mainClass>
                 </configuration>

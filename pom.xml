@@ -323,6 +323,15 @@
                             <waitUntil>uploaded</waitUntil>
                             <waitMaxTime>1800</waitMaxTime>
                             <waitPollingInterval>10</waitPollingInterval>
+                            <!--
+                                admin 永远不上 Central(见 z-ctc-admin/pom.xml 的 maven.deploy.skip 注释),
+                                但 central-publishing-maven-plugin 不看 maven.deploy.skip —— 实测 1.0.2 那次
+                                它照样把 admin 的 pom/jar/exec.jar 全打进 bundle,而 admin 的 pom 缺 <name>
+                                直接让整批发被 Central 判 FAILED。excludeArtifacts 按 artifactId 精确匹配。
+                            -->
+                            <excludeArtifacts>
+                                <excludeArtifact>z-ctc-admin</excludeArtifact>
+                            </excludeArtifacts>
                         </configuration>
                     </plugin>
                 </plugins>
