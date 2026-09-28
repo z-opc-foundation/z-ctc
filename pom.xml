@@ -68,7 +68,7 @@
 
         <!-- 内部依赖版本 -->
         <z-ctc.version>${revision}</z-ctc.version>
-        <z-boot.version>1.0.16</z-boot.version>
+        <z-boot.version>1.0.17</z-boot.version>
         <z-util.version>1.0.10</z-util.version>
         <spring-boot.version>2.7.12</spring-boot.version>
 
