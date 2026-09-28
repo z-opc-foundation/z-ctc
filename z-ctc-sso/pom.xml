@@ -67,18 +67,9 @@
         </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.10.1</version>
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+    <!-- 迁移删掉了本模块那条 maven-compiler-plugin 3.10.1 + <source>/<target>=${java.version} 的
+         字面声明：模块 pom 里的 <version> 顶得过一切 DM，留着它根 pom 抬到 3.11.0 也管不到这一层
+         （sso/web/admin 三处同形，一起删）。现在由 z-boot-parent 的 pluginManagement 下发
+         3.11.0 / source-target 1.8 / UTF-8，实测产物 class 仍 major 52。 -->
 
 </project>

@@ -8,6 +8,17 @@
         改造为 io.github.yuku123 namespace (Maven Central 命名空间).
         使用 ${revision} (CI-friendly versions) + flatten-maven-plugin 发版自动替换.
     -->
+    <!-- 消费入口统一走 z-boot-parent（1.0.19 起全组织口径，试点 z-cache）：一行 parent 白拿第三方
+         地板 z-boot-dependencies:1.0.19 + 兄弟仓权威 z-boot-fleet:1.0.0 + Java 8 的 pluginManagement。
+         迁移前本仓没有 parent，根 pom 自己养一版版本表；逐格处置见下面 properties 的注释与提交说明。
+         relativePath 必须留空：parent 不在磁盘上，在 repo1。 -->
+    <parent>
+        <groupId>io.github.yuku123</groupId>
+        <artifactId>z-boot-parent</artifactId>
+        <version>1.0.19</version>
+        <relativePath/>
+    </parent>
+
     <groupId>io.github.yuku123</groupId>
     <artifactId>z-ctc</artifactId>
     <version>${revision}</version>
@@ -61,116 +72,119 @@
         <!-- 项目自身版本（CI-friendly versions 根，发版改这一处即可） -->
         <revision>1.0.2</revision>
 
-        <java.version>8</java.version>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-        <!-- 内部依赖版本 -->
-        <z-ctc.version>${revision}</z-ctc.version>
-        <z-boot.version>1.0.17</z-boot.version>
-        <z-util.version>1.0.13</z-util.version>
-        <!-- 2026-09-28「同坐标单版本」：2.7.12 → 2.7.18（2.7 线最后一版，Java 8 可用），
-             与 z-boot-dependencies 1.0.18 / z-opc 根 pom 同一口径；12→18 含 CVE 修复，纯上行。 -->
-        <spring-boot.version>2.7.18</spring-boot.version>
-
-        <!-- Maven 插件版本（收口到根 pom） -->
-        <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
+        <!-- 删掉的版本键逐格按**坐标**判过（parent_preflight.py 第 2/5 节），父链都供得到：
+             java.version=8→1.8、maven.compiler.source/target=8、project.build.sourceEncoding=UTF-8、
+             spring-boot.version=2.7.18、flatten-maven-plugin.version=1.7.3、z-util.version=1.0.13
+             （fleet 按 z-util-core/-http 同供 1.0.13）、maven-compiler-plugin.version 3.10.1→3.11.0、
+             z-boot.version 1.0.17→1.0.19（repo1 两版 z-boot-web-starter pom 逐行 diff 只差
+             spring-boot-starter* 2.7.12→2.7.18，knife4j/springdoc 一族零变动）、z-ctc.version
+             ${revision}→改由下面自家坐标的 ${project.version} 自钉。所有引用点留着，值落在父链上。 -->
+        <!-- 留下的 6 格：maven-source-plugin 3.3.0 是**刻意与父链不同值**（地板 1.0.19 供的属性是
+             3.2.1，跟着走等于把出 sources.jar 的插件往回降级）；其余 5 件（deploy/javadoc/gpg/
+             central-publishing/versions）父链连属性都不供——parent 的 pluginManagement 只管
+             compiler/surefire/failsafe/jar/resources/spring-boot 六件——删键当场引用点悬空。 -->
         <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
         <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
         <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
         <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
         <central-publishing-plugin.version>0.7.0</central-publishing-plugin.version>
-        <flatten-maven-plugin.version>1.7.3</flatten-maven-plugin.version>
         <versions-maven-plugin.version>2.17.1</versions-maven-plugin.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <!-- Spring Boot BOM -->
+            <!-- 自家 6 个 reactor 坐标钉 ${project.version}（z-boot README「消费模型」步骤 4）。
+                 不是装饰：继承来的 DM 会改写**传递依赖**，而 fleet 的 z-ctc 那一格钉的是 repo1 上的
+                 已发布件 1.0.1 ⇒ 不补这一批，z-ctc-web/admin 就会把 1.0.1 的 sibling 字节码当
+                 本工程编进 1.0.2 的产物。z-ctc-admin 永不发布（excludeArtifacts），写它只为让
+                 "自家坐标一律 ${project.version}"不再有例外。 -->
             <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring-boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-ctc</artifactId>
+                <version>${project.version}</version>
             </dependency>
-
-            <!-- 内部模块：版本号统一从根 pom 的 ${revision} -->
             <dependency>
                 <groupId>io.github.yuku123</groupId>
                 <artifactId>z-ctc-common</artifactId>
-                <version>${z-ctc.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.github.yuku123</groupId>
                 <artifactId>z-ctc-core</artifactId>
-                <version>${z-ctc.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.github.yuku123</groupId>
                 <artifactId>z-ctc-sso</artifactId>
-                <version>${z-ctc.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.github.yuku123</groupId>
                 <artifactId>z-ctc-web</artifactId>
-                <version>${z-ctc.version}</version>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-ctc-admin</artifactId>
+                <version>${project.version}</version>
             </dependency>
 
-            <!-- z-boot starters -->
-            <dependency>
-                <groupId>io.github.yuku123</groupId>
-                <artifactId>z-boot-web-starter</artifactId>
-                <version>${z-boot.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.github.yuku123</groupId>
-                <artifactId>z-boot-datasource-starter</artifactId>
-                <version>${z-boot.version}</version>
-            </dependency>
-
-            <!-- z-util -->
-            <dependency>
-                <groupId>io.github.yuku123</groupId>
-                <artifactId>z-util-core</artifactId>
-                <version>${z-util.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.github.yuku123</groupId>
-                <artifactId>z-util-http</artifactId>
-                <version>${z-util.version}</version>
-            </dependency>
-
-            <!-- 第三方 -->
+            <!-- 与地板**不同值**、按坐标留着的直接条目：jsqlparser 本仓 4.6 / 地板直接钉 4.9。
+                 z-ctc-core 的 TenantLineHandler（provided）与 z-ctc-admin 那批 mybatis-plus 3.5.3.1
+                 都按 4.6 编（admin pom 里那条 InstantiationError 注释就是它的出处）；抬到 4.9 是
+                 功能改动、不是"换构建模型"这一刀要顺手做的事。`import` 顶不过继承来的直接 DM，
+                 所以必须是直接条目。 -->
             <dependency>
                 <groupId>com.github.jsqlparser</groupId>
                 <artifactId>jsqlparser</artifactId>
                 <version>4.6</version>
             </dependency>
+
+            <!-- ⚠ **不是版本分歧，是 Boot 受管项自带的 exclusion**：迁移前 mysql-connector-j 由
+                 本仓 import 的 spring-boot-dependencies 供 8.0.33，而**那条受管项自己排掉了
+                 com.google.protobuf:protobuf-java**；删掉 import 后版本落到地板的 8.4.0（同值，本仓
+                 bootstrap 那份属性早就是 8.4.0），但 exclusion 跟着 import 一起没了 ⇒ 实测
+                 protobuf-java:3.25.5 从 mysql 底下冒进 core/web/admin 三棵树（基线里 0 行）。
+                 直接 DM 条目是**整条替换**，只写版本不带 exclusion 补不回来，所以照抄 Boot 那一格。
+                 版本写成字面 8.4.0：与本仓 bootstrap/pom.xml:38 那份同名属性同值，但那个键定义在
+                 **不参与 reactor** 的 bootstrap 里，根上引用它只会造出悬空占位符。
+                 根修在地板 1.0.20（z-boot README 消费模型步骤 10），届时这一格可整条收掉。 -->
             <dependency>
-                <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-boot-starter</artifactId>
-                <version>3.5.7</version>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>8.4.0</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.protobuf</groupId>
+                        <artifactId>protobuf-java</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
-            <!-- z-ctc admin 用 druid + knife4j（业务 web 层不依赖） -->
-            <dependency>
-                <groupId>com.alibaba</groupId>
-                <artifactId>druid-spring-boot-starter</artifactId>
-                <version>1.2.23</version>
-            </dependency>
-            <dependency>
-                <groupId>com.github.xiaoymin</groupId>
-                <artifactId>knife4j-openapi3-spring-boot-starter</artifactId>
-                <version>4.1.0</version>
-            </dependency>
+
+            <!-- 迁移删掉的条目（逐条按坐标对过 preflight 第 2/5 节，同值就整条收掉）：
+                 spring-boot-dependencies:${spring-boot.version} 的 import —— 地板 1.0.19 自己 import
+                   同一坐标同一格 2.7.18，本仓再 import 只会和地板的 jackson-bom/spring-framework-bom/
+                   netty-bom 抢优先级；
+                 z-boot-web-starter / z-boot-datasource-starter（原 1.0.17）—— parent 按坐标供 1.0.19；
+                 z-util-core / z-util-http（原 1.0.13）—— fleet 同坐标同值；
+                 mybatis-plus-boot-starter 3.5.7、druid-spring-boot-starter 1.2.23、
+                 knife4j-openapi3-spring-boot-starter 4.1.0 —— 三条与地板直接条目面值逐字相同。 -->
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
+        <!-- 迁移实测：父链的 pluginManagement 把 surefire 从"没钉⇒浮动到最新"（基线抓到 3.5.4，
+             它会自己补引擎）压成 2.22.2，而本仓只声明了 junit-jupiter-api 没有引擎 ⇒ z-ctc-sso
+             那 12 个 Jupiter @Test 静默变成 0 个（JwtCompatCrossCheckTest 连跑都没跑）。
+             补这一条把测试面还原，版本由地板 import 的 junit-bom 5.9.3 下发。 -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -182,6 +196,11 @@
 
     <build>
         <plugins>
+            <!-- 全仓只剩这一条 compiler 声明（sso/web/admin 那三处字面 3.10.1 已删），两个值现在都
+                 读父链：maven-compiler-plugin.version 3.10.1→3.11.0、java.version 8→1.8。
+                 parent 的 pluginManagement 还额外下发 encoding=UTF-8 与 -parameters（本条 <configuration>
+                 只覆盖 source/target，其余按父链合并）—— 后者是迁移带来的字节码新增 MethodParameters，
+                 不是版本变化。 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

@@ -23,11 +23,12 @@
     </properties>
 
     <dependencies>
-        <!-- Jackson annotations (本模块 src/main/java 用 @JsonIgnore 等) -->
+        <!-- Jackson annotations (本模块 src/main/java 用 @JsonIgnore 等)。原来这里字面钉 2.18.6
+             —— 模块 pom 的 <version> 顶得过一切 DM，是把本仓自己钉在地板之外；删掉后由地板的
+             jackson-bom 供，面值同为 2.18.6（tree 实测）。 -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
-            <version>2.18.6</version>
         </dependency>
         <!-- Jackson databind (本模块 src/main/java 用 ObjectMapper / JsonNode 等) -->
         <dependency>
@@ -77,17 +78,7 @@
         </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.10.1</version>
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+    <!-- 迁移删掉了本模块那条 maven-compiler-plugin 3.10.1 的字面 <version> 声明（模块 pom 里的
+         <version> 顶得过一切 DM，留着它根 pom 抬到 3.11.0 也管不到这一层），现在跟
+         z-boot-parent 的 pluginManagement 走。 -->
 </project>
