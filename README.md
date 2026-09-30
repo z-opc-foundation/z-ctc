@@ -224,7 +224,7 @@ _Maintained by the z-opc-foundation organization._
   - [`deploy_maven_center.sh`](_doc/003_script/deploy_maven_center.sh)
   - [`install-settings.sh`](_doc/003_script/install-settings.sh)
 
-- [`_doc/004_skill/`](_doc/004_skill/) — AI skill 定义（目前为空目录，暂无 skill）
+- `_doc/004_skill/` — AI skill 定义（目前为空目录，暂无 skill）
 
 表结构说明另见 [`_doc/001_arch/03-db-schema.md`](_doc/001_arch/03-db-schema.md)；
 `04-4a-migration.md` 记录 4A 模型迁移过程。
