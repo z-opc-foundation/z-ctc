@@ -81,3 +81,7 @@ deploy/v4-test/node_modules/
 # V2 改造后 src/main/resources/static/ 只放 .gitkeep 占位
 # 实际 dist 由 frontend-maven-plugin 生成到 target/classes/static/（不进 git）
 z-*/src/main/resources/static/assets/
+
+/.cache/
+**/__pycache__/
+*.pyc

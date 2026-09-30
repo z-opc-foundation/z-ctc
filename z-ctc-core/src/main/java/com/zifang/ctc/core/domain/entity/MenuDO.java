@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * 应用菜单 DO.
  * <p>
- * 对应表 z_ctc_app_menu (CREATE TABLE 在生产 DB / _doc/004_sql/z-ctc-micro-frontend.sql):
+ * 对应表 z_ctc_app_menu (CREATE TABLE 在生产 DB / _doc/002_deploy/init/z-ctc-authz-override.sql):
  * <ul>
  *   <li>id — PK</li>
  *   <li>app_code — 应用编码 (如 'z-opc')</li>
