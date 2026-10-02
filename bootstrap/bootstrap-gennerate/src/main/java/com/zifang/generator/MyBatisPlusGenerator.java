@@ -17,7 +17,8 @@ public class MyBatisPlusGenerator {
     // 数据库配置
     private static final String DB_URL = "jdbc:mysql://101.37.80.51:3306/biz_service?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8";
     private static final String DB_USER = "zifang";
-    private static final String DB_PASS = "Hhzemol!123";
+    private static final String DB_PASS = System.getenv("Z_BASE_DB_DEFAULT_PASSWORD") == null
+            ? "" : System.getenv("Z_BASE_DB_DEFAULT_PASSWORD"); // 明文只住 lead/004_重要秘钥
     private static final String DB_DRIVER = "com.mysql.cj.jdbc.Driver";
 
     // 生成配置
