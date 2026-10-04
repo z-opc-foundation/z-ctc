@@ -217,6 +217,40 @@
                             <npmVersion>9.6.7</npmVersion>
                         </configuration>
                     </execution>
+                    <!--
+                        兄弟包 z-ctc-frontend-component 必须先构建出 dist/。
+                        它不在 reactor 里（无 pom 引用它），此前没有任何一步会构建它，
+                        而消费端 package.json 依赖 "file:../z-ctc-frontend-component"、
+                        该包 main/module 都指向 ./dist ⇒ 干净机器上 dist 根本不存在，
+                        消费端 vite build 报
+                        "Failed to resolve entry for package @yuku123/z-ctc-frontend-component"，
+                        整个 mvn install 挂在这里（表现为一堆 [ERROR]，与 javac 无关）。
+
+                        同 phase 内的执行顺序按声明顺序，故这两个 execution 必须排在
+                        下面 npm-install / npm-run-build 之前。
+                    -->
+                    <execution>
+                        <id>npm-install-component</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <workingDirectory>${project.basedir}/../_frontend/z-ctc-frontend-component</workingDirectory>
+                            <arguments>install --no-audit --no-fund</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-run-build-component</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <workingDirectory>${project.basedir}/../_frontend/z-ctc-frontend-component</workingDirectory>
+                            <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>npm-install</id>
                         <goals>
