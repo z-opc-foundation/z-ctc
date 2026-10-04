@@ -1,5 +1,6 @@
 package com.zifang.ctc.core.domain.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.zifang.ctc.core.domain.entity.DeptDO;
 import com.zifang.ctc.core.domain.mapper.DeptMapper;
 import com.zifang.ctc.core.domain.service.DeptDbService;
@@ -85,5 +86,16 @@ public class DeptDbServiceImpl implements DeptDbService {
     @Override
     public List<DeptDO> selectByOrgCode(String tenantCode, String domainCode, String orgCode) {
         return deptMapper.selectByOrgCode(tenantCode, domainCode, orgCode);
+    }
+
+    /**
+     * 按条件查询部门列表。
+     *
+     * @param wrapper MyBatis-Plus 查询条件
+     * @return 匹配的部门列表
+     */
+    @Override
+    public List<DeptDO> selectByQuery(QueryWrapper<DeptDO> wrapper) {
+        return deptMapper.selectList(wrapper);
     }
 }

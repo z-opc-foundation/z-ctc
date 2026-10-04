@@ -34,6 +34,21 @@ public class DeptDO implements Serializable {
     @TableField("dept_name")
     private String deptName;
 
+    /**
+     * 父部门编码；根部门为 null。
+     *
+     * <p><b>2026-10-04 新增</b>。此前 {@code z_ctc_ac_dept} 表<b>没有父级列</b>，
+     * 而并列的旧表 {@code z_ctc_dept} 有 {@code parent_code} —— 于是本仓
+     * {@code DeptDO} 无从表达层级，<b>部门树退化成平铺列表</b>。
+     * 对照证据：{@code _doc/002_deploy/init/code-based-migration.sql} 曾把
+     * {@code z_ctc_dept} 的层级迁成 {@code dept_code + parent_code} 三元组，
+     * 但 ac 体系（新表）没跟上。
+     *
+     * <p>配套迁移：{@code z_ctc_ac_dept_add_parent_code.sql}（加列 + 回填自引用检查）。
+     */
+    @TableField("parent_code")
+    private String parentCode;
+
     @TableField("status")
     private Integer status;
 
@@ -101,6 +116,14 @@ public class DeptDO implements Serializable {
 
     public void setDeptName(String deptName) {
         this.deptName = deptName;
+    }
+
+    public String getParentCode() {
+        return parentCode;
+    }
+
+    public void setParentCode(String parentCode) {
+        this.parentCode = parentCode;
     }
 
     public Integer getStatus() {
