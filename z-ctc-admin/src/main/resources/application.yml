@@ -19,10 +19,19 @@ z:
   base:
     db:
       ctc:
-        # FEATURE: 阿里云 RDS 直连,加 allowPublicKeyRetrieval=true 解决 mysql 8 公钥问题
-        url: jdbc:mysql://rm-bp108uqlgwn712k54ho.mysql.rds.aliyuncs.com:3306/oc?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-        username: ${CTC_DB_USERNAME:zifang}
-        password: ${CTC_DB_PASSWORD:}
+        # 2026-10-04: 原来是写死的字面量 URL（rm-bp108uqlgwn712k54ho.mysql.rds.aliyuncs.com），
+        # 与下面 default.* 的 host/port/database 两条配置各走各的 —— 后果有二：
+        #   1) 改 .env 里的 DB_HOST 只切得动 default.*，切不动这条字面量；
+        #   2) 凭据读的是 CTC_DB_USERNAME / CTC_DB_PASSWORD，而 compose 的 ctc 服务只注入
+        #      DB_USERNAME / DB_PASSWORD，全仓没有一处定义过 CTC_DB_* ⇒ 密码恒为空字符串，
+        #      连生产库必然认证失败。
+        # 现在统一从 compose/.env 的同一组参数取值（DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/
+        # DB_PASSWORD），切库只改 .env 一处。默认值保留为本机 mysql 容器，
+        # 保持「没配环境变量时不要连生产」。
+        # 固定串：阿里云 RDS 直连，allowPublicKeyRetrieval=true 解决 mysql 8 公钥问题。
+        url: jdbc:mysql://${DB_HOST:mysql.zopc.local}:${DB_PORT:3306}/${DB_DATABASE:oc}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+        username: ${DB_USERNAME:zopc}
+        password: ${DB_PASSWORD:}
         initial-size: 5
         min-idle: 5
         max-active: 20
