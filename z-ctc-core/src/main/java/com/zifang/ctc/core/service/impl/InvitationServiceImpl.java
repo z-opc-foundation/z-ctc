@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
+import java.security.SecureRandom;
 import com.zifang.util.core.lang.RandomUtil;
 
 /**
@@ -41,6 +41,11 @@ public class InvitationServiceImpl implements InvitationService {
      */
     private static final String INVITE_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final int INVITE_CODE_LENGTH = 6;
+    /**
+     * 邀请码随机源。邀请码是注册凭证（6 位，字母表去掉了易混字符，约 3.0e8 空间），
+     * 早前用 ThreadLocalRandom —— 与 Math.random 同族的非密码学 PRNG，可被预测。改用 SecureRandom。
+     */
+    private static final SecureRandom INVITE_RANDOM = new SecureRandom();
     private static final int DEFAULT_EXPIRE_DAYS = 7;
 
     private final InvitationDbService invitationDbService;
@@ -282,7 +287,7 @@ public class InvitationServiceImpl implements InvitationService {
         for (int attempt = 0; attempt < 10; attempt++) {
             StringBuilder sb = new StringBuilder(INVITE_CODE_LENGTH);
             for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
-                sb.append(INVITE_CODE_CHARS.charAt(ThreadLocalRandom.current().nextInt(INVITE_CODE_CHARS.length())));
+                sb.append(INVITE_CODE_CHARS.charAt(INVITE_RANDOM.nextInt(INVITE_CODE_CHARS.length())));
             }
             String code = sb.toString();
             if (invitationDbService.selectByInviteCode(code) == null) {

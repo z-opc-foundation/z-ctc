@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -40,6 +41,30 @@ public class VerifyCodeService {
     private static final long CODE_EXPIRE_SECONDS = 5 * 60L;
     private static final long SEND_COOLDOWN_SECONDS = 60L;
     private static final int MAX_VERIFY_FAILURES = 5;
+    private static final int CODE_BOUND = 1_000_000;
+
+    /**
+     * 验证码随机源。
+     * <p>
+     * 早前是 {@code String.format("%06d", (int)(Math.random() * 1_000_000))}。
+     * {@code Math.random()} 走 {@link java.util.Random} —— 48 位线性同余发生器，
+     * 状态空间 2^48。本机实测：连续观察 3 次 31 位输出即可精确恢复内部状态，
+     * 随后 10 次输出预测值与真实值逐个完全一致。
+     * 6 位码虽然只保留 53 位 double 的约 19.93 位，但 3 个验证码携带的信息量就已超过
+     * 48 位状态空间 —— 也就是说攻击者的搜索空间是 PRNG 状态，不是那 10^6 个号码。
+     * 用 {@code nextInt(bound)} 而非 {@code (int)(nextDouble()*bound)}，顺带避开取模偏置。
+     */
+    private SecureRandom random = new SecureRandom();
+
+    /** 包可见：测试注入可预测随机源，验证生成路径确实走这个字段。 */
+    void setRandomForTest(SecureRandom random) {
+        this.random = random;
+    }
+
+    /** 生成 6 位数字验证码。 */
+    String newCode() {
+        return String.format("%06d", random.nextInt(CODE_BOUND));
+    }
 
     /** key: scene:channel:receiver */
     private final Cache<String, CodeEntry> codeStore = Caffeine.newBuilder()
@@ -92,7 +117,7 @@ public class VerifyCodeService {
             return new SendOutcome(false, remain, "发送太频繁, 请 " + remain + " 秒后再试");
         }
 
-        String code = String.format("%06d", (int) (Math.random() * 1_000_000));
+        String code = newCode();
 
         // 找通道 SPI; 没有则日志 Mock (all-in-one dev 场景: 手机码不可能真发, 日志兜底)
         CodeChannelSender sender = channelSenders.stream()

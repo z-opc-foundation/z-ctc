@@ -76,6 +76,19 @@
             <artifactId>spring-boot-starter-validation</artifactId>
             <scope>provided</scope>
         </dependency>
+
+        <!--
+            本模块原先零可执行测试：VerifyCodeService 的验证码生成（曾用 Math.random）、
+            AuthnController 的登录限流都没有任何回归闸。补上测试依赖。
+            注：z-ctc-core / z-ctc-sso 下形如 *Test 的类里有两个是 public static void main
+            自测（AcDeptTreeServiceTest / AcStaffSimpleServiceTest / JwtUtilTest），
+            surefire 不执行它们，"No tests to run" 就是它们造成的 —— 别被那个数字骗了。
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <!-- 迁移删掉了本模块那条 maven-compiler-plugin 3.10.1 的字面 <version> 声明（模块 pom 里的
