@@ -34,7 +34,7 @@
 |------------|--------------------------|-------|
 | z-ops      | 运维平台（Go）：Docker 管理、宿主机监控 | 规划中   |
 | z-task     | 任务中心：任务创建/分配/跟踪          | 已有 ⚠️ |
-| z-wf       | 工作流/审批中心：流程定义、审批路由       | 已有 ⚠️ |
+| z-camuda       | 工作流/审批中心：流程定义、审批路由       | 已有 ⚠️ |
 | z-schedule | 调度中心：分布式定时任务             | 已有 ⚠️ |
 
 ### 中间件平台层
@@ -74,7 +74,7 @@ z-opc/
 │   └── bootstrap/                           # 启动器
 ├── z-config/                               # 配置中心
 ├── z-task/                                 # 任务中心
-├── z-wf/                                   # 工作流引擎
+├── z-camuda/                                   # 工作流引擎
 ├── z-schedule/                             # 调度中心
 ├── z-mist/                                 # 密钥管理
 ├── z-oss/                                  # 对象存储
@@ -139,7 +139,7 @@ z-opc/
 | main-starter（后端 all-in-one）   | 8080 |
 | main-starter-frontend（前端 dev） | 3000 |
 | z-ctc 独立运行                    | 8092 |
-| z-wf 独立运行                     | 8091 |
+| z-camuda 独立运行                     | 8091 |
 | z-task 独立运行                   | 8090 |
 | z-mist 独立运行                   | 8085 |
 | z-meta 独立运行                   | 8093 |
@@ -151,7 +151,7 @@ z-opc/
 - **ORM**：MyBatis-Plus 3.3.1
 - **数据库名**：`biz_service`
 - **远程地址**：`101.37.80.51:3306`
-- **SQL 脚本**：`_sql/` 目录下按模块分 `z-ctc.sql`、`z-wf.sql`、`z-task.sql` 等
+- **SQL 脚本**：`_sql/` 目录下按模块分 `z-ctc.sql`、`z-camuda.sql`、`z-task.sql` 等
 
 ## 1.8 构建命令
 
