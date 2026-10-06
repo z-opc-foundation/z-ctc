@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -76,6 +77,43 @@ public class VerifyCodeService {
     private List<CodeChannelSender> channelSenders = Collections.emptyList();
 
     /**
+     * 无下发通道时, 是否把<b>明文</b>验证码打进日志 ——
+     * 安全默认值为 {@code false}, 需要靠日志取码的场景显式打开。
+     *
+     * <p>为什么默认关：这条日志的访问面远大于"知道这个手机号验证码"的人。
+     * 日志通常被集中收集、保留期长、可按关键字全文检索；而验证码有效期只有 5 分钟，
+     * 过期后它就是一条无用的敏感数据留在日志里。真正需要它的只有
+     * all-in-one dev 场景（手机码不可能真发），而那种场景加一行配置即可。</p>
+     *
+     * <p>关掉它<b>不影响功能</b>：验证码照常生成、照常写进 {@link #codeStore}、
+     * 照常可校验，只是没人能从日志里看到它。</p>
+     */
+    @Value("${z.ctc.verify-code.mock-log-plain-code:false}")
+    private boolean logPlainCodeInMock;
+
+    /** 包可见：测试注入，钉住"默认关 / 显式开才开"这两侧。 */
+    void setLogPlainCodeInMockForTest(boolean logPlainCodeInMock) {
+        this.logPlainCodeInMock = logPlainCodeInMock;
+    }
+
+    /**
+     * 无下发通道时的提示语 — 含不含明文码由 {@link #logPlainCodeInMock} 决定。
+     *
+     * <p>单独抽出来是为了让"默认不泄露"可以直接被断言：{@code z-ctc-web} 只依赖
+     * {@code log4j-api}（无 {@code log4j-core}），测试里没有任何日志实现能捕获到内容，
+     * 判据只能验这段纯逻辑本身。</p>
+     */
+    String mockChannelNotice(String receiver, String channel, String scene, String code) {
+        if (logPlainCodeInMock) {
+            return "[CODE-MOCK] receiver=" + receiver + " channel=" + channel + " scene=" + scene
+                    + " code=" + code + " (无下发通道, 日志 Mock 明文已显式开启)";
+        }
+        return "[CODE-MOCK] receiver=" + receiver + " channel=" + channel + " scene=" + scene
+                + " 无下发通道, 验证码已生成但未下发; 如需在日志里取码请显式开启 "
+                + "z.ctc.verify-code.mock-log-plain-code=true";
+    }
+
+    /**
      * 发送验证码结果.
      */
     public static class SendOutcome {
@@ -133,8 +171,9 @@ public class VerifyCodeService {
                 return new SendOutcome(false, 0, "验证码发送失败, 请稍后再试");
             }
         } else {
-            log.info("[CODE-MOCK] receiver={} channel={} scene={} code={} (无下发通道, 日志 Mock)",
-                    receiver, channel, scene, code);
+            // 无下发通道（all-in-one dev 场景靠日志兜底）。明文码默认不打，
+            // 见 logPlainCodeInMock 的说明。
+            log.warn(mockChannelNotice(receiver, channel, scene, code));
         }
 
         codeStore.put(key, new CodeEntry(code, now));

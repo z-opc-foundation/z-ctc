@@ -188,4 +188,62 @@ public class VerifyCodeServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.verifyCode(
                 "13800000000", VerifyCodeService.CHANNEL_PHONE, VerifyCodeService.SCENE_LOGIN, "333333"));
     }
+
+    // ---------- 无下发通道时的明文码暴露 ----------
+
+    private static final String KNOWN_CODE = "314159";
+
+    /** 固定随机源，让发出的码确定是 KNOWN_CODE。 */
+    private void sendKnownCode() {
+        service.setRandomForTest(new SecureRandom() {
+            private int done = 0;
+            @Override public int nextInt(int bound) { return done++ == 0 ? 314159 : super.nextInt(bound); }
+        });
+        service.sendCode("13800000000", VerifyCodeService.CHANNEL_PHONE, VerifyCodeService.SCENE_LOGIN);
+    }
+
+    @Test
+    void testPlainCodeAbsentFromMockNoticeByDefault() {
+        // 安全默认值：默认配置下日志里不能出现明文码
+        String notice = service.mockChannelNotice("13800000000", "PHONE", "LOGIN", KNOWN_CODE);
+        assertFalse(notice.contains(KNOWN_CODE),
+                "默认配置下无下发通道的日志里出现了明文验证码: " + notice);
+    }
+
+    @Test
+    void testConfigDefaultIsFalse() throws Exception {
+        // 钉住 @Value 的默认表达式：把 ":false" 改成 ":true" 就是一次真实的安全默认值反转
+        java.lang.reflect.Field f = VerifyCodeService.class.getDeclaredField("logPlainCodeInMock");
+        org.springframework.beans.factory.annotation.Value v =
+                f.getAnnotation(org.springframework.beans.factory.annotation.Value.class);
+        assertNotNull(v, "logPlainCodeInMock 必须是可配置项（@Value），不该写死");
+        // 注意占位符以 } 收尾，比对时要把 } 算进去
+        assertTrue(v.value().endsWith(":false}"),
+                "配置默认值必须是 false（明文码安全默认关闭），实际是 " + v.value());
+    }
+
+    @Test
+    void testPlainCodeAppearsWhenExplicitlyEnabled() {
+        // dev 场景靠日志取码的能力不能被这次安全收口废掉
+        service.setLogPlainCodeInMockForTest(true);
+        String notice = service.mockChannelNotice("13800000000", "PHONE", "LOGIN", KNOWN_CODE);
+        assertTrue(notice.contains(KNOWN_CODE),
+                "显式开启后必须仍能从日志里拿到明文码，否则 dev 场景取不到验证码: " + notice);
+    }
+
+    @Test
+    void testCodeStillVerifiableWhenPlainLoggingOff() {
+        // 防过度修复：关掉明文日志只该影响"能不能从日志看到"，不该影响验证码本身
+        sendKnownCode();
+        service.verifyCode("13800000000", VerifyCodeService.CHANNEL_PHONE,
+                VerifyCodeService.SCENE_LOGIN, KNOWN_CODE);
+    }
+
+    @Test
+    void testCodeStillVerifiableWhenPlainLoggingOn() {
+        service.setLogPlainCodeInMockForTest(true);
+        sendKnownCode();
+        service.verifyCode("13800000000", VerifyCodeService.CHANNEL_PHONE,
+                VerifyCodeService.SCENE_LOGIN, KNOWN_CODE);
+    }
 }

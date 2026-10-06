@@ -161,8 +161,30 @@ MySQL 8 直连需 `allowPublicKeyRetrieval=true`，通过 `druid.connection-prop
 mvn test
 ```
 
+本仓是 **Java 8 口径**（`java.version=1.8`，class-file major 52），
+用 JDK 8 跑测试；本机默认 `java` 是 17，直接 `mvn test` 不是在声明的口径上跑。
+
 端到端验证脚本与三模式启动脚本在 `deploy/`（`bin/start-mode1.sh` ~ `start-mode3.sh`、
 `bin/build-images.sh`、`v4-test/`），k8s 清单在 `deploy/k8s/`，按 `00-namespace` → `05-ingress` 顺序 apply。
+
+### 验证码 Mock 模式的明文码开关
+
+`VerifyCodeService` 在**没有配置任何 `CodeChannelSender` 通道**时会走 Mock 分支
+（all-in-one dev 场景：手机码不可能真发，原本靠日志兜底）。
+
+**明文验证码默认不再打进日志**：
+
+| 配置项 | 默认 | 作用 |
+| --- | --- | --- |
+| `z.ctc.verify-code.mock-log-plain-code` | `false` | `true` 时才在 Mock 提示里带上明文码 |
+
+关掉它**不影响功能**：验证码照常生成、照常写进 `codeStore`、照常可校验，
+只是没人能从日志里看到它。需要靠日志取码的 dev 环境显式打开即可。
+
+理由：这条日志的访问面远大于"知道这个手机号验证码"的人——日志通常被集中收集、
+保留期长、可按关键字全文检索；而验证码只有 5 分钟有效期，过期后它就是一条
+留在日志里、永不失效的敏感数据。Mock 分支同时改为 `warn` 级别，
+因为"没有下发通道"在生产里意味着**用户根本收不到验证码**，值得被注意到。
 
 ---
 
