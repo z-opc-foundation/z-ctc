@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Space, Tabs, Table, Tag, Button } from 'antd';
-import { HelloCtc } from '@yuku123/z-ctc-frontend-component';
+import { HelloCtc } from '@yuku123/z-ctc-component';
 
 // z-ctc 应用层示例：4A 中心主要管理页面（认证 / 授权 / 账号 / 审计）
 // 实际页面由后续迭代填充（FEATURE035 / FEATURE036 ...）

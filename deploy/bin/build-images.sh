@@ -40,17 +40,17 @@ docker build $NO_CACHE \
     .
 
 echo ""
-echo "=== Step 3/3: 构建前端镜像（$ OCI_REGISTRY/z-ctc-frontend:$ IMAGE_VERSION）==="
+echo "=== Step 3/3: 构建前端镜像（$ OCI_REGISTRY/z-ctc-suit:$ IMAGE_VERSION）==="
 docker build $NO_CACHE \
     -f deploy/Dockerfile.frontend \
-    -t "$ OCI_REGISTRY/z-ctc-frontend:$ IMAGE_VERSION" \
+    -t "$ OCI_REGISTRY/z-ctc-suit:$ IMAGE_VERSION" \
     .
 
 if [ "$ PUSH" = "true" ]; then
     echo ""
     echo "=== Pushing to $ OCI_REGISTRY ==="
     docker push "$ OCI_REGISTRY/z-ctc-admin:$ IMAGE_VERSION"
-    docker push "$ OCI_REGISTRY/z-ctc-frontend:$ IMAGE_VERSION"
+    docker push "$ OCI_REGISTRY/z-ctc-suit:$ IMAGE_VERSION"
 fi
 
 echo ""

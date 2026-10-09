@@ -193,7 +193,7 @@
                  <version> 顶得过一切 DM），删掉后统一由 z-boot-parent 的 pluginManagement 下发 3.11.0。 -->
             <!--
                 V2 改造：frontend-maven-plugin 在 generate-resources 阶段跑 npm build
-                workingDirectory 指向 _frontend/z-ctc-frontend/（仓根下，不在 reactor 内）
+                workingDirectory 指向 _frontend/z-ctc-suit/（仓根下，不在 reactor 内）
                 产物 dist/ → 由下面 maven-resources-plugin 复制到 src/main/resources/static/
                 详见 lead/005_技术架构/005_前端工程与中间件部署架构规范.md §1.2 / §6.1 V2
             -->
@@ -202,7 +202,7 @@
                 <artifactId>frontend-maven-plugin</artifactId>
                 <version>1.15.0</version>
                 <configuration>
-                    <workingDirectory>${project.basedir}/../_frontend/z-ctc-frontend</workingDirectory>
+                    <workingDirectory>${project.basedir}/../_frontend/z-ctc-suit</workingDirectory>
                     <installDirectory>${project.build.directory}/frontend</installDirectory>
                 </configuration>
                 <executions>
@@ -218,12 +218,12 @@
                         </configuration>
                     </execution>
                     <!--
-                        兄弟包 z-ctc-frontend-component 必须先构建出 dist/。
+                        兄弟包 z-ctc-component 必须先构建出 dist/。
                         它不在 reactor 里（无 pom 引用它），此前没有任何一步会构建它，
-                        而消费端 package.json 依赖 "file:../z-ctc-frontend-component"、
+                        而消费端 package.json 依赖 "file:../z-ctc-component"、
                         该包 main/module 都指向 ./dist ⇒ 干净机器上 dist 根本不存在，
                         消费端 vite build 报
-                        "Failed to resolve entry for package @yuku123/z-ctc-frontend-component"，
+                        "Failed to resolve entry for package @yuku123/z-ctc-component"，
                         整个 mvn install 挂在这里（表现为一堆 [ERROR]，与 javac 无关）。
 
                         同 phase 内的执行顺序按声明顺序，故这两个 execution 必须排在
@@ -236,7 +236,7 @@
                         </goals>
                         <phase>generate-resources</phase>
                         <configuration>
-                            <workingDirectory>${project.basedir}/../_frontend/z-ctc-frontend-component</workingDirectory>
+                            <workingDirectory>${project.basedir}/../_frontend/z-ctc-component</workingDirectory>
                             <arguments>install --no-audit --no-fund</arguments>
                         </configuration>
                     </execution>
@@ -247,7 +247,7 @@
                         </goals>
                         <phase>generate-resources</phase>
                         <configuration>
-                            <workingDirectory>${project.basedir}/../_frontend/z-ctc-frontend-component</workingDirectory>
+                            <workingDirectory>${project.basedir}/../_frontend/z-ctc-component</workingDirectory>
                             <arguments>run build</arguments>
                         </configuration>
                     </execution>
@@ -275,7 +275,7 @@
             </plugin>
 
             <!--
-                V2 改造：把 _frontend/z-ctc-frontend/dist/ 复制到 target/classes/static/
+                V2 改造：把 _frontend/z-ctc-suit/dist/ 复制到 target/classes/static/
                 （不复制到 src/main/resources/static/，避免污染源码目录 + git 噪声）
                 必须在 frontend-maven-plugin 跑完之后（process-resources > generate-resources）
                 且在默认 maven-resources-plugin 之后（process-resources 阶段默认 src/main/resources -> target/classes）
@@ -296,7 +296,7 @@
                             <overwrite>true</overwrite>
                             <resources>
                                 <resource>
-                                    <directory>${project.basedir}/../_frontend/z-ctc-frontend/dist</directory>
+                                    <directory>${project.basedir}/../_frontend/z-ctc-suit/dist</directory>
                                     <filtering>false</filtering>
                                 </resource>
                             </resources>

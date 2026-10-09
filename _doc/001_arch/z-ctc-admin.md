@@ -88,8 +88,8 @@ deploy 脚本（`deploy_maven_center.sh`）显式 `-pl '!z-ctc-admin'` 做双保
 
 ## 与前端工程的关系
 
-未来 V2 改造后，本目录的 `src/main/resources/static/` 将**由 `_frontend/z-ctc-frontend/` 的 build 产物自动注入**：
-- `_frontend/z-ctc-frontend/dist/` → `z-ctc-admin/src/main/resources/static/`
+未来 V2 改造后，本目录的 `src/main/resources/static/` 将**由 `_frontend/z-ctc-suit/` 的 build 产物自动注入**：
+- `_frontend/z-ctc-suit/dist/` → `z-ctc-admin/src/main/resources/static/`
 - 触发时机：`mvn package` 的 `process-resources` 阶段（通过 `frontend-maven-plugin`）
 - 当前 `static/` 目录里**没有**手放 dist（依赖由 admin 启动后通过 OpenAPI 文档生成前端页面，V2 后会改为 React SPA）
 

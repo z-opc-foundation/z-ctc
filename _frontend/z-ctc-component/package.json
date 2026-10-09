@@ -1,5 +1,5 @@
 {
-  "name": "@yuku123/z-ctc-frontend-component",
+  "name": "@yuku123/z-ctc-component",
   "version": "1.0.1",
   "description": "z-ctc 4A 中心共享 UI 组件层（library mode）—— 与 z-schedule-frontend-component 同规范",
   "type": "module",

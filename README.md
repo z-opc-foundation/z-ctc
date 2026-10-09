@@ -57,8 +57,8 @@ z-ctc/
 ├── z-ctc-admin/           # 可启动演示应用（不进 Maven Central）
 ├── bootstrap/             # 脚手架产物目录，不参与 Maven 发布
 ├── _frontend/             # 配套前端两层
-│   ├── z-ctc-frontend/                    # 业务应用
-│   └── z-ctc-frontend-component/          # 组件库
+│   ├── z-ctc-suit/                    # 业务应用
+│   └── z-ctc-component/          # 组件库
 ├── deploy/                # 部署资产（三种模式 + k8s）
 └── _doc/                  # 文档，见文末「文档目录」
 ```

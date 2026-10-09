@@ -1,5 +1,5 @@
 {
-  "name": "z-ctc-frontend",
+  "name": "z-ctc-suit",
   "version": "1.0.1",
   "description": "z-ctc 4A 中心管理 SPA（应用层）—— 与 z-schedule-frontend 同规范",
   "private": true,
@@ -7,11 +7,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:component": "cd ../z-ctc-frontend-component && npm run build",
+    "build:component": "cd ../z-ctc-component && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@yuku123/z-ctc-frontend-component": "file:../z-ctc-frontend-component",
+    "@yuku123/z-ctc-component": "file:../z-ctc-component",
     "antd": "^5.10.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

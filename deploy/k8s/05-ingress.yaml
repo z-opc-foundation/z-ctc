@@ -25,6 +25,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: z-ctc-frontend
+                name: z-ctc-suit
                 port:
                   number: 80

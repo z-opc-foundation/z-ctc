@@ -9,7 +9,7 @@ export interface HelloCtcProps {
 
 /** 4A 中心示例组件 —— 演示业务方怎么消费 */
 export const HelloCtc: FC<HelloCtcProps> = ({ name = '4A' }) => {
-    return <Button type="primary">Hello {name}（来自 @yuku123/z-ctc-frontend-component）</Button>;
+    return <Button type="primary">Hello {name}（来自 @yuku123/z-ctc-component）</Button>;
 };
 
 /** 重导出 antd 常用组件，省得业务方自己再 import */

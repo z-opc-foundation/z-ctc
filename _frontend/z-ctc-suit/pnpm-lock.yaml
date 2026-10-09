@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      '@yuku123/z-ctc-frontend-component':
-        specifier: file:../z-ctc-frontend-component
-        version: file:../z-ctc-frontend-component(antd@5.29.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@yuku123/z-ctc-component':
+        specifier: file:../z-ctc-component
+        version: file:../z-ctc-component(antd@5.29.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       antd:
         specifier: ^5.10.0
         version: 5.29.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -559,8 +559,8 @@ packages:
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
 
-  '@yuku123/z-ctc-frontend-component@file:../z-ctc-frontend-component':
-    resolution: {directory: ../z-ctc-frontend-component, type: directory}
+  '@yuku123/z-ctc-component@file:../z-ctc-component':
+    resolution: {directory: ../z-ctc-component, type: directory}
     peerDependencies:
       antd: ^5.10.0
       react: ^18.2.0
@@ -1459,7 +1459,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@yuku123/z-ctc-frontend-component@file:../z-ctc-frontend-component(antd@5.29.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@yuku123/z-ctc-component@file:../z-ctc-component(antd@5.29.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       antd: 5.29.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1

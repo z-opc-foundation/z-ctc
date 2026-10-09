@@ -32,8 +32,8 @@ services:
       retries: 3
       start_period: 30s
 
-  z-ctc-frontend:
-    image: ghcr.io/yuku123/z-ctc-frontend:1.0.1
+  z-ctc-suit:
+    image: ghcr.io/yuku123/z-ctc-suit:1.0.1
     build:
       context: ..
       dockerfile: deploy/Dockerfile.frontend

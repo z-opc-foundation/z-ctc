@@ -5,7 +5,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: z-ctc-frontend
+  name: z-ctc-suit
   namespace: ${NAMESPACE}
   labels:
     app.kubernetes.io/name: z-ctc
@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: ${OCI_REGISTRY}/yuku123/z-ctc-frontend:${IMAGE_VERSION}
+          image: ${OCI_REGISTRY}/yuku123/z-ctc-suit:${IMAGE_VERSION}
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
