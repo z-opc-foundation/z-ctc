@@ -15,7 +15,9 @@
     "antd": "^5.10.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.21.0"
+    "react-router-dom": "^6.21.0",
+    "@ant-design/icons": "^5.6.1",
+    "axios": "^1.7.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.55",
@@ -23,6 +25,11 @@
     "@vitejs/plugin-react": "^4.2.1",
     "vite": "^5.1.0"
   },
-  "keywords": ["z-ctc", "4a", "spa", "yuku123"],
+  "keywords": [
+    "z-ctc",
+    "4a",
+    "spa",
+    "yuku123"
+  ],
   "license": "MIT"
 }
