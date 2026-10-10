@@ -1,7 +1,7 @@
 import { Component, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '../../../../_shared/z-frontend-common-local/dist/z-frontend-common.es.js'
-import { menuItems, routeTable } from './pages-manifest'
+import { menuItems, routes } from './pages-manifest'
 import LoginPage from './LoginPage'
 import { Result, Button } from 'antd'
 
@@ -66,7 +66,7 @@ export default function App() {
                     <Route path="/z-ctc/login" element={<LoginRoute />} />
                     <Route element={<ProtectedShell />}>
                         <Route path="/" element={<Navigate to={menuItems[0].key} replace />} />
-                        {routeTable.map((r) => (
+                        {routes.map((r) => (
                             <Route key={r.path} path={r.path} element={<r.Component />} />
                         ))}
                         <Route path="*" element={<NotFound />} />
