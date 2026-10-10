@@ -14,7 +14,7 @@ export const menuItems = [
     { key: '/z-ctc/audit', label: '审计日志', icon: <FileSearchOutlined /> },
 ]
 
-export const routeTable = [
+export const routes = [
     { path: '/z-ctc/home', Component: HomePage },
     { path: '/z-ctc/accounts', Component: AccountsPage },
     { path: '/z-ctc/authn', Component: AuthnPage },
