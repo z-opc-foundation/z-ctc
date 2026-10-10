@@ -14,7 +14,7 @@ export default defineConfig({
     base: '/ctc/',  // ← 关键：dev profile 必须用 /ctc/，否则 /assets/* 会 404
     resolve: {
     dedupe: ['react', 'react-dom', 'react-router-dom', 'antd', '@ant-design/icons', 'axios'],
-        alias: { '@': path.resolve(__dirname, 'src') }
+        alias: { '@': path.resolve(__dirname, 'src'), ...(process.env.LOCAL_SIBLINGS === '1' ? { '@yuku123/z-ctc-component': '../z-ctc-component/src' } : {}) }
     },
     plugins: [react()],
     server: {
