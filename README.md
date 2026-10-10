@@ -252,3 +252,5 @@ _Maintained by the z-opc-foundation organization._
 `04-4a-migration.md` 记录 4A 模型迁移过程。
 
 各文档详细说明见各子目录。
+
+<!-- icon: minimax image-01 placeholder -->
