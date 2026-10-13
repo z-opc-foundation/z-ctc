@@ -94,6 +94,9 @@ CREATE TABLE IF NOT EXISTS `z_ctc_ac_account`
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE =utf8mb4_unicode_ci COMMENT='z-ctc 账号主表';
 
 -- 凭证表 (一个账号可绑定多种身份: 用户名+密码 / 手机号验证码 / 邮箱 / 第三方 unionid)
+-- user_id 不是 account_id: AuthDO (FEATURE049 起) 映射的是 user_id,
+-- 指向 z_ctc_ac_user.id。这份 DDL 一直停在 F037 改名前的形状, 于是干净库上
+-- 第一次注册就报 Unknown column 'user_id' in 'field list'。
 CREATE TABLE IF NOT EXISTS `z_ctc_ac_auth`
 (
     `id`
@@ -103,12 +106,12 @@ CREATE TABLE IF NOT EXISTS `z_ctc_ac_auth`
     AUTO_INCREMENT
     COMMENT
     '主键',
-    `account_id`
+    `user_id`
     BIGINT
     NOT
     NULL
     COMMENT
-    '账号 ID (关联 z_ctc_ac_account.id)',
+    '用户 ID (关联 z_ctc_ac_user.id)',
     `identity_type`
     TINYINT
     NOT
@@ -141,9 +144,9 @@ CREATE TABLE IF NOT EXISTS `z_ctc_ac_auth`
     `identity_type`,
     `identifier`
 ),
-    KEY `idx_account_id`
+    KEY `idx_user_id`
 (
-    `account_id`
+    `user_id`
 )
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE =utf8mb4_unicode_ci COMMENT='z-ctc 凭证表';
 

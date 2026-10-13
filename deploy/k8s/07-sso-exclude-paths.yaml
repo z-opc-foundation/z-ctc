@@ -1,0 +1,32 @@
+# ============================================================
+# z-ctc 的 SSO 闸必须放行自己的登录端点, 否则谁都登不进来。
+#
+# application.yml 里的 exclude-paths 还是 feature049 改名前的路径
+# (/api/auth/register, /api/uc/register ...), 而 AuthnController 现在挂在
+# /api/ctc/authn/* 下面。两者对不上, 于是登录端点自己被闸拦成
+# {"code":401,"message":"未登录或Token无效"} —— 表现得像"要先登录才能登录"。
+#
+# 这里用 Spring 的索引式环境变量整体覆盖这个 List。
+# 注意是**替换**不是追加, 所以 actuator / swagger 那几条必须一起带上。
+#
+# 只放开真正需要匿名的那几条: 换 token / 建号 / 发验证码 / 验证码登录。
+# whoami / select-tenant / switch-tenant 仍留在闸内 —— 它们拿着 token 就能
+# 读用户身份和租户列表, 不该匿名可达。
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: z-ctc-sso-exclude
+  namespace: z-ctc
+data:
+  SSO_EXCLUDE_PATHS_0: /api/ctc/authn/login
+  SSO_EXCLUDE_PATHS_1: /api/ctc/authn/register
+  SSO_EXCLUDE_PATHS_2: /api/ctc/authn/send-code
+  SSO_EXCLUDE_PATHS_3: /api/ctc/authn/phone-login
+  SSO_EXCLUDE_PATHS_4: /api/ctc/authn/register-phone
+  SSO_EXCLUDE_PATHS_5: /api/ctc/authn/reset-password
+  SSO_EXCLUDE_PATHS_6: /doc.html
+  SSO_EXCLUDE_PATHS_7: /webjars/**
+  SSO_EXCLUDE_PATHS_8: /swagger-resources/**
+  SSO_EXCLUDE_PATHS_9: /v3/api-docs/**
+  SSO_EXCLUDE_PATHS_10: /actuator/**

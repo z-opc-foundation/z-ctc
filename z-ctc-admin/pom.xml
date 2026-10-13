@@ -36,10 +36,33 @@
     <dependencyManagement>
         <dependencies>
             <!--
-                FEATURE034 T4: 锁定 mybatis-plus 全套 3.5.3.1 + jsqlparser 4.6.
-                mybatis-plus 3.5.7 编译期依赖 jsqlparser 4.9 的 SelectItem API,
-                与 jsqlparser 4.6 不兼容, 启动时会抛 InstantiationError.
+                FEATURE034 T4: 锁定 mybatis-plus 全套 3.5.3.1 + jsqlparser 4.4.
+
+                原来是 3.5.3.1 配 jsqlparser 4.6, 而且 **starter 没钉** ——
+                地板把它发到 3.5.7, 于是运行期是 starter/autoconfigure 3.5.7 +
+                core/extension 3.5.3.1 + jsqlparser 4.6 的三方错配。
+                后果落在 TenantLineInnerInterceptor: 它经 JsqlParserSupport.parserMulti
+                把每条 SQL 喂给 jsqlparser 重新解析一遍再拼 tenant_code, 而
+                3.5.3.1 的解析调用序列是照 jsqlparser 4.4 的语法表生成的, 撞上 4.6
+                就 CCJSqlParser.ParseException:
+                  Encountered unexpected token: "\n\n\n" <ST_SEMICOLON> at line 8, column 8
+                栈尾是 RelObjectNameList -> Column -> Insert, 看着像"INSERT 语句本身
+                写坏了", 其实是解析器版本错配 —— 同一条 INSERT 手写 jdbc 直连是好的。
+                任何走 MyBatis-Plus 拦截器的写操作都会炸, 注册用户这种基础路径直接 500。
+
+                对齐到 3.5.3.1 实际编译时的那一套: starter 与 autoconfigure 一并钉
+                3.5.3.1, jsqlparser 钉 4.4。三个坐标同版本, 错配消失。
             -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>3.5.3.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot-autoconfigure</artifactId>
+                <version>3.5.3.1</version>
+            </dependency>
             <dependency>
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus</artifactId>
@@ -63,7 +86,7 @@
             <dependency>
                 <groupId>com.github.jsqlparser</groupId>
                 <artifactId>jsqlparser</artifactId>
-                <version>4.6</version>
+                <version>4.4</version>
             </dependency>
             <!-- 同一刀的另外两格：地板的直接 DM 条目把 mybatis 钉 3.5.16 / mybatis-spring 钉 2.0.6
                  （那是地板给 mybatis-plus 3.5.7 配的配套），而 3.5.3.1 那套配套是 3.5.10 / 2.1.2 ——
@@ -143,7 +166,6 @@
         <dependency>
             <groupId>com.github.jsqlparser</groupId>
             <artifactId>jsqlparser</artifactId>
-            <version>4.6</version>
         </dependency>
 
         <!-- 这里原来字面钉 z-boot-datasource-starter 1.0.17：模块 pom 的 <version> 顶得过一切 DM，
