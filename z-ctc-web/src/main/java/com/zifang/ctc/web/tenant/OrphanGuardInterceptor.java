@@ -1,7 +1,7 @@
 package com.zifang.ctc.web.tenant;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zifang.ctc.core.tenant.TenantContext;
+import com.zifang.util.json.JsonUtil;
 import com.zifang.util.core.meta.Result;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,7 +17,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.List;
-import com.zifang.util.core.json.JsonMapperFactory;
 
 /**
  * 游离态守卫拦截器 (FEATURE049).
@@ -74,7 +73,6 @@ public class OrphanGuardInterceptor implements HandlerInterceptor {
     );
 
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
-    private final ObjectMapper objectMapper = JsonMapperFactory.getDefault();
     /** 去掉 context-path 前缀, 取相对应用路径. 部署在 /z-team 等非根 context-path 时,
      * getRequestURI() 返回 /z-team/api/ctc/authn/whoami 会与白名单 /api/ctc/authn/whoami
      * 失配导致全部 403, 必须用 getPathWithinApplication 保证路径与白名单对齐. */
@@ -111,6 +109,6 @@ public class OrphanGuardInterceptor implements HandlerInterceptor {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         Result<Void> body = Result.<Void>fail(msg).code(403);
-        response.getWriter().write(objectMapper.writeValueAsString(body));
+        response.getWriter().write(JsonUtil.toJsonExcludingNulls(body));
     }
 }

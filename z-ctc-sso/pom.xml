@@ -49,6 +49,11 @@
             <groupId>io.github.yuku123</groupId>
             <artifactId>z-util-http</artifactId>
         </dependency>
+        <!-- 自研 JSON 门面 (com.zifang.util.json.JsonUtil)，版本由根 pom DM 钉 1.2.0 -->
+        <dependency>
+            <groupId>io.github.yuku123</groupId>
+            <artifactId>z-util-parser-json</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>com.baomidou</groupId>
