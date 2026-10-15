@@ -2,6 +2,7 @@ import { Component, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@yuku123/z-frontend-common'
 import { menuItems, routes } from './pages-manifest'
+import { at } from './routes-base'
 import LoginPage from './LoginPage'
 import { Result, Button } from 'antd'
 
@@ -21,7 +22,7 @@ function NotFound() {
             status="404"
             title="页面不存在"
             subTitle="路由表里没有这条路径。"
-            extra={<Button type="primary" onClick={() => { window.location.href = '/z-ctc/home' }}>去首页</Button>}
+            extra={<Button type="primary" onClick={() => { window.location.href = at('/home') }}>去首页</Button>}
         />
     )
 }
@@ -36,7 +37,7 @@ function ProtectedShell() {
 
     useEffect(() => {
         if (!localStorage.getItem('token')) {
-            window.location.replace('/z-ctc/login')
+            window.location.replace(at('/login'))
             return
         }
         const raw = localStorage.getItem('userInfo')
@@ -63,7 +64,7 @@ export default function App() {
         <ErrorBoundary>
             <BrowserRouter>
                 <Routes>
-                    <Route path="/z-ctc/login" element={<LoginRoute />} />
+                    <Route path={at('/login')} element={<LoginRoute />} />
                     <Route element={<ProtectedShell />}>
                         <Route path="/" element={<Navigate to={menuItems[0].key} replace />} />
                         {routes.map((r) => (

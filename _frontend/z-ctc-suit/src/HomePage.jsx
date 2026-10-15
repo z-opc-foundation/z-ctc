@@ -2,6 +2,7 @@ import { Card, Col, Row, Space, Tag, Typography } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { menuItems } from './pages-manifest'
+import { at } from './routes-base'
 
 const { Title, Paragraph } = Typography
 
@@ -15,7 +16,7 @@ export default function HomePage() {
         if (raw) { try { setUser(JSON.parse(raw)) } catch { setUser({ name: raw }) } }
     }, [])
 
-    const cards = menuItems.filter((m) => m.key !== '/z-ctc/home')
+    const cards = menuItems.filter((m) => m.key !== at('/home'))
 
     return (
         <div>

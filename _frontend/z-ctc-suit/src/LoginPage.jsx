@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button, Card, Form, Input, message } from 'antd'
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
+import { at } from './routes-base'
 
 /** 登录页（lead 008 §16）—— CTC/SSO 接入前短期 mockAuth（hard-coded admin/123456）。 */
 const MOCK_AUTH = { username: 'admin', password: '123456', user: { name: 'admin', role: '管理员' } }
@@ -15,7 +16,7 @@ export default function LoginPage() {
                 localStorage.setItem('token', 'mock-' + MOCK_AUTH.username)
                 localStorage.setItem('userInfo', JSON.stringify(MOCK_AUTH.user))
                 message.success('登录成功（mock 模式，待 CTC/SSO 接入）')
-                window.location.href = '/z-ctc/home'
+                window.location.href = at('/home')
             } else {
                 message.error('用户名或密码错误（默认 admin/123456）')
             }

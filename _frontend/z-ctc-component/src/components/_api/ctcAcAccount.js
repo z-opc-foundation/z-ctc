@@ -5,11 +5,11 @@
  *   - AccountController  (/api/ctc/ac/accounts)  : 全部 CRUD + 状态/密码/分配角色
  *   - LoginLogController (/api/ctc/ac/login-log) : 1 endpoint
  *
- * 注意: @/common/utils/request 的响应拦截器已统一解包,
+ * 注意: @yuku123/z-frontend-common 的响应拦截器已统一解包,
  *       业务层拿到的 r 已经是内层数据, 不需要再 .then(r => r.data).
  */
 
-import {createRequest} from '@/common/utils/request'
+import {createRequest} from '@yuku123/z-frontend-common'
 
 let _baseURL = '/api'
 

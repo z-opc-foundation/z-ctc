@@ -8,7 +8,7 @@
  *   - /api/ctc/authz/roles/resources?roleId= — 角色拥有的资源
  */
 
-import {createRequest} from '@/common/utils/request'
+import {createRequest} from '@yuku123/z-frontend-common'
 import {ctcAuthorizationApi} from './ctcAuthorization'
 import {ctcAcAccountApi} from './ctcAcAccount'
 

@@ -14,11 +14,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGenerator;
+import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.resource.PathResourceResolver;
 
 import javax.sql.DataSource;
+import java.io.IOException;
 
 /**
  * z-ctc-web 自动配置 (4A 中心 - 主装配点).
@@ -73,6 +77,34 @@ public class ZCompanyCtcWebAutoConfiguration extends ModuleDataSourceTemplate im
         registry.addInterceptor(orphanGuardInterceptor())
                 .addPathPatterns("/api/**")
                 .order(0);  // 高优先级, 在业务 controller 之前
+    }
+
+    /**
+     * SPA history fallback: 前端是 BrowserRouter, 刷新 /home /audit 这类路径时
+     * Spring 找不到静态资源就直接 404 (返回 JSON), 浏览器拿不到 index.html 就白屏。
+     * vite dev / vite preview 自带 fallback, 把这个洞完全掩盖了, 只有线上才现形。
+     * <p>
+     * 排除 /api/** 与真实静态资源(/assets/**、/icon.png 等), 其余一律 forward 到 index.html。
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/**")
+                .addResourceLocations("classpath:/static/")
+                .resourceChain(true)
+                .addResolver(new PathResourceResolver() {
+                    @Override
+                    protected Resource getResource(String resourcePath, Resource location) throws IOException {
+                        Resource requested = location.createRelative(resourcePath);
+                        if (requested.exists() && requested.isReadable()) {
+                            return requested;
+                        }
+                        // 命中不了就当 SPA 路由, 交回 index.html
+                        if (resourcePath.startsWith("api/") || resourcePath.startsWith("assets/")) {
+                            return null;
+                        }
+                        return location.createRelative("index.html");
+                    }
+                });
     }
 
     @Bean("dataSourceCtc")

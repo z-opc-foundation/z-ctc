@@ -4,11 +4,11 @@
  * 后端端点 (z-meta):
  *   - DictController (/api/dict) : 字典类型 + 字典项 CRUD
  *
- * 注意: @/common/utils/request 已统一在响应拦截器中解包 Result<T> 与裸 Map,
+ * 注意: @yuku123/z-frontend-common 已统一在响应拦截器中解包 Result<T> 与裸 Map,
  *       所以业务层拿到的 r 已经是内层 data, 不需要再 .then(r => r.data).
  */
 
-import {createRequest} from '@/common/utils/request'
+import {createRequest} from '@yuku123/z-frontend-common'
 
 let _baseURL = '/api'
 

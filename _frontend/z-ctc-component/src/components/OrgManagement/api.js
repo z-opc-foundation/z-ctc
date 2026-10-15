@@ -10,14 +10,14 @@
  *   id, tenantCode, domainCode, orgCode, orgName, status, description, extConfig,
  *   createdAt, createdBy, updatedAt, updatedBy
  *
- * 注意: @/common/utils/request 的响应拦截器已统一解包,
+ * 注意: @yuku123/z-frontend-common 的响应拦截器已统一解包,
  *       业务层拿到的 r 已经是内层数据, 不需要再 .then(r => r.data).
  * 统一规约: 全部接口均使用请求参数 (?xxx=), 不使用路径变量.
  *
  * 租户 / 域由组件使用者通过 props 传入 (本组件不耦合 z-meta).
  */
 
-import {createRequest} from '@/common/utils/request'
+import {createRequest} from '@yuku123/z-frontend-common'
 
 let _baseURL = '/api'
 

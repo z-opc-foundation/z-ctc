@@ -9,12 +9,12 @@
  *   TenantDO: id, tenantCode, tenantName, status, description, createdAt, updatedAt
  *   DomainDO: id, domainCode, domainName, tenantCode, status, description, createdAt, updatedAt
  *
- * 注意: @/common/utils/request 的响应拦截器已统一解包 Result<T>,
+ * 注意: @yuku123/z-frontend-common 的响应拦截器已统一解包 Result<T>,
  *       业务层拿到的 r 已经是内层数据, 不需要再 .then(r => r.data).
  * 统一规约: 全部接口均使用请求参数 (?xxx=), 不使用路径变量.
  */
 
-import {createRequest} from '@/common/utils/request'
+import {createRequest} from '@yuku123/z-frontend-common'
 
 let _baseURL = '/api'
 

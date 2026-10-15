@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react'
 import {Card, Col, Row, Statistic} from 'antd'
 import {AppstoreOutlined, LinkOutlined, SafetyCertificateOutlined, TeamOutlined} from '@ant-design/icons'
 import {PageHeader} from '@/common/components/ui'
-import {createRequest} from '@/common/utils/request'
+import {createRequest} from '@yuku123/z-frontend-common'
 
 const request = createRequest({baseURL: '/api', timeout: 10000})
 

@@ -5,11 +5,11 @@
  *   - LoginLogController (/api/ctc/ac/login-log) : GET /list, /page, /recent
  *
  * 后端返回裸 Map { total, list, page, size }, 不做 Result 解包.
- * 注意: @/common/utils/request 的响应拦截器会保持 Map 原样向下传,
+ * 注意: @yuku123/z-frontend-common 的响应拦截器会保持 Map 原样向下传,
  *       所以业务层拿到的 r 已经是 Map, 不需要再 .then(r => r.data).
  */
 
-import {createRequest} from '@/common/utils/request'
+import {createRequest} from '@yuku123/z-frontend-common'
 
 let _baseURL = '/api'
 
