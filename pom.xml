@@ -84,9 +84,11 @@
 
     <properties>
         <!-- 项目自身版本（CI-friendly versions 根，发版改这一处即可）。
+             1.0.4: 装配层改名后首发 —— z-ctc-client-spring-boot-starter → z-ctc-spring-boot-starter。
+             这是新坐标在 Central 上的首个版本，1.0.3 的旧坐标不再维护。
              1.0.3: 修 SsoAutoConfiguration 把 null TokenService 交给 SsoInterceptor
              （addInterceptors 早于 @Bean 方法执行）→ Bearer 路径必 500。 -->
-        <revision>1.0.3</revision>
+        <revision>1.0.4</revision>
 
         <!-- 删掉的版本键逐格按**坐标**判过（parent_preflight.py 第 2/5 节），父链都供得到：
              java.version=8→1.8、maven.compiler.source/target=8、project.build.sourceEncoding=UTF-8、
