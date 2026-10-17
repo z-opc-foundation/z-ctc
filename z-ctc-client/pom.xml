@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.yuku123</groupId>
+        <artifactId>z-ctc</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>z-ctc-client</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Z CTC Client</name>
+    <description>
+        z-ctc 4A 中心 HTTP SDK。供**不再内嵌 z-ctc-web 的进程**使用（典型是 k8s 里
+        各自独立成工作负载的板块)：登录态查询 + 权限读 + 直挂授权写。
+        形态照 z-team-bench-client / z-team-evolution-client：接口 + Remote 实现 + 静态 Factory，
+        HttpURLConnection，零框架依赖，不依赖 Spring。
+    </description>
+
+    <dependencies>
+        <!-- 只依赖 *-common。DTO 一律在本模块自定义 (model 包)：
+             不把 ResourceDO / UserGrantDO 这类持久化实体泄漏给消费方。 -->
+        <dependency>
+            <groupId>io.github.yuku123</groupId>
+            <artifactId>z-ctc-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- JSON（与 bench-client / evolution-client / msg-client 同风格） -->
+        <dependency>
+            <groupId>io.github.yuku123</groupId>
+            <artifactId>z-util-parser-json</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <proc>none</proc>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

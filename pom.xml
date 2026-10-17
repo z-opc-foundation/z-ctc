@@ -60,6 +60,20 @@
         <module>z-ctc-sso</module>
         <module>z-ctc-web</module>
         <!--
+            z-ctc-client: 4A 中心授权数据 (authz 域) 的 HTTP SDK, **裸能力**, 零 Spring 依赖。
+            存在的理由: k8s 下各板块自成分离工作负载后, 消费方不再内嵌 z-ctc-web
+            (那会让每个进程长出第二份 RBAC, 且各自 @MapperScan 的 bean 名互相污染),
+            改为只依赖本 SDK 走 HTTP 调过来。与 z-team-bench-client 同风格。
+            注意范围: 只管「这个用户有哪些权限点」。登录态 (token 验签) 是 z-ctc-sso 的事,
+            那条链路打 /api/ctc/authn/verify 且不查库, 故障域与本 SDK 必须分开。
+        -->
+        <module>z-ctc-client</module>
+        <!--
+            z-ctc-client-spring-boot-starter: 上面那个裸 SDK 的 Spring Boot 装配层,
+            只做「配了就给 bean」这一件事, 不含业务逻辑。非 Spring 场景用 z-ctc-client。
+        -->
+        <module>z-ctc-client-spring-boot-starter</module>
+        <!--
             z-ctc-admin: 留 reactor 以享受统一构建，但 maven.deploy.skip=true，
             永远不上 Maven Central（产物仅作 docker 镜像源 / 本地 java -jar 演示）。
             详见 lead/005_技术架构/005_前端工程与中间件部署架构规范.md §2
@@ -69,8 +83,10 @@
     </modules>
 
     <properties>
-        <!-- 项目自身版本（CI-friendly versions 根，发版改这一处即可） -->
-        <revision>1.0.2</revision>
+        <!-- 项目自身版本（CI-friendly versions 根，发版改这一处即可）。
+             1.0.3: 修 SsoAutoConfiguration 把 null TokenService 交给 SsoInterceptor
+             （addInterceptors 早于 @Bean 方法执行）→ Bearer 路径必 500。 -->
+        <revision>1.0.3</revision>
 
         <!-- 删掉的版本键逐格按**坐标**判过（parent_preflight.py 第 2/5 节），父链都供得到：
              java.version=8→1.8、maven.compiler.source/target=8、project.build.sourceEncoding=UTF-8、
