@@ -1,0 +1,63 @@
+# 08-kapi-ingressroute.yaml
+#
+# kapi 统一后端域名下 z-ctc 这一刀的转发规则（2026-10-17 补录进仓）。
+#
+# 为什么补录：集群里这两个对象 2026-10-14 就存在，但**仓库里从没有过清单**（当时直接
+# kubectl apply 的漂移资源），而且规则本身是错的 —— 老口径
+# `Host(kapi.zopc.top) && PathPrefix(/ctc)` + stripPrefix(/ctc)：
+#   - 前端真实路径是 /api/ctc/authn/login，压根不匹配 PathPrefix(/ctc) ⇒ 实测 404
+#   - 旧形状 /ctc/authn/login 剥完变成 /authn/login ⇒ 实测 405
+# 即「两条都不通」。这里按统一口径重写。
+#
+# 口径（与其他板块的 /kapi/<app>/ 规则同源，2026-10-17 CEO 钉）：
+#   浏览器请求  /kapi/z-ctc/api/ctc/authn/login
+#   剥掉前缀    /api/ctc/authn/login
+#   落到本仓    AuthnController @RequestMapping("/api/ctc/authn")   ← 逐字对上
+#   即：**只剥 /kapi/<应用> 这层应用前缀，其余原样透传**，不额外动 /api。
+#
+# Host 覆盖 opc.zopc.top 与 kapi.zopc.top 两个域：
+#   - opc.zopc.top 是主壳（opc.zopc.top/ 的前端），前端按设计把 ctc 请求发到同域
+#     /kapi/z-ctc/**；Traefik 的 Host+PathPrefix 规则比那条 catch-all `/` 更长更具体，
+#     会优先命中，不用改 z-opc 的 Ingress。
+#   - kapi.zopc.top 是终局形态的统一后端域名，先带上，避免以后再改一遍。
+#
+# ⚠ TLS 不在这里声明：公网 HTTPS 在 101.37.80.51 的 nginx 终结（frps 隧道回家），
+#   Traefik 只吃明文 80 端口。集群里现有的 zopc-top Ingress 也都没有 tls 段。
+#
+# ⚠ 本文件**不含任何 Secret**，可以安全 apply。它只引用 Service，不改 Secret 对象
+#   （不要在本仓用 kubectl apply 碰 secret，那会覆盖集群里的真值）。
+
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: kapi-strip-ctc
+  namespace: z-ctc
+spec:
+  stripPrefix:
+    prefixes:
+      - /kapi/z-ctc
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: kapi
+  namespace: z-ctc
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`opc.zopc.top`) && PathPrefix(`/kapi/z-ctc`)
+      middlewares:
+        - name: kapi-strip-ctc
+      services:
+        - name: z-ctc-admin
+          port: 8888
+    - kind: Rule
+      match: Host(`kapi.zopc.top`) && PathPrefix(`/kapi/z-ctc`)
+      middlewares:
+        - name: kapi-strip-ctc
+      services:
+        - name: z-ctc-admin
+          port: 8888
