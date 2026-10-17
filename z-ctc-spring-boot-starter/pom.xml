@@ -11,10 +11,10 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>z-ctc-client-spring-boot-starter</artifactId>
+    <artifactId>z-ctc-spring-boot-starter</artifactId>
     <packaging>jar</packaging>
 
-    <name>Z CTC Client Spring Boot Starter</name>
+    <name>Z CTC Spring Boot Starter</name>
     <description>
         z-ctc 授权 SDK 的 Spring Boot 装配层。**只做装配，不含业务逻辑**——
         裸能力全在 z-ctc-client（接口 + Remote 实现 + 静态 Factory，零 Spring 依赖）。

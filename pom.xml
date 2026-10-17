@@ -69,10 +69,10 @@
         -->
         <module>z-ctc-client</module>
         <!--
-            z-ctc-client-spring-boot-starter: 上面那个裸 SDK 的 Spring Boot 装配层,
+            z-ctc-spring-boot-starter: 上面那个裸 SDK 的 Spring Boot 装配层,
             只做「配了就给 bean」这一件事, 不含业务逻辑。非 Spring 场景用 z-ctc-client。
         -->
-        <module>z-ctc-client-spring-boot-starter</module>
+        <module>z-ctc-spring-boot-starter</module>
         <!--
             z-ctc-admin: 留 reactor 以享受统一构建，但 maven.deploy.skip=true，
             永远不上 Maven Central（产物仅作 docker 镜像源 / 本地 java -jar 演示）。

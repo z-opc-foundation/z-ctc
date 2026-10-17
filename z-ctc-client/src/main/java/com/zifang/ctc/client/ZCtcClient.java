@@ -20,7 +20,7 @@ import java.util.List;
  *
  * <p><b>与 starter 的关系</b>：本模块是<b>裸 SDK</b>，零 Spring 依赖，
  * 由 {@link ZCtcClientFactory#remote(String)} 产出可直接使用的对象。
- * 要「加依赖就得到 bean」用 {@code z-ctc-client-spring-boot-starter}，
+ * 要「加依赖就得到 bean」用 {@code z-ctc-spring-boot-starter}，
  * 它只做装配，不含新逻辑。
  *
  * <p><b>鉴权</b>：4A 中心的 {@code SsoInterceptor} 拦截 {@code /api/**}，
