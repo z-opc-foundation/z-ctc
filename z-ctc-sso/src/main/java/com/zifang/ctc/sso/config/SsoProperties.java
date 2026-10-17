@@ -26,6 +26,19 @@ public class SsoProperties {
     // token验证服务地址
     private String authServerUrl = "http://localhost:8080/auth/verify";
 
+    /**
+     * 4A 中心的 base URL。配了 = 本进程是<b>消费方</b>，token 交回中心用
+     * {@code /api/ctc/authn/verify} 验签（{@link RemoteTokenService}，该端点不查数据库）；
+     * 留空 = 本进程自己就是 4A 中心（all-in-one），本地验签（{@link LocalTokenService}）。
+     *
+     * <p>这就是「拆成独立工作负载」那一刀：消费方不再内嵌 4A 中心的实现，
+     * 只保留同一套 {@code SsoContext} / {@code SsoInterceptor} 门面。
+     *
+     * <p>注意与授权数据那条链路（{@code z-ctc-client}）是两回事：本项管登录态，
+     * 那个管权限点。两者故障域必须分开，故本模块不依赖 {@code z-ctc-client}。
+     */
+    private String ctcBaseUrl = "";
+
     // 域名 → 租户/域 覆盖规则 (YAML: sso.domain-overrides)
     private List<DomainOverride> domainOverrides = new ArrayList<>();
 
@@ -104,6 +117,19 @@ public class SsoProperties {
 
     public void setAuthServerUrl(String authServerUrl) {
         this.authServerUrl = authServerUrl;
+    }
+
+    public String getCtcBaseUrl() {
+        return ctcBaseUrl;
+    }
+
+    public void setCtcBaseUrl(String ctcBaseUrl) {
+        this.ctcBaseUrl = ctcBaseUrl;
+    }
+
+    /** 是否走远端 4A 中心验签（即本进程是消费方，不是 4A 中心本身）。 */
+    public boolean isRemoteCtc() {
+        return ctcBaseUrl != null && !ctcBaseUrl.trim().isEmpty();
     }
 
     public List<DomainOverride> getDomainOverrides() {
