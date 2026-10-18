@@ -33,7 +33,7 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {ctcAcAccountApi, ctcAcLoginLogApi} from './api'
-import {PageHeader, SearchInput} from '@/common/components/ui'
+import {PageHeader, SearchInput} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 账号管理页 (4A AC 域) — 标准数据管理布局

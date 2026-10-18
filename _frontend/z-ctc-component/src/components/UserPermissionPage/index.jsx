@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react'
 import {Button, Card, Empty, List, Select, Space, Table, Tag, Tree, Typography} from 'antd'
 import {ReloadOutlined} from '@ant-design/icons'
 import {userPermissionApi} from '../_api/userPermission'
-import {PageHeader, TableToolbar} from '@/common/components/ui'
+import {PageHeader, TableToolbar} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 4A 用户权限 — 查看某用户拥有的角色 + 资源（权限点）树

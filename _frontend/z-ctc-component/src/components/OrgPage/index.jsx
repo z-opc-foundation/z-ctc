@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react'
 import {OrgManagement} from '../OrgManagement'
 import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi} from '../TenantManagement/api'
-import {PageHeader} from '@/common/components/ui'
+import {PageHeader} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 4A 中心 / 组织管理 (4a/org).

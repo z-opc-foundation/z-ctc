@@ -3,7 +3,7 @@ import {Card, Col, Row, Select, Space, Statistic, Table, Tabs, Tag, Tooltip} fro
 import {LoginOutlined, ReloadOutlined, SearchOutlined} from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {loginLogApi} from '../_api/loginLog'
-import {PageHeader, SearchInput} from '@/common/components/ui'
+import {PageHeader, SearchInput} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 审计中心 — 按类型 Tabs 隔离日志

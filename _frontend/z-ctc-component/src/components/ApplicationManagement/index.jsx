@@ -12,7 +12,7 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {ctcAuthorizationApi, metaAppApi} from './api'
-import {EmptyState, PageHeader} from '@/common/components/ui'
+import {EmptyState, PageHeader} from '@yuku123/z-frontend-common/ui'
 
 
 /**

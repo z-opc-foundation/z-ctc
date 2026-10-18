@@ -102,6 +102,12 @@ public class ZCompanyCtcWebAutoConfiguration extends ModuleDataSourceTemplate im
                         if (resourcePath.startsWith("api/") || resourcePath.startsWith("assets/")) {
                             return null;
                         }
+                        // 带扩展名的不是前端路由：vite base 配错时 index.html 会去请求
+                        // /xxx/assets/x.js，回 index.html 会得到一个 200 text/html 的假成功，
+                        // 浏览器只报 "Failed to fetch dynamically imported module"，看不出是 base 错了。
+                        if (resourcePath.lastIndexOf('.') > resourcePath.lastIndexOf('/')) {
+                            return null;
+                        }
                         return location.createRelative("index.html");
                     }
                 });

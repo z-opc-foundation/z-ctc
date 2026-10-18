@@ -30,7 +30,7 @@ import {
     UndoOutlined,
 } from '@ant-design/icons'
 import {ctcAuthorizationApi} from './api'
-import {PageHeader} from '@/common/components/ui'
+import {PageHeader} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 权限管理 (FEATURE015) — 按"应用维度"管理权限点（资源 CRUD）

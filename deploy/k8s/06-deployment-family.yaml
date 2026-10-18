@@ -12,20 +12,24 @@ kind: Namespace
 metadata:
   name: z-ctc
 ---
-#   kubectl -n z-ctc create secret generic z-ctc-db \
-#     --from-literal=db-password='<与 z-ops 同库同密码>'
+# 这个文件**不再**定义 z-ctc-db。
 #
-# secretKeyRef 只能读**同 namespace** 的 secret, 所以 z-ctc 虽然连的是同一个
-# MySQL, 也必须在自己的 ns 里有一份 z-ctc-db。值必须和 z-ops 的 z-ops-db
-# 一致 —— 不同的话 z-ctc 连不上库, 表现是启动后 druid 报 access denied。
-apiVersion: v1
-kind: Secret
-metadata:
-  name: z-ctc-db
-  namespace: z-ctc
-type: Opaque
-stringData:
-  db-password: "REPLACE_ME"
+# 原先这里带了一个 stringData: db-password: REPLACE_ME 的 Secret 定义, 而真正
+# 的口令是部署时用 `kubectl create secret` 灌进去的 —— 于是每次 `kubectl apply -f`
+# 都会把手工灌的真值覆盖成 REPLACE_ME。2026-10-15 切阿里云 RDS 时真被覆盖了一次
+# (当时零消费者,没造成运行影响,但真值不可逆地丢了)。
+#
+# 现在改法: secret 只用命令创建, 不进清单。
+#   PW=$(grep '^Z_BASE_DB_DEFAULT_PASSWORD=' \
+#          /Users/zifang/workplace/ceo_workplace/z-opc-foundation/z-opc-foundation-lead/004_重要秘钥/z-opc.env | cut -d= -f2-)
+#   kubectl -n z-ctc create secret generic aliyun-db --from-literal=db-password="$PW"
+#
+# 阿里云 RDS 的 zifang 账号通常只授内网来源 IP, 从集群内直连已实测可行
+# (z-ops-mysql 容器里的 mysql 客户端能连上)。
+#
+# 留这份注释是因为老读者还会去找这个名字: secretKeyRef 只能读**同 namespace**
+# 的 secret, 所以 z-ctc 虽然连的是同一个 RDS, 也必须在自己的 ns 里有一份。
+# 名字从 z-ctc-db 改成了 aliyun-db —— 它现在连的不是集群内 MySQL 了。
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -52,19 +56,25 @@ spec:
           ports:
             - containerPort: 8888
           env:
-            # 与 z-ops 共用同一个 MySQL 实例, 不同库 (z_ops / z_ctc)
+            # 身份库指生产 RDS 的 oc —— 与 z-ops、z-opc 系各仓同库同源。
+            # 集群内那个 z_ctc 库是 2026-10-12 部署时顺手建的空壳, 只有 10 个
+            # opsdemo/ceo1* 测试账号、**没有 admin**, 导致 ops.zopc.top 登不进去。
+            # oc 库里 admin(id=1, tenant=default) 和真实角色授权都在, 且两边
+            # 共用同一套 JWT HS256 密钥, 切过去登录态天然互通。
+            # 口令真值在 lead/004_重要秘钥/z-opc.env 的 Z_BASE_DB_DEFAULT_PASSWORD,
+            # 本仓只放占位符。
             - name: DB_HOST
-              value: z-ops-mysql.z-ops.svc.cluster.local
+              value: rm-bp108uqlgwn712k54ho.mysql.rds.aliyuncs.com
             - name: DB_PORT
               value: "3306"
             - name: DB_DATABASE
-              value: z_ctc
+              value: oc
             - name: DB_USERNAME
-              value: root
+              value: zifang
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: z-ctc-db
+                  name: aliyun-db
                   key: db-password
             - name: SSO_ENABLED
               value: "true"

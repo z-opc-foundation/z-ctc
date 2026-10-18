@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react'
 import {Button, Card, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Table, Tag} from 'antd'
 import {DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import {dictApi} from '../_api/dict'
-import {PageHeader, SearchInput} from '@/common/components/ui'
+import {PageHeader, SearchInput} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 元典管理 — 字典类型 + 字典项 树形管理

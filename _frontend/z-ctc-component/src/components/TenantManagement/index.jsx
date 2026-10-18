@@ -18,7 +18,7 @@ import {
 import {DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined,} from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi} from './api'
-import {PageHeader} from '@/common/components/ui'
+import {PageHeader} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 租户管理 (4A AC 域) — 左树右表布局
