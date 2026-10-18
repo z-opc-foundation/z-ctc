@@ -3,15 +3,23 @@ package com.zifang.ctc.sso.config;
 
 import com.zifang.ctc.sso.model.UserInfo;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.util.List;
 
 public class SsoInterceptor implements HandlerInterceptor {
+
+    /**
+     * 免登录标记的简单名。本仓不依赖各业务仓（z-team-common 的 {@code @NoLogin} 不能被这里编译期引用），
+     * 故按简单名识别；未标注该注解的端点行为与从前完全一致。
+     */
+    private static final String NO_LOGIN_ANNOTATION_SIMPLE_NAME = "NoLogin";
 
     private final TokenService tokenService;
     private final SsoProperties ssoProperties;
@@ -44,6 +52,11 @@ public class SsoInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws IOException {
         String requestUri = request.getRequestURI();
+
+        // 端点自身标注免登录标记（业务仓自持，注解是唯一真源，避免与 exclude-paths 配置两处口径漂移）
+        if (isNoLoginAnnotated(handler)) {
+            return true;
+        }
 
         // 检查是否为忽略的路径
         if (isExcludePath(requestUri)) {
@@ -202,6 +215,24 @@ public class SsoInterceptor implements HandlerInterceptor {
             }
         }
         return null;
+    }
+
+    /** 处理器方法或其所在类上是否带免登录标记 */
+    private boolean isNoLoginAnnotated(Object handler) {
+        if (!(handler instanceof HandlerMethod)) {
+            return false;
+        }
+        HandlerMethod hm = (HandlerMethod) handler;
+        return hasNoLogin(hm.getMethod()) || hasNoLogin(hm.getBeanType());
+    }
+
+    private boolean hasNoLogin(java.lang.reflect.AnnotatedElement element) {
+        for (Annotation ann : element.getAnnotations()) {
+            if (NO_LOGIN_ANNOTATION_SIMPLE_NAME.equals(ann.annotationType().getSimpleName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // 判断是否为忽略的路径
