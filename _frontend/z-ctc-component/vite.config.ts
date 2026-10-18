@@ -16,14 +16,27 @@ export default defineConfig({
         emptyOutDir: true,
         sourcemap: false,
         lib: {
-            entry: path.resolve(__dirname, 'src/index.tsx'),
+            // 两个 entry 对应 exports 两张脸: '.'(index.js/index.cjs) 与 './pages'(pages.js,
+            // lead 005 §8.2/§8.6 #3)。只声明 index 时产物里没有 pages.js, 而 exports 还指着它。
+            entry: {
+                index: path.resolve(__dirname, 'src/index.tsx'),
+                pages: path.resolve(__dirname, 'src/pages.ts'),
+            },
             name: 'ZCtcFrontendComponent',
-            fileName: (format) => `index.${format === 'es' ? 'js' : 'cjs'}`,
             formats: ['es', 'cjs']
         },
         rollupOptions: {
-            external: ['react', 'react-dom', 'antd'],
-            output: { globals: { react: 'React', 'react-dom': 'ReactDOM', antd: 'antd' } }
+            external: [
+                'react', 'react-dom', 'react-dom/client', 'react/jsx-runtime',
+                'react-router-dom', 'antd', '@ant-design/icons', 'axios',
+                '@yuku123/z-frontend-common',
+            ],
+            output: {
+                globals: {
+                    react: 'React', 'react-dom': 'ReactDOM', antd: 'antd',
+                    '@yuku123/z-frontend-common': 'ZFrontendCommon',
+                }
+            }
         }
     },
     resolve: {
