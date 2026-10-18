@@ -1,6 +1,6 @@
 {
   "name": "@yuku123/z-ctc-component",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "z-ctc 4A 中心共享 UI 组件层（library mode）—— 与 z-schedule-frontend-component 同规范",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -28,7 +28,7 @@
   "peerDependencies": {
     "@ant-design/icons": "^6.0.0",
     "@ant-design/pro-components": "^3.1.12-0",
-    "@yuku123/z-frontend-common": "^1.0.0",
+    "@yuku123/z-frontend-common": "^1.1.1",
     "antd": "^6.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -40,7 +40,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "@yuku123/z-frontend-common": "^1.0.0",
+    "@yuku123/z-frontend-common": "^1.1.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "antd": "^6.3.3",
@@ -56,5 +56,9 @@
     "component-library",
     "yuku123"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  }
 }
