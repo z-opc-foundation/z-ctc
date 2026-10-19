@@ -137,7 +137,8 @@ public class SsoInterceptor implements HandlerInterceptor {
         String prefix = stripped.endsWith("/")
                 ? stripped.substring(0, stripped.length() - 1)
                 : stripped;
-        return url.substring(0, url.length() - request.getRequestURI().length()) + prefix + suffix;
+        return url.substring(0, url.length() - request.getRequestURI().length())
+                + prefix + request.getRequestURI() + suffix;
     }
 
     /**
