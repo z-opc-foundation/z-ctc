@@ -24,6 +24,14 @@
 # ⚠ TLS 不在这里声明：公网 HTTPS 在 101.37.80.51 的 nginx 终结（frps 隧道回家），
 #   Traefik 只吃明文 80 端口。集群里现有的 zopc-top Ingress 也都没有 tls 段。
 #
+# entryPoints 必须带上 websecure（2026-10-20 补）。原来只写 web，于是直连集群 443
+# （--resolve opc.zopc.top:443:<node>）时 /kapi/z-ctc/** 落到 z-opc 的 zopc-top Ingress
+# 那条 catch-all `path: /` 上，被 z-opc-main 接走：actuator/health 返回 SPA 的
+# text/html 而不是 actuator JSON，whoami 由 z-opc-main 内嵌的那份 SsoInterceptor
+# 应答 —— 同一个 URL 在 31940 和 443 上落到两个不同的组件。公网链路
+# （边缘 nginx → frps → frpc → web）不受影响，所以此前一直没暴露。
+# Traefik 按 Host+Path 长度择优，更长的 PathPrefix 规则会压过 catch-all，无需改 z-opc 的 Ingress。
+#
 # ⚠ 本文件**不含任何 Secret**，可以安全 apply。它只引用 Service，不改 Secret 对象
 #   （不要在本仓用 kubectl apply 碰 secret，那会覆盖集群里的真值）。
 
@@ -46,6 +54,7 @@ metadata:
 spec:
   entryPoints:
     - web
+    - websecure
   routes:
     - kind: Rule
       match: Host(`opc.zopc.top`) && PathPrefix(`/kapi/z-ctc`)
