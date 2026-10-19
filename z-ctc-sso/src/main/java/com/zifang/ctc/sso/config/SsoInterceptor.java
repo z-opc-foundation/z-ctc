@@ -118,27 +118,59 @@ public class SsoInterceptor implements HandlerInterceptor {
     /**
      * 还原用户当初请求的完整 URL，作为登录后的回跳目标。
      * <p>
-     * {@code request.getRequestURL()} 拿到的是**容器看到的**路径，也就是网关剥完前缀之后
-     * 的样子。经 Traefik 的 kapi-strip-ctc 中间件进来时，前缀 {@code /kapi/z-ctc} 已经被
-     * 去掉，于是拼出来的是 {@code https://opc.zopc.top/api/ctc/authn/whoami} —— 这个路径在
-     * opc 上根本不存在，登录成功后再跳过去只会 404。StripPrefix 中间件据文档会把被剥掉的
-     * 那段放进 {@code X-Forwarded-Prefix}，这里据此补回去；该头不存在时退化成原行为。
+     * {@code request.getRequestURL()} 拿到的是**容器看到的**样子，有两处与用户实际访问的不符：
+     * <ul>
+     *   <li>路径：经 Traefik 的 kapi-strip-ctc 中间件进来时前缀 {@code /kapi/z-ctc} 已被剥掉，
+     *       拼出来的是 {@code https://opc.zopc.top/api/ctc/authn/whoami}，这路径在 opc 上不存在，
+     *       登录成功后再跳过去只会 404。StripPrefix 会把剥掉的那段放进 {@code X-Forwarded-Prefix}，
+     *       这里据此补回去。</li>
+     *   <li>协议：容器只听 http，{@code getRequestURL()} 恒为 {@code http://}，哪怕公网入口是
+     *       https。回跳地址写成 http 就得多走一跳 301 回 https，且明文暴露跳转目标。
+     *       这里从 {@code X-Forwarded-Proto} 取。</li>
+     * </ul>
+     * 两者任一头不存在时退化成原行为，直连容器的形态不受影响。
      * <p>
-     * 直连容器（无网关）时该头不存在，补前缀逻辑自然跳过，行为与从前一致。
+     * 这里刻意**不开** {@code server.forward-headers-strategy}：那会让 ForwardedHeaderFilter
+     * 接管 {@code X-Forwarded-Prefix} 并改写 {@code getRequestURI()}，本类按 {@code /api/ctc/**}
+     * 口径匹配的 exclude/intercept 路径会全部失配，SSO 闸直接失效。
      */
     private String originalUrl(HttpServletRequest request) {
-        String url = request.getRequestURL().toString();
+        String scheme = forwardedScheme(request);
+        String authority = authority(request, scheme);
+        String uri = request.getRequestURI();
         String stripped = request.getHeader("X-Forwarded-Prefix");
-        String query = request.getQueryString();
-        String suffix = (query == null || query.isEmpty()) ? "" : "?" + query;
-        if (stripped == null || stripped.isEmpty() || "/".equals(stripped)) {
-            return url + suffix;
+        if (stripped != null && !stripped.isEmpty() && !"/".equals(stripped)) {
+            uri = (stripped.endsWith("/") ? stripped.substring(0, stripped.length() - 1) : stripped) + uri;
         }
-        String prefix = stripped.endsWith("/")
-                ? stripped.substring(0, stripped.length() - 1)
-                : stripped;
-        return url.substring(0, url.length() - request.getRequestURI().length())
-                + prefix + request.getRequestURI() + suffix;
+        String query = request.getQueryString();
+        return scheme + "://" + authority + uri
+                + ((query == null || query.isEmpty()) ? "" : "?" + query);
+    }
+
+    /**
+     * 只允许把协议**升**到 https，不允许降级：{@code X-Forwarded-Proto} 是逐跳追加的，
+     * 取第一段即可；但客户端可以自己伪造这个头，不校验就等于给了个把回跳地址降级到明文的口子。
+     */
+    private static String forwardedScheme(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-Proto");
+        if (forwarded == null || forwarded.isEmpty()) {
+            return request.getScheme();
+        }
+        String first = forwarded.split(",")[0].trim();
+        return "https".equalsIgnoreCase(first) ? "https" : request.getScheme();
+    }
+
+    /**
+     * 主机名与端口取 {@code request.getServerName()} / {@code getServerPort()} 而不是
+     * {@code X-Forwarded-Host}：后者客户端可任意伪造，而回跳地址随后会被登录页拼上 token，
+     * 等于开了一条把 token 送去任意站点的路。Host 头则被网关的 vhost 分流约束着 ——
+     * 能路由到本服务，就说明它与本站的域名是对得上的。
+     */
+    private static String authority(HttpServletRequest request, String scheme) {
+        int port = request.getServerPort();
+        int def = "https".equals(scheme) ? 443 : 80;
+        return port == def ? request.getServerName()
+                : request.getServerName() + ":" + port;
     }
 
     /**

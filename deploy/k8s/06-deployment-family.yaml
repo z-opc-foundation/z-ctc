@@ -22,7 +22,9 @@ metadata:
 # 现在改法: secret 只用命令创建, 不进清单。
 #   PW=$(grep '^Z_BASE_DB_DEFAULT_PASSWORD=' \
 #          /Users/zifang/workplace/ceo_workplace/z-opc-foundation/z-opc-foundation-lead/004_重要秘钥/z-opc.env | cut -d= -f2-)
-#   kubectl -n z-ctc create secret generic aliyun-db --from-literal=db-password="$PW"
+#   kubectl -n z-ctc create secret generic aliyun-db \
+#     --from-literal=db-password="$PW" \
+#     --from-literal=db-host="$RDS_HOST"     # 阿里云 RDS 主机名，也走 secret，仓内不留云端地址
 #
 # 阿里云 RDS 的 zifang 账号通常只授内网来源 IP, 从集群内直连已实测可行
 # (z-ops-mysql 容器里的 mysql 客户端能连上)。
@@ -64,7 +66,10 @@ spec:
             # 口令真值在 lead/004_重要秘钥/z-opc.env 的 Z_BASE_DB_DEFAULT_PASSWORD,
             # 本仓只放占位符。
             - name: DB_HOST
-              value: rm-bp108uqlgwn712k54ho.mysql.rds.aliyuncs.com
+              valueFrom:
+                secretKeyRef:
+                  name: aliyun-db
+                  key: db-host
             - name: DB_PORT
               value: "3306"
             - name: DB_DATABASE

@@ -220,13 +220,13 @@ _Maintained by the z-opc-foundation organization._
 - [`_doc/001_arch/`](_doc/001_arch/) — 架构文档 (项目总览 / 模块结构 / 接口清单 / DB schema / 前端 / 能力 / roadmap):
   - [`00-overview.md`](_doc/001_arch/00-overview.md)
   - [`01-module-structure.md`](_doc/001_arch/01-module-structure.md)
-  - [`01-module-structure-2.md`](_doc/001_arch/01-module-structure-2.md)
+  - [`06-module-conventions.md`](_doc/001_arch/06-module-conventions.md)
   - [`02-api.md`](_doc/001_arch/02-api.md)
   - [`03-db-schema.md`](_doc/001_arch/03-db-schema.md)
   - [`04-4a-migration.md`](_doc/001_arch/04-4a-migration.md)
   - [`05-frontend.md`](_doc/001_arch/05-frontend.md)
   - [`07-roadmap.md`](_doc/001_arch/07-roadmap.md)
-  - [`z-ctc-admin.md`](_doc/001_arch/z-ctc-admin.md)
+  - [`08-admin.md`](_doc/001_arch/08-admin.md)
 
 - [`_doc/002_deploy/`](_doc/002_deploy/) — 部署 SQL（多文件，放 `init/`，按下面顺序执行）:
   - [`init/init-database.sql`](_doc/002_deploy/init/init-database.sql) — 建库

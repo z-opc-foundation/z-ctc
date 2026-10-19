@@ -1,5 +1,13 @@
 # 本地 dev 启动端口(standalone 模式, 与 docker-compose.yml 一致: 8888)。
 # 可通过 --server.port=... 覆盖。
+#
+# 这里**刻意不配** server.forward-headers-strategy=framework。
+# 试过, 后果是 SSO 闸整个失效: framework 策略会注册 ForwardedHeaderFilter, 而它
+# 接管 X-Forwarded-Prefix, 把 getRequestURI() 从 /api/ctc/** 改写成 /kapi/z-ctc/api/ctc/**
+# —— 于是 SsoInterceptor 的 exclude-paths / intercept-paths(口径都是 /api/ctc/**)一个都
+# 匹配不上, 请求直接穿过闸门进 controller。症状是 whoami 从 401 JSON 变成
+# HTTP 200 + {"code":401,"message":"处理失败|未登录"}, 看着像"闸松了"而不是"闸错了"。
+# 回跳 URL 的 scheme 改在 SsoInterceptor 里单独处理, 见那里的 originalUrl()。
 server:
   port: 8888
   servlet:
@@ -19,7 +27,7 @@ z:
   base:
     db:
       ctc:
-        # 2026-10-04: 原来是写死的字面量 URL（rm-bp108uqlgwn712k54ho.mysql.rds.aliyuncs.com），
+        # 2026-10-04: 原来是写死的字面量 URL（rm-***.mysql.rds.aliyuncs.com，真值见 lead 004_重要秘钥），
         # 与下面 default.* 的 host/port/database 两条配置各走各的 —— 后果有二：
         #   1) 改 .env 里的 DB_HOST 只切得动 default.*，切不动这条字面量；
         #   2) 凭据读的是 CTC_DB_USERNAME / CTC_DB_PASSWORD，而 compose 的 ctc 服务只注入
