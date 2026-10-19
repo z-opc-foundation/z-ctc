@@ -126,16 +126,23 @@ public class SsoInterceptor implements HandlerInterceptor {
      *       这里据此补回去。</li>
      *   <li>协议：容器只听 http，{@code getRequestURL()} 恒为 {@code http://}，哪怕公网入口是
      *       https。回跳地址写成 http 就得多走一跳 301 回 https，且明文暴露跳转目标。
-     *       这里从 {@code X-Forwarded-Proto} 取。</li>
+     *       这里取 {@code sso.login-url} 的协议。</li>
      * </ul>
-     * 两者任一头不存在时退化成原行为，直连容器的形态不受影响。
+     * 路径那一项的头不存在时退化成原行为，直连容器的形态不受影响。
+     * <p>
+     * 协议这一项**刻意不读** {@code X-Forwarded-Proto}：公网入口是
+     * 「边缘 nginx(TLS) → frps → frpc → Traefik 明文入口 → 容器」，而 frp 的 {@code type = "http"}
+     * 代理**不转发 X-Forwarded-Proto**（实测直打 frps:8000，带与不带该头输出逐字节相同），
+     * 头在隧道里就没了，Traefik 侧再配 forwardedHeaders 也无从生效。
+     * {@code sso.login-url} 是运维对"公网协议"的显式声明，比从转发头反推更可靠，
+     * 也不依赖任何网关行为。
      * <p>
      * 这里刻意**不开** {@code server.forward-headers-strategy}：那会让 ForwardedHeaderFilter
      * 接管 {@code X-Forwarded-Prefix} 并改写 {@code getRequestURI()}，本类按 {@code /api/ctc/**}
      * 口径匹配的 exclude/intercept 路径会全部失配，SSO 闸直接失效。
      */
     private String originalUrl(HttpServletRequest request) {
-        String scheme = forwardedScheme(request);
+        String scheme = loginUrlScheme();
         String authority = authority(request, scheme);
         String uri = request.getRequestURI();
         String stripped = request.getHeader("X-Forwarded-Prefix");
@@ -148,29 +155,38 @@ public class SsoInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * 只允许把协议**升**到 https，不允许降级：{@code X-Forwarded-Proto} 是逐跳追加的，
-     * 取第一段即可；但客户端可以自己伪造这个头，不校验就等于给了个把回跳地址降级到明文的口子。
+     * 回跳地址的协议直接取 {@code sso.login-url} 的协议。解析不出（配成相对路径或畸形值）
+     * 时退回请求自身的 scheme。
      */
-    private static String forwardedScheme(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-Proto");
-        if (forwarded == null || forwarded.isEmpty()) {
-            return request.getScheme();
+    private String loginUrlScheme() {
+        String loginUrl = ssoProperties.getLoginUrl();
+        if (loginUrl != null) {
+            int sep = loginUrl.indexOf("://");
+            if (sep > 0) {
+                return loginUrl.substring(0, sep).toLowerCase();
+            }
         }
-        String first = forwarded.split(",")[0].trim();
-        return "https".equalsIgnoreCase(first) ? "https" : request.getScheme();
+        return "http";
     }
 
     /**
-     * 主机名与端口取 {@code request.getServerName()} / {@code getServerPort()} 而不是
-     * {@code X-Forwarded-Host}：后者客户端可任意伪造，而回跳地址随后会被登录页拼上 token，
-     * 等于开了一条把 token 送去任意站点的路。Host 头则被网关的 vhost 分流约束着 ——
-     * 能路由到本服务，就说明它与本站的域名是对得上的。
+     * 主机名取 {@code request.getServerName()} 而不是 {@code X-Forwarded-Host}：后者客户端可任意
+     * 伪造，而回跳地址随后会被登录页拼上 token，等于开了一条把 token 送去任意站点的路。
+     * Host 头则被网关的 vhost 分流约束着 —— 能路由到本服务，就说明它与本站的域名是对得上的。
+     * <p>
+     * 端口只在协议与请求自身一致时才用 {@code getServerPort()}：那是本地 dev 直连容器的形态，
+     * 端口得带上。而协议一旦是被 {@code login-url} 换上去的，公网入口的端口就由协议决定
+     * （https 即 443），容器的 80/8888 与公网端口无关 —— 拿它去比"是否默认端口"会把
+     * {@code https://opc.zopc.top:80/...} 这种自相矛盾又必然连不通的地址拼出来。
      */
     private static String authority(HttpServletRequest request, String scheme) {
+        String host = request.getServerName();
+        if (!scheme.equalsIgnoreCase(request.getScheme())) {
+            return host;
+        }
         int port = request.getServerPort();
-        int def = "https".equals(scheme) ? 443 : 80;
-        return port == def ? request.getServerName()
-                : request.getServerName() + ":" + port;
+        return port == ("https".equalsIgnoreCase(scheme) ? 443 : 80)
+                ? host : host + ":" + port;
     }
 
     /**
