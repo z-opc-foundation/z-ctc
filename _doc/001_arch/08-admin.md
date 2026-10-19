@@ -2,7 +2,7 @@
 
 > **Standalone Demo App + Docker 镜像源 —— 永远不上 Maven Central**
 >
-> 详见 [`lead/005_技术架构/005_前端工程与中间件部署架构规范.md`](../../z-opc-foundation-lead/005_技术架构/005_前端工程与中间件部署架构规范.md) §2
+> 详见 [`lead/005_技术架构/005_前端工程与中间件部署架构规范.md`](../../../z-opc-foundation-lead/005_技术架构/005_前端工程与中间件部署架构规范.md) §2
 
 ## 它是什么
 
