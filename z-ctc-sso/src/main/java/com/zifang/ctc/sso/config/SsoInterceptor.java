@@ -10,7 +10,10 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class SsoInterceptor implements HandlerInterceptor {
@@ -107,10 +110,46 @@ public class SsoInterceptor implements HandlerInterceptor {
             response.getWriter().write("{\"success\":false,\"code\":401,\"message\":\"未登录或Token无效\",\"data\":null}");
             return false;
         }
-        String redirectUrl = ssoProperties.getLoginUrl() + "?redirect=" +
-                request.getRequestURL().toString();
+        String redirectUrl = ssoProperties.getLoginUrl() + "?redirect=" + encode(originalUrl(request));
         response.sendRedirect(redirectUrl);
         return false;
+    }
+
+    /**
+     * 还原用户当初请求的完整 URL，作为登录后的回跳目标。
+     * <p>
+     * {@code request.getRequestURL()} 拿到的是**容器看到的**路径，也就是网关剥完前缀之后
+     * 的样子。经 Traefik 的 kapi-strip-ctc 中间件进来时，前缀 {@code /kapi/z-ctc} 已经被
+     * 去掉，于是拼出来的是 {@code https://opc.zopc.top/api/ctc/authn/whoami} —— 这个路径在
+     * opc 上根本不存在，登录成功后再跳过去只会 404。StripPrefix 中间件据文档会把被剥掉的
+     * 那段放进 {@code X-Forwarded-Prefix}，这里据此补回去；该头不存在时退化成原行为。
+     * <p>
+     * 直连容器（无网关）时该头不存在，补前缀逻辑自然跳过，行为与从前一致。
+     */
+    private String originalUrl(HttpServletRequest request) {
+        String url = request.getRequestURL().toString();
+        String stripped = request.getHeader("X-Forwarded-Prefix");
+        String query = request.getQueryString();
+        String suffix = (query == null || query.isEmpty()) ? "" : "?" + query;
+        if (stripped == null || stripped.isEmpty() || "/".equals(stripped)) {
+            return url + suffix;
+        }
+        String prefix = stripped.endsWith("/")
+                ? stripped.substring(0, stripped.length() - 1)
+                : stripped;
+        return url.substring(0, url.length() - request.getRequestURI().length()) + prefix + suffix;
+    }
+
+    /**
+     * URLEncoder 把空格编成 {@code +}，而 query 值里的 {@code +} 会被接收端解回空格，
+     * 于是带空格的回跳地址到对面就散了。编完把 {@code +} 换回 {@code %20}。
+     */
+    private static String encode(String url) {
+        try {
+            return URLEncoder.encode(url, StandardCharsets.UTF_8.name()).replace("+", "%20");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("UTF-8 不可用", e);
+        }
     }
 
     /**

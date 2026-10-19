@@ -73,8 +73,12 @@ sso:
   # 生产环境应改为 .your-domain.com 等真实根域。
   cookie-domain: ${SSO_COOKIE_DOMAIN:.zopc.local}
   cookie-secure: ${SSO_COOKIE_SECURE:false}
-  # 登录入口 (SsoInterceptor.sendRedirect 跳这里),指向 z-opc 前端 SPA。
-  # 生产环境改成 https://opc.zopc.top/login
+  # 登录入口 (SsoInterceptor.sendRedirect 跳这里)。这个值是**发给浏览器**的,
+  # 不是给服务端自己连的 —— 所以绝不能填 127.0.0.1/localhost/NodePort:
+  # 浏览器侧的回环指向终端用户自己的机器, 会表现成「打开就挂」。
+  # 生产环境用 https://opc.zopc.top/login —— z-opc 主壳那个登录页真调
+  # /ctc/authn/login 并已实现读 ?redirect= 回跳。不要指 ctc.zopc.top,
+  # 那个域服务的是 z-ctc-suit 的 mock 登录页, 登完拿不到 SSO cookie。
   login-url: ${SSO_LOGIN_URL:http://opc.zopc.local:8088/login}
   exclude-paths:
     # FEATURE: 本地 z-ctc-admin 启动需要放行登录端点
