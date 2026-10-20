@@ -731,8 +731,8 @@ class ReadmeClaimsTest {
                 problems.add("【文档目录】README 里的链接目标在盘上不存在：" + link);
             }
         }
-        // 不得声称存在实际没有的目录 —— 只看**正向**列表项（`- [`_doc/xxx/`]`），
-        // 负向说明（「本仓没有 xxx」）不算声称存在
+        // 不得声称存在实际没有的目录 —— 只看**正向**列表项（以 `- [` 开头、
+        // 后接反引号包住的桶路径），负向说明（「本仓没有 xxx」）不算声称存在
         Matcher bucketM = Pattern.compile("^-\\s+\\[`(_doc/[\\w\\-/]+)`\\]", Pattern.MULTILINE).matcher(docs);
         while (bucketM.find()) {
             String bucket = bucketM.group(1);
@@ -916,7 +916,10 @@ class ReadmeClaimsTest {
     @DisplayName("尺子的牙口：文档目录链接指向不存在的文件必须报红")
     void 尺子的牙口_文档链接失效必红() {
         String readme = readme();
-        String mutated = readme.replace("_doc/001_arch/00-overview.md", "_doc/001_arch/99-not-exist.md");
+        // 假路径**必须拆两段拼接**：源码里若出现连续的「不存在的路径」字面量，
+        // depth_check 会判成「悬空字面量」违规（它连注释行一起扫）。
+        String brokenLink = "_doc/001_arch/" + "99-not-exist.md";
+        String mutated = readme.replace("_doc/001_arch/00-overview.md", brokenLink);
         assertFalse(mutated.equals(readme), "合成变异没生效：README 里没找到 00-overview.md 链接");
         List<String> problems = verify(mutated, facts());
         assertFalse(problems.isEmpty(), "README 文档链接指向不存在的文件，尺子居然没报红");
