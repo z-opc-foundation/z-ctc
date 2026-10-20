@@ -13,18 +13,18 @@
 |------|-----|
 | **仓库** | `z-ctc`（Comprehensive-Tissue-Centre 缩写，历史上称 4A 中心） |
 | **Maven 坐标** | `io.github.yuku123:z-ctc:${revision}` |
-| **当前版本** | `1.0.2`（根 POM `<revision>`，CI-friendly versions + flatten-maven-plugin） |
+| **当前版本** | `1.0.4`（根 POM `<revision>`，CI-friendly versions + flatten-maven-plugin） |
 | **父项目** | `io.github.yuku123:z-boot-parent:1.1.0`（`<relativePath/>` 留空，parent 在 repo1 不在磁盘） |
-| **Maven Central** | 已发布：`z-ctc:1.0.2` / `z-ctc-web:1.0.2` 均可从 repo1 拉取 |
+| **Maven Central** | 已发布：`z-ctc:1.0.2` / `z-ctc-web:1.0.2` 均可从 repo1 拉取（1.0.3 / 1.0.4 目前只有本地构建产物，未见 Central 下载记录） |
 | **默认端口** | `8888`（dev profile 下 context-path 为 `/ctc`） |
 | **运行口径** | Java 8 · Spring Boot 2.7.18 |
-| **最近更新** | 2026-09-30 |
+| **最近更新** | 2026-10-20 |
 
 ---
 
 ## 🎯 能力清单
 
-全部能力都能从 `z-ctc-web/src/main/java/com/zifang/ctc/web/api/` 下的 Controller 一一对应：
+全部能力都能从 `z-ctc-web/src/main/java/com/zifang/ctc/web/api/` 下的 **12 个** Controller 一一对应：
 
 | 能力 | 入口 | 说明 |
 |------|------|------|
@@ -37,8 +37,10 @@
 | 组织 | `OrgController` | 组织架构 |
 | 邀请 | `InvitationController` | 邀请注册链路 |
 | 应用菜单 | `MenuController` | 按应用下发菜单 |
+| OSC 部门 | `OscDeptController` | 部门树 / 部门列表；挂在 `/ctc-osc/dept`，**不在 `/api/ctc` 前缀下** |
+| OSC 员工 | `OscStaffController` | 员工简表；挂在 `/ctc-osc/staff`，**不在 `/api/ctc` 前缀下** |
 
-跨子域免登由 `z-ctc-sso` 提供：`SsoInterceptor` 校验请求 → `TokenService` 有三种实现
+跨子域免登由 `z-ctc-sso` 提供：`SsoInterceptor` 校验请求 → `TokenService` 有 **3** 种实现
 （`LocalTokenService` 本地解析 JWT、`RemoteTokenService` 回源校验、`CompositeTokenService` 组合两者），
 `TokenCache` 做令牌缓存，`SsoProperties` 承载 `sso.*` 配置。`JwtUtil` 的签名/JSON/base64url/exp
 逻辑已收编到 `z-util` 的 `Jwt`（门面委托），不再自养一份 JWT 实现。
@@ -54,11 +56,15 @@ z-ctc/
 ├── z-ctc-core/            # 4A 领域核心：实体、MyBatis-Plus Mapper、服务实现
 ├── z-ctc-sso/             # SSO：拦截器 + 令牌服务 + cookie 域 + JWT 门面
 ├── z-ctc-web/             # HTTP 层：Controller、自动装配（ZCompanyCtcWebAutoConfiguration）
+├── z-ctc-client/          # 授权数据 HTTP SDK（裸能力，零 Spring 依赖）
+├── z-ctc-spring-boot-starter/  # 上面那个 SDK 的 Spring Boot 装配层
 ├── z-ctc-admin/           # 可启动演示应用（不进 Maven Central）
-├── bootstrap/             # 脚手架产物目录，不参与 Maven 发布
-├── _frontend/             # 配套前端两层
-│   ├── z-ctc-suit/                    # 业务应用
-│   └── z-ctc-component/          # 组件库
+├── bootstrap/             # 脚手架产物目录（自带 pom，但不在根 POM 的 <modules> 里，不参与 Maven 发布）
+├── _frontend/             # 配套前端 4 个 npm 工程
+│   ├── z-ctc-suit/                # 业务应用
+│   ├── z-ctc-component/          # 组件库
+│   ├── z-ctc-frontend/           # 前端壳
+│   └── z-ctc-frontend-component/ # 前端壳的组件
 ├── deploy/                # 部署资产（三种模式 + k8s）
 └── _doc/                  # 文档，见文末「文档目录」
 ```
@@ -74,7 +80,7 @@ z-ctc/
 |------|------|
 | 语言 / 运行时 | Java 8（全组织口径 1.8） |
 | 框架 | Spring Boot 2.7.18（版本由 `z-boot-parent` 自带地板统一供给） |
-| 持久层 | MyBatis-Plus 3.5.3.1 + Druid 连接池 |
+| 持久层 | MyBatis-Plus（`z-ctc-admin` 钉 **3.5.3.1**，其余模块走 `z-boot-parent` 地板 **3.5.7**）+ Druid 连接池 |
 | 数据库 | MySQL 8.0（生产）/ H2（`dev` profile，免外部依赖启动） |
 | 令牌 | JWT（实现收编至 `z-util`，`z-util` 版本走 `z-boot-parent` 的兄弟仓权威表） |
 | 接口文档 | Knife4j / springdoc —— 启动后访问 `/doc.html` |
@@ -91,14 +97,14 @@ z-ctc/
 mvn clean install -DskipTests
 ```
 
-第三方版本一律由 `z-boot-parent:1.1.0` 供给（第三方地板与兄弟仓权威表均已并入 parent 自身）
-供给，模块 POM 里不应再出现字面版本钉；若构建报找不到版本，先确认本地/镜像能解析到
+第三方版本一律由 `z-boot-parent:1.1.0` 供给（第三方地板与兄弟仓权威表均已并入 parent 自身），
+模块 POM 里不应再出现字面版本钉；若构建报找不到版本，先确认本地/镜像能解析到
 `io.github.yuku123:z-boot-parent:1.1.0`。
 
 ### 本地跑起来（无需 MySQL）
 
 ```bash
-SPRING_PROFILES_ACTIVE=dev java -jar z-ctc-admin/target/z-ctc-admin-1.0.2-exec.jar
+SPRING_PROFILES_ACTIVE=dev java -jar z-ctc-admin/target/z-ctc-admin-1.0.4-exec.jar
 ```
 
 `dev` profile 排除 `ZCompanyCtcWebAutoConfiguration`（它强制 MySQL Druid 数据源），改用 H2 内存库，
@@ -111,8 +117,13 @@ SPRING_PROFILES_ACTIVE=dev java -jar z-ctc-admin/target/z-ctc-admin-1.0.2-exec.j
 
 | 环境变量 | 用途 |
 |----------|------|
-| `CTC_DB_URL` / `CTC_DB_USERNAME` / `CTC_DB_PASSWORD` | ctc 模块数据源 |
-| `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | 其它模块拼 URL 的回退路径 |
+| `DB_HOST` / `DB_PORT` / `DB_DATABASE` | 拼 `z.base.db.ctc.url`（与 `z.base.db.default.*` 同源） |
+| `DB_USERNAME` / `DB_PASSWORD` | `z.base.db.ctc.username` / `z.base.db.ctc.password` |
+
+> `CTC_DB_*`（`CTC_DB_URL` / `CTC_DB_USERNAME` / `CTC_DB_PASSWORD`）三个变量**全仓无定义** ——
+> `z-ctc-admin/src/main/resources/application.yml` 的注释里记着这段历史：凭据读的是 `CTC_DB_*`，
+> 而 compose 的 ctc 服务只注入 `DB_*`，于是密码恒为空串、连生产库必然认证失败。
+> 现已统一到 `DB_*` 这一组，切库只改 `.env` 一处。
 
 MySQL 8 直连需 `allowPublicKeyRetrieval=true`，通过 `druid.connection-properties` 注入到所有连接。
 
@@ -134,6 +145,8 @@ MySQL 8 直连需 `allowPublicKeyRetrieval=true`，通过 `druid.connection-prop
 | `/api/ctc/ac` | 组织 |
 | `/api/ctc/app-menu` | 应用菜单 |
 | `/api/ctc/admin/tenant-init` | 租户初始化 |
+| `/ctc-osc/dept` | OSC 部门（**不在 `/api/ctc` 前缀下**） |
+| `/ctc-osc/staff` | OSC 员工（**不在 `/api/ctc` 前缀下**） |
 
 ---
 
@@ -143,13 +156,19 @@ MySQL 8 直连需 `allowPublicKeyRetrieval=true`，通过 `druid.connection-prop
 
 | 配置 | 环境变量 | 说明 |
 |------|----------|------|
-| `sso.enabled` | `SSO_ENABLED` | 总开关 |
-| `sso.callback-url` | `SSO_CALLBACK_URL` | 回调地址，生产必须覆盖 |
-| `sso.cookie-domain` | `SSO_COOKIE_DOMAIN` | `sso_token` cookie 落到的根域。**必须是真实根域**（如 `.zopc.local`），留默认当前 host 会导致跨子域不发 cookie → 鉴权失败 → 反复重定向登录 |
-| `sso.cookie-secure` | `SSO_COOKIE_SECURE` | HTTPS 部署置 true |
 | `sso.login-url` | `SSO_LOGIN_URL` | `SsoInterceptor.sendRedirect` 的跳转目标（前端 SPA 登录页） |
+| `sso.token-cookie-name` | — | 单值 cookie 名，默认 `sso_token` |
+| `sso.token-cookie-names` | — | 多值 cookie 名候选列表，与上一项取并集去重 |
+| `sso.intercept-paths` | — | 拦截路径，**`SsoProperties` 的默认值是 `/**`**（不是 `/api/**`） |
 | `sso.exclude-paths` | — | 放行路径（登录、注册、`/doc.html`、`/actuator/**` 等） |
-| `sso.intercept-paths` | — | 拦截路径，默认 `/api/**` |
+| `sso.auth-server-url` | — | 令牌校验服务地址 |
+| `sso.ctc-base-url` | — | 4A 中心 base URL；配了 = 本进程是消费方（走 `RemoteTokenService`），留空 = 本进程自己就是 4A 中心（走 `LocalTokenService`） |
+| `sso.domain-overrides` | — | 域名 → 租户/域 覆盖规则 |
+| `sso.cookie-domain` | `SSO_COOKIE_DOMAIN` | `sso_token` cookie 落到的根域。yml 默认 `.zopc.local`；生产必须换成真实根域（如 `.your-domain.com`），留当前 host 会导致跨子域不发 cookie → 鉴权失败 → 反复重定向登录 |
+| `sso.cookie-secure` | `SSO_COOKIE_SECURE` | HTTPS 部署置 true（yml 默认 `false`） |
+
+> `sso.enabled`（`SSO_ENABLED`）与 `sso.callback-url`（`SSO_CALLBACK_URL`）这两个键**当前无消费方** ——
+> `SsoProperties` 里没有对应字段，`SsoAutoConfiguration` 仍会无条件注册拦截器。
 
 注意：`whoami` 这类需要 `SsoInterceptor` 注入 `ssoUser` 的端点**不能**放进 `exclude-paths`。
 
@@ -164,8 +183,17 @@ mvn test
 本仓是 **Java 8 口径**（`java.version=1.8`，class-file major 52），
 用 JDK 8 跑测试；本机默认 `java` 是 17，直接 `mvn test` 不是在声明的口径上跑。
 
+`mvn test` 真正执行的是 **Jupiter 用例**：`z-ctc-sso` 的 `JwtCompatCrossCheckTest` 与
+`z-ctc-web` 的 `VerifyCodeServiceTest`。`z-ctc-core` 下的 `AcDeptTreeServiceTest` /
+`AcStaffSimpleServiceTest` 与 `z-ctc-sso` 下的 `JwtUtilTest` 是 `main()` 自测，
+**surefire 不执行它们**（源文件里没有 Jupiter 注解）—— 要跑得 `javac` + `java` 手工执行。
+
+本 README 的定量主张由 `z-ctc-web/src/test/java/com/zifang/ctc/web/ReadmeClaimsTest.java` 守卫：
+版本、reactor 模块清单、Controller 名单、API 前缀、默认端口、SSO 配置键、数据源环境变量、
+文档目录逐条对着源码重算，README 改了就红。
+
 端到端验证脚本与三模式启动脚本在 `deploy/`（`bin/start-mode1.sh` ~ `start-mode3.sh`、
-`bin/build-images.sh`、`v4-test/`），k8s 清单在 `deploy/k8s/`，按 `00-namespace` → `05-ingress` 顺序 apply。
+`bin/build-images.sh`、`v4-test/`），k8s 清单在 `deploy/k8s/`（`00-namespace.yaml` ~ `08-kapi-ingressroute.yaml` 共 9 个），按编号顺序 apply。
 
 ### 验证码 Mock 模式的明文码开关
 
@@ -215,29 +243,32 @@ _Maintained by the z-opc-foundation organization._
 
 ## 文档目录
 
-本项目文档统一收口在 `_doc/` 下:
+本项目文档统一收口在 `_doc/` 下（3 个桶：`001_arch` / `002_deploy` / `003_script`）:
 
 - [`_doc/001_arch/`](_doc/001_arch/) — 架构文档 (项目总览 / 模块结构 / 接口清单 / DB schema / 前端 / 能力 / roadmap):
   - [`00-overview.md`](_doc/001_arch/00-overview.md)
   - [`01-module-structure.md`](_doc/001_arch/01-module-structure.md)
-  - [`06-module-conventions.md`](_doc/001_arch/06-module-conventions.md)
   - [`02-api.md`](_doc/001_arch/02-api.md)
   - [`03-db-schema.md`](_doc/001_arch/03-db-schema.md)
   - [`04-4a-migration.md`](_doc/001_arch/04-4a-migration.md)
   - [`05-frontend.md`](_doc/001_arch/05-frontend.md)
+  - [`06-module-conventions.md`](_doc/001_arch/06-module-conventions.md)
   - [`07-roadmap.md`](_doc/001_arch/07-roadmap.md)
   - [`08-admin.md`](_doc/001_arch/08-admin.md)
 
-- [`_doc/002_deploy/`](_doc/002_deploy/) — 部署 SQL（多文件，放 `init/`，按下面顺序执行）:
+- [`_doc/002_deploy/`](_doc/002_deploy/) — 部署 SQL（多文件，放 `init/`）:
   - [`init/init-database.sql`](_doc/002_deploy/init/init-database.sql) — 建库
-  - [`init/`](_doc/002_deploy/init/) — 建表与初始化：
+  - [`init/assemble-init.py`](_doc/002_deploy/init/assemble-init.py) — 把散在 z-ctc / z-opc 两个仓的 DDL 拼成一份有序脚本
+  - [`init/00-init-all.sql`](_doc/002_deploy/init/00-init-all.sql) — `assemble-init.py` 的产物；装配顺序是硬约束（见脚本头部注释）
+  - [`init/`](_doc/002_deploy/init/) — 建表与初始化的源文件：
     [`schema.sql`](_doc/002_deploy/init/schema.sql)、
     [`init_tables.sql`](_doc/002_deploy/init/init_tables.sql)、
     [`z-ctc-ac.sql`](_doc/002_deploy/init/z-ctc-ac.sql)、
     [`z-ctc-authz.sql`](_doc/002_deploy/init/z-ctc-authz.sql)、
     [`z-ctc-authz-override.sql`](_doc/002_deploy/init/z-ctc-authz-override.sql)、
     [`code-based-schema.sql`](_doc/002_deploy/init/code-based-schema.sql)、
-    [`code-based-migration.sql`](_doc/002_deploy/init/code-based-migration.sql)
+    [`code-based-migration.sql`](_doc/002_deploy/init/code-based-migration.sql)、
+    [`z_ctc_ac_dept_add_parent_code.sql`](_doc/002_deploy/init/z_ctc_ac_dept_add_parent_code.sql)
 
 - [`_doc/003_script/`](_doc/003_script/) — 运维脚本:
   - [`build.sh`](_doc/003_script/build.sh)
@@ -246,7 +277,7 @@ _Maintained by the z-opc-foundation organization._
   - [`deploy_maven_center.sh`](_doc/003_script/deploy_maven_center.sh)
   - [`install-settings.sh`](_doc/003_script/install-settings.sh)
 
-- `_doc/004_skill/` — AI skill 定义（目前为空目录，暂无 skill）
+- 本仓**没有** `_doc/004_skill/`（无 skill 资产，该目录未创建）
 
 表结构说明另见 [`_doc/001_arch/03-db-schema.md`](_doc/001_arch/03-db-schema.md)；
 `04-4a-migration.md` 记录 4A 模型迁移过程。
