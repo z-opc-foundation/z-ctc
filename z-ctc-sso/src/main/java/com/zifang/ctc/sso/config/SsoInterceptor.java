@@ -14,6 +14,8 @@ import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class SsoInterceptor implements HandlerInterceptor {
@@ -23,6 +25,43 @@ public class SsoInterceptor implements HandlerInterceptor {
      * 故按简单名识别；未标注该注解的端点行为与从前完全一致。
      */
     private static final String NO_LOGIN_ANNOTATION_SIMPLE_NAME = "NoLogin";
+
+    /**
+     * 允许「query 传 token」的路径白名单（2026-10-21，TASK-20260924-017）。
+     *
+     * <p><b>为什么要有白名单</b>：query 里的 token 会同时落进三处会长期留存的地方 ——
+     * 浏览器历史、Nginx / 网关 access log、任何 {@code Referer} 出口。常规业务接口
+     * （如 {@code /z-team/api/personal-agents/**}）完全没有理由走这条路：Cookie 与
+     * {@code Authorization: Bearer} 都能带凭证，且后者根本不进 URL。
+     *
+     * <p><b>为什么不是零</b>：下面两条是「自己就会从 Authorization/Cookie/Query 三处
+     * 解析 token」的端点（{@code AuthnController#extractUserFromRequest}），
+     * 且 z-ctc-admin 侧不在 {@code sso.exclude-paths} 里、仍在本拦截器的拦截面内 ——
+     * 把它们挡在闸门外会直接造成 401 回归。
+     *
+     * <p><b>为什么模式带「双星号通配前缀」</b>：同一个部署形态里 request URI 可能带
+     * {@code /z-team}（context-path）或 {@code /kapi/z-ctc}（网关前缀未剥）前缀，
+     * 用「斜杠 + 双星号 + 斜杠」前缀让同一组规则在三种前缀下都成立。
+     * （写成字面量会在 javadoc 里提前闭合注释，故此处用文字描述。）
+     *
+     * <p><b>扩展点</b>：新增白名单条目请在本常量里加，并写清「为什么不能用请求头」。
+     * {@code SsoAutoConfiguration} 的装配归 z-ctc 仓自己维护（该文件另有在办任务），
+     * 故这里做成常量 + {@link #setQueryTokenAllowedPaths(List)}，不依赖配置项。
+     */
+    private static final List<String> QUERY_TOKEN_ALLOWED_PATHS = Collections.unmodifiableList(
+            Arrays.asList(
+                    // 当前用户查询：前端 z-team ctc-sso.ts / fetchMe 已改走 Cookie，
+                    // 这里放行只为兼容「外部系统用 ?token= 查一次用户」的既有用法。
+                    "/**/api/ctc/authn/whoami",
+                    // 退出登录：清 Cookie 兜底端点，允许用 ?token= 定位要清的会话。
+                    "/**/api/ctc/authn/logout"
+            ));
+
+    /**
+     * query token 白名单的运行时覆盖（可选）。{@code null}/空 ⇒ 用上面的默认常量。
+     * 供 z-ctc 仓后续把它接到配置上时使用。
+     */
+    private List<String> queryTokenAllowedPaths;
 
     private final TokenService tokenService;
     private final SsoProperties ssoProperties;
@@ -52,6 +91,43 @@ public class SsoInterceptor implements HandlerInterceptor {
         this.domainOverrides = domainOverrides;
     }
 
+    /**
+     * 覆盖「query 传 token」白名单（可选，默认见 {@link #QUERY_TOKEN_ALLOWED_PATHS}）。
+     * 传 null / 空列表 ⇒ 回落到默认常量。
+     */
+    public void setQueryTokenAllowedPaths(List<String> paths) {
+        this.queryTokenAllowedPaths = (paths == null || paths.isEmpty()) ? null : paths;
+    }
+
+    /**
+     * 从 Authorization 头取 token：支持 {@code Bearer xxx} 与裸 token 两种历史写法。
+     */
+    private String bearerToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null) {
+            return null;
+        }
+        if (authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return authHeader;
+    }
+
+    /**
+     * 该路径是否允许「query 传 token」。不在白名单 ⇒ query 里的 token 一律不认。
+     */
+    private boolean isQueryTokenAllowed(String requestUri) {
+        List<String> patterns = (queryTokenAllowedPaths != null)
+                ? queryTokenAllowedPaths
+                : QUERY_TOKEN_ALLOWED_PATHS;
+        for (String pattern : patterns) {
+            if (pathMatcher.match(pattern, requestUri)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws IOException {
         String requestUri = request.getRequestURI();
@@ -76,15 +152,11 @@ public class SsoInterceptor implements HandlerInterceptor {
         // 无法拦截的问题, 同时优先识别 sso_token / zctc_token 等新 JWT cookie.
         UserInfo userInfo = tryVerifyAllCookieTokens(request);
         if (userInfo == null) {
-            // query param / Authorization header 也尝试一遍
-            String headerToken = request.getParameter("token");
-            if (headerToken == null) {
-                String authHeader = request.getHeader("Authorization");
-                if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                    headerToken = authHeader.substring(7);
-                } else if (authHeader != null) {
-                    headerToken = authHeader;
-                }
+            // ① Authorization 头优先（推荐通道：Bearer 不进 URL、不进 access log、不进 Referer）
+            String headerToken = bearerToken(request);
+            // ② query param 只在显式白名单路径上才认（2026-10-21，TASK-20260924-017 收窄）
+            if (headerToken == null && isQueryTokenAllowed(requestUri)) {
+                headerToken = request.getParameter("token");
             }
             if (headerToken != null && !headerToken.trim().isEmpty()) {
                 userInfo = tokenService.verifyToken(headerToken);
@@ -149,9 +221,39 @@ public class SsoInterceptor implements HandlerInterceptor {
         if (stripped != null && !stripped.isEmpty() && !"/".equals(stripped)) {
             uri = (stripped.endsWith("/") ? stripped.substring(0, stripped.length() - 1) : stripped) + uri;
         }
-        String query = request.getQueryString();
+        String query = stripTokenParam(request.getQueryString());
         return scheme + "://" + authority + uri
                 + ((query == null || query.isEmpty()) ? "" : "?" + query);
+    }
+
+    /**
+     * 从查询串里摘掉 {@code token} 参数。
+     * <p>
+     * 回跳 URL 会被原样带进登录页的地址栏 —— 里面若留着 {@code ?token=<jwt>}，
+     * 这枚 JWT 就又进了浏览器历史，还可能随登录页的外链进 Referer。
+     * 登录成功后浏览器拿到的是新发的 Cookie，回跳串里那枚 token 没有任何用途，
+     * 直接摘掉。（2026-10-21，TASK-20260924-017）
+     */
+    private static String stripTokenParam(String query) {
+        if (query == null || query.isEmpty()) {
+            return query;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String part : query.split("&")) {
+            if (part.isEmpty()) {
+                continue;
+            }
+            int eq = part.indexOf('=');
+            String name = (eq >= 0) ? part.substring(0, eq) : part;
+            if ("token".equalsIgnoreCase(name)) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append('&');
+            }
+            sb.append(part);
+        }
+        return sb.toString();
     }
 
     /**
