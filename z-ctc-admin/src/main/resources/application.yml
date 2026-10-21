@@ -27,7 +27,7 @@ z:
   base:
     db:
       ctc:
-        # 2026-10-04: 原来是写死的字面量 URL（rm-***.mysql.rds.aliyuncs.com，真值见 lead 004_重要秘钥），
+        # 2026-10-04: 原来是写死的字面量 RDS URL（主机名与口令都不进仓，真值见 lead 004_重要秘钥），
         # 与下面 default.* 的 host/port/database 两条配置各走各的 —— 后果有二：
         #   1) 改 .env 里的 DB_HOST 只切得动 default.*，切不动这条字面量；
         #   2) 凭据读的是 CTC_DB_USERNAME / CTC_DB_PASSWORD，而 compose 的 ctc 服务只注入
