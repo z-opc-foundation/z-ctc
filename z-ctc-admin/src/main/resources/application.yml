@@ -107,6 +107,13 @@ sso:
     - /swagger-resources/**
     - /v3/api-docs/**
     - /actuator/**
+    # FEATURE: 员工名录免登录端点（服务端到服务端调用）—— **显式登记为豁免**。
+    # 之前它落在「既不在 sso.intercept-paths(/api/**) 内、也没登记进 exclude-paths」的
+    # 灰色区 ⇒ 巡检无法判断它是设计还是漏网（卡 TASK-20261021-034）。
+    # ⚠ 该端点出网字段已收窄（剔除 telephone / jobNumber / extend.email / extend.userNo），
+    #   但**仍不要求登录态** ⇒ 是否限制调用来源（限内网 / 服务令牌）仍待人工拍板，
+    #   在那之前它就是「匿名可读的最小名录」。
+    - /ctc-osc/staff/getStaffSimpleListWithoutLogin
   intercept-paths:
     - /api/**
 

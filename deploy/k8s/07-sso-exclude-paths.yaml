@@ -30,3 +30,7 @@ data:
   SSO_EXCLUDE_PATHS_8: /swagger-resources/**
   SSO_EXCLUDE_PATHS_9: /v3/api-docs/**
   SSO_EXCLUDE_PATHS_10: /actuator/**
+  # 员工名录免登录端点（服务端到服务端调用）—— 显式登记为豁免（卡 TASK-20261021-034）。
+  # 之前它在生产配置里也没登记 ⇒ 落在「谁都没管」的灰色区；出网字段已收窄，
+  # 但**是否限制调用来源**仍待人工拍板 ⇒ 登记只代表「这是有意设计」，不代表已加固。
+  SSO_EXCLUDE_PATHS_11: /ctc-osc/staff/getStaffSimpleListWithoutLogin

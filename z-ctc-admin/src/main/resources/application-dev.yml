@@ -79,6 +79,9 @@ sso:
     - /swagger-resources/**
     - /v3/api-docs/**
     - /actuator/**
+    # FEATURE: 员工名录免登录端点（服务端到服务端调用）—— 显式登记为豁免
+    # （卡 TASK-20261021-034，与 application.yml 保持同一口径）。
+    - /ctc-osc/staff/getStaffSimpleListWithoutLogin
   intercept-paths:
     - /api/**
 
