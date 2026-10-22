@@ -2,6 +2,8 @@ package com.zifang.ctc.sso.config;
 
 
 import com.zifang.ctc.sso.model.UserInfo;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -14,11 +16,22 @@ import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 public class SsoInterceptor implements HandlerInterceptor {
+
+    /**
+     * 闸门拒绝日志（卡 TASK-20261022-001 第 1 项 b 子项）。
+     * <p>
+     * <b>为什么必须有</b>：本类此前**一条日志语句都没有** —— 闸门拒绝时 401 直接返回，
+     * 链路上**没有一行字** ⇒ 事后「查不到异常登录」根本不能当没被攻击过的免罪符。
+     * <p>
+     * <b>记什么</b>：URL + 客户端 IP + 拒绝原因（**不记 token 值**，只记「有没有带/哪种通道」）。
+     */
+    private static final Logger log = LogManager.getLogger(SsoInterceptor.class);
 
     /**
      * 免登录标记的简单名。本仓不依赖各业务仓（z-team-common 的 {@code @NoLogin} 不能被这里编译期引用），
@@ -172,6 +185,15 @@ public class SsoInterceptor implements HandlerInterceptor {
         }
 
         // token无效或不存在
+        // ⚠ 闸门拒绝**必须留痕**（卡 TASK-20261022-001 第 1 项 b 子项）：
+        //   URL + 客户端 IP + 拒绝原因 —— 缺任何一样，事后都无法定位到「那次请求」。
+        //   ⚠ **不记 token 值**（只记「带了没有 / 走的哪个通道」），避免把凭证写进日志。
+        String rejectReason = describeRejectReason(request, requestUri);
+        String clientIp = resolveClientIp(request);
+        log.warn("[SSO-GATE] 拒绝: url={}, method={}, clientIp={}, reason={}, ua={}",
+                requestUri, request.getMethod(), clientIp, rejectReason,
+                request.getHeader("User-Agent"));
+
         // API 请求（Accept: application/json）返回 401 JSON，浏览器请求重定向到登录页
         String accept = request.getHeader("Accept");
         boolean isApiRequest = (accept != null && accept.contains("application/json"))
@@ -184,6 +206,137 @@ public class SsoInterceptor implements HandlerInterceptor {
         }
         String redirectUrl = ssoProperties.getLoginUrl() + "?redirect=" + encode(originalUrl(request));
         response.sendRedirect(redirectUrl);
+        return false;
+    }
+
+    /**
+     * 拒绝原因（**不泄露凭证内容**，只说「带了没有、走哪条通道」）。
+     * <p>
+     * 分三档，便于事后区分「用户没登录」与「有人在拿假 token 撞闸门」：
+     * <ul>
+     *   <li>未携带任何凭证 —— Cookie / Authorization / query 三处都没有；</li>
+     *   <li>携带了 Cookie 凭证但校验不过 —— 多半是过期，也可能是伪造；</li>
+     *   <li>携带了 Authorization / query 凭证但校验不过 —— 多半是伪造 token。</li>
+     * </ul>
+     */
+    private String describeRejectReason(HttpServletRequest request, String requestUri) {
+        String headerToken = bearerToken(request);
+        boolean headerPresent = headerToken != null && !headerToken.trim().isEmpty();
+        boolean queryPresent = false;
+        if (!headerPresent && isQueryTokenAllowed(requestUri)) {
+            String q = request.getParameter("token");
+            queryPresent = q != null && !q.trim().isEmpty();
+        }
+        if (headerPresent) {
+            return "凭证无效或已过期（Authorization 头）";
+        }
+        if (queryPresent) {
+            return "凭证无效或已过期（query token，白名单路径）";
+        }
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            List<String> candidates = ssoProperties.getEffectiveTokenCookieNames();
+            for (Cookie c : cookies) {
+                if (c != null && candidates.contains(c.getName())
+                        && c.getValue() != null && !c.getValue().isEmpty()) {
+                    return "凭证无效或已过期（Cookie " + c.getName() + "）";
+                }
+            }
+        }
+        return "未携带凭证（Cookie / Authorization / query 三处都没有）";
+    }
+
+    /**
+     * 取客户端真实来源 IP（卡 TASK-20261022-001 第 2 项）。
+     * <p>
+     * <b>为什么不能只看请求头</b>：此前登录日志的 {@code client_ip} 只从
+     * {@code X-Client-Ip} 请求头取值 ⇒ 没有任何组件注入这个头时**恒为 NULL**
+     * （实测 1863 行 100% 为 NULL）⇒ 字段在、却**按 IP 归因不可用**。
+     * <p>
+     * <b>口径</b>（服务端真实对端地址 + XFF 链，**以最后一跳可信地址为准**）：
+     * <ol>
+     *   <li>对端地址 = {@code request.getRemoteAddr()}（容器看到的真实连接方，**不可伪造**）；</li>
+     *   <li>XFF 链 = {@code X-Forwarded-For} 的逗号分隔列表（**左=原始客户端，右=离我们最近的一跳**）；
+     *       边缘/网关会把它自己看到的地址**追加**到链尾 ⇒ 链尾那一项才是可信的。</li>
+     *   <li>从**右往左**找第一个**非私网**地址 —— 我们自己的边缘/网关都在私网段，
+     *       跳过它们后拿到的就是真实客户端；链上被伪造的前置项（更靠左）自然被忽略。</li>
+     *   <li>整条链都是私网（客户端本身在内网）⇒ 退回 XFF **最左**那一项；
+     *       连 XFF 都没有 ⇒ 只能用对端地址（此时只能定位到「最后一跳」，不是原始客户端）。</li>
+     * </ol>
+     * 返回 {@code null} 只可能发生在请求对象为 null 时。
+     */
+    public static String resolveClientIp(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        List<String> chain = new ArrayList<>();
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null) {
+            for (String part : xff.split(",")) {
+                String p = part.trim();
+                if (!p.isEmpty()) {
+                    chain.add(p);
+                }
+            }
+        }
+        String peer = request.getRemoteAddr();
+        if (peer != null && !peer.trim().isEmpty()) {
+            chain.add(peer.trim());
+        }
+        if (chain.isEmpty()) {
+            return null;
+        }
+        // 从右往左：第一个非私网地址 = 最后一跳可信地址
+        for (int i = chain.size() - 1; i >= 0; i--) {
+            String ip = chain.get(i);
+            if (looksLikeIp(ip) && !isPrivateAddress(ip)) {
+                return ip;
+            }
+        }
+        // 全是私网 ⇒ 退回 XFF 最左一项（客户端可能就在内网）
+        return chain.get(0);
+    }
+
+    /** 粗判是否像 IP（v4 点分 / v6 十六进制）—— 只为剔除 XFF 里的垃圾值。 */
+    private static boolean looksLikeIp(String value) {
+        if (value == null || value.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            boolean ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+                    || c == '.' || c == ':';
+            if (!ok) {
+                return false;
+            }
+        }
+        return value.indexOf(':') > 0 || value.indexOf('.') > 0;
+    }
+
+    /** 是否私网/环回/链路本地地址（我们自己的边缘机、网关、Traefik 都在这些段里）。 */
+    private static boolean isPrivateAddress(String value) {
+        String v = value.toLowerCase();
+        if (v.startsWith("127.") || v.equals("::1") || v.startsWith("fe80:")
+                || v.startsWith("fc") || v.startsWith("fd")) {
+            return true;
+        }
+        if (v.startsWith("10.") || v.startsWith("192.168.")) {
+            return true;
+        }
+        if (v.startsWith("169.254.")) {
+            return true;
+        }
+        if (v.startsWith("172.")) {
+            String[] parts = v.split("\\.");
+            if (parts.length > 1) {
+                try {
+                    int second = Integer.parseInt(parts[1]);
+                    return second >= 16 && second <= 31;
+                } catch (NumberFormatException ignore) {
+                    return false;
+                }
+            }
+        }
         return false;
     }
 

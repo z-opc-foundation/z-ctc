@@ -19,6 +19,7 @@ import com.zifang.ctc.core.vo.AccountVO;
 import com.zifang.ctc.core.vo.LoginResponseVO;
 import com.zifang.ctc.sso.JwtUtil;
 import com.zifang.ctc.sso.config.SsoContext;
+import com.zifang.ctc.sso.config.SsoInterceptor;
 import com.zifang.ctc.sso.config.SsoProperties;
 import com.zifang.ctc.sso.model.UserInfo;
 import com.zifang.ctc.web.api.request.LoginRequest;
@@ -115,9 +116,15 @@ public class AuthnController {
     @Operation(summary = "账号密码登录")
     @PostMapping("/login")
     public Result<LoginResponseVO> login(@RequestBody LoginRequest request,
+                                         HttpServletRequest httpRequest,
                                          HttpServletResponse response,
-                                         @RequestHeader(value = "X-Client-Ip", required = false) String clientIp,
                                          @RequestHeader(value = "User-Agent", required = false) String userAgent) {
+        // ⚠ 客户端 IP **不再只从 `X-Client-Ip` 请求头取**（卡 TASK-20261022-001 第 2 项）：
+        //   没有任何组件注入那个头时，取值**恒为 NULL**（实测 1863 行登录日志 100% 为 NULL）
+        //   ⇒ 「字段存在」不等于「能按 IP 归因」。
+        //   现在取**服务端看到的真实来源**：对端地址 + XFF 链，**以最后一跳可信地址为准**
+        //   （口径与实现见 `SsoInterceptor.resolveClientIp`）。
+        String clientIp = SsoInterceptor.resolveClientIp(httpRequest);
         if (request == null || request.getIdentifier() == null || request.getPassword() == null) {
             return Result.<LoginResponseVO>fail("identifier / password 必填").code(400);
         }
@@ -596,9 +603,11 @@ public class AuthnController {
     @Operation(summary = "手机验证码登录")
     @PostMapping("/phone-login")
     public Result<LoginResponseVO> phoneLogin(@RequestBody PhoneLoginRequest request,
+                                              HttpServletRequest httpRequest,
                                               HttpServletResponse response,
-                                              @RequestHeader(value = "X-Client-Ip", required = false) String clientIp,
                                               @RequestHeader(value = "User-Agent", required = false) String userAgent) {
+        // 与密码登录同源：客户端 IP 取**真实来源**（对端地址 + XFF 链），不再依赖 `X-Client-Ip` 头。
+        String clientIp = SsoInterceptor.resolveClientIp(httpRequest);
         if (request == null || request.getPhone() == null || request.getCode() == null) {
             return Result.<LoginResponseVO>fail("phone / code 必填").code(400);
         }
@@ -851,7 +860,9 @@ public class AuthnController {
      * @param identityType  凭证类型, 1=密码
      * @param status        登录状态, 1=成功, 0=失败
      * @param failureReason 失败原因, 成功时为 null
-     * @param clientIp      客户端 IP, 来自 X-Client-Ip 头
+     * @param clientIp      客户端真实来源 IP（**服务端对端地址 + XFF 链，以最后一跳可信地址为准**；
+     *                      取值口径见 {@link SsoInterceptor#resolveClientIp}）——
+     *                      ⚠ 不再依赖 {@code X-Client-Ip} 请求头（没有组件注入它时恒为 NULL）
      * @param userAgent     客户端 UA, 来自 User-Agent 头
      * @param tenantCode    登录尝试关联的租户编码, 可为 null
      */

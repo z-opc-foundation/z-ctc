@@ -34,6 +34,16 @@ public class LoginLogDO implements Serializable {
     @TableField("failure_reason")
     private String failureReason;
 
+    /**
+     * 客户端真实来源 IP（卡 TASK-20261022-001 第 2 项）。
+     * <p>
+     * 语义：**服务端看到的真实来源地址** —— 对端地址（{@code getRemoteAddr()}）+
+     * {@code X-Forwarded-For} 链，**以最后一跳可信地址为准**。
+     * <p>
+     * ⚠ 历史上本字段只从 {@code X-Client-Ip} **请求头**取值 ⇒ 没有组件注入该头时
+     * **恒为 NULL**（实测 1863 行 100% 为 NULL）⇒ 字段存在 ≠ 能按 IP 归因。
+     * 现在写入路径已改为取真实来源（见 {@code SsoInterceptor.resolveClientIp}）。
+     */
     @TableField("client_ip")
     private String clientIp;
 
