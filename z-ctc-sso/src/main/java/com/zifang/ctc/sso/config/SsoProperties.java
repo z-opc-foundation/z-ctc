@@ -42,6 +42,25 @@ public class SsoProperties {
     // 域名 → 租户/域 覆盖规则 (YAML: sso.domain-overrides)
     private List<DomainOverride> domainOverrides = new ArrayList<>();
 
+    /**
+     * HS256 签名密钥（JWT secret）。
+     *
+     * <p><b>本属性刻意没有默认值</b>：密钥一旦写进源码，就会随 jar 一起发布出去
+     * （class 常量池里能直接读到），而 Maven 中央的已发布坐标<b>不可撤回</b> ⇒
+     * ⇒ 源码里那把一旦公开，<b>所有下游验签方都变成可伪造身份</b>。
+     *
+     * <p>注入方式（Spring 松散绑定：{@code sso.jwt-secret} ⇔ 环境变量 {@code SSO_JWT_SECRET}）：
+     * <ul>
+     *   <li><b>签发方（4A 中心自己，{@code sso.ctc-base-url} 为空）</b>：必须注入
+     *       {@code SSO_JWT_SECRET}；缺失 ⇒ <b>启动直接失败</b>（fail-closed），
+     *       绝不静默回落到某个内置默认值；</li>
+     *   <li><b>消费方（{@code sso.ctc-base-url} 已配）</b>：token 交回 4A 中心验签
+     *       （{@link RemoteTokenService}），本地既不签也不验 ⇒ <b>不需要也不应该</b>持有密钥
+     *       ⇒ 缺失是正常状态。</li>
+     * </ul>
+     */
+    private String jwtSecret = "";
+
     // Cookie Domain (跨子域共享 SSO token, 例如 ".zopc.top" 让 opc/ppt 共享)
     // 留空则不设 Domain, 仅当前子域可用
     private String cookieDomain = "";
@@ -138,6 +157,19 @@ public class SsoProperties {
 
     public void setDomainOverrides(List<DomainOverride> domainOverrides) {
         this.domainOverrides = domainOverrides;
+    }
+
+    /**
+     * HS256 签名密钥（配置键 {@code sso.jwt-secret}，环境变量 {@code SSO_JWT_SECRET}）。
+     *
+     * @see #jwtSecret
+     */
+    public String getJwtSecret() {
+        return jwtSecret;
+    }
+
+    public void setJwtSecret(String jwtSecret) {
+        this.jwtSecret = jwtSecret;
     }
 
     public String getCookieDomain() {

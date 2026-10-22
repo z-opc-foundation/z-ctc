@@ -76,7 +76,26 @@ public class SsoAutoConfiguration implements WebMvcConfigurer {
     @Bean
     @ConditionalOnMissingBean
     public JwtUtil jwtUtil() {
-        return new JwtUtil("ctc-secret-key-2024-secure-jwt-signing-key");
+        String secret = ssoProperties.getJwtSecret();
+
+        // 消费方（sso.ctc-base-url 已配）：token 交回 4A 中心验签（RemoteTokenService），
+        // 本地既不签也不验 => 不需要、也不应该持有密钥 => 空值是正常状态。
+        // ⚠ 但本 bean 仍必须存在：tokenService(...) 的签名里有它，
+        //    所以这里不能因为「消费方用不上」就抛异常把消费方进程打挂。
+        if (ssoProperties.isRemoteCtc()) {
+            return new JwtUtil(secret == null ? "" : secret);
+        }
+
+        // 签发方（4A 中心自己）：本地签发 + 本地验签都要用密钥 => 缺失即启动失败（fail-closed）。
+        // ⚠ 绝不静默回落到任何内置默认值：内置默认值会随 jar 一起发布到 Maven 中央，
+        //    而中央的已发布坐标不可撤回 => 一旦回落，所有拿到 jar 的人都能离线伪造 sso_token。
+        if (secret == null || secret.trim().isEmpty()) {
+            throw new IllegalStateException(
+                    "sso.jwt-secret 未配置：本进程是 4A 中心（sso.ctc-base-url 为空），"
+                            + "必须持有 HS256 签名密钥。请以环境变量 SSO_JWT_SECRET 注入"
+                            + "（K8s 里请用 secretKeyRef 引用 Secret，不要把密钥写进源码或配置文件）。");
+        }
+        return new JwtUtil(secret);
     }
 
 }

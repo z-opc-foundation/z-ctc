@@ -43,8 +43,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class JwtCompatCrossCheckTest {
 
-    /** 与 SsoAutoConfiguration 的现网签发密钥同形态（仅测试内使用，不外发）。 */
-    private static final String SECRET = "ctc-secret-key-2024-secure-jwt-signing-key";
+    /**
+     * 测试用密钥：<b>运行时随机生成</b>，源码里不写死任何固定值。
+     *
+     * <p><b>为什么必须随机</b>：
+     * <ul>
+     *   <li>写死的测试密钥会随源码进仓、随 jar 进中央；而 Maven 中央的已发布坐标<b>不可撤回</b>
+     *       ⇒ 一旦它与生产同值，就等于把生产密钥公开发布出去；</li>
+     *   <li>即使与生产不同值，一枚固定的 42 字符常量也极易被后人「照抄到生产」
+     *       （历史上就发生过：生产密钥与测试常量同值）。</li>
+     * </ul>
+     * <p>用随机值 ⇒ 本类验证的是「<b>任意合法密钥</b>都该验得过」，且仓里不再存在任何固定密钥字面量。
+     */
+    private static final String SECRET = randomSecret();
+
+    /** 运行时随机生成一枚 HS256 密钥（32 随机字节 ⇒ base64 44 字符）。 */
+    private static String randomSecret() {
+        byte[] b = new byte[32];
+        new java.security.SecureRandom().nextBytes(b);
+        return java.util.Base64.getEncoder().encodeToString(b);
+    }
 
     // ================= 1. 双向可验 =================
 
