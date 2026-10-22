@@ -53,7 +53,7 @@ spec:
         kubernetes.io/hostname: zifang001
       containers:
         - name: z-ctc
-          image: z-ctc-admin:1.0.5-authn-1
+          image: z-ctc-admin:1.0.5-zboot112
           imagePullPolicy: Never
           ports:
             - containerPort: 8888
@@ -107,6 +107,16 @@ spec:
               value: .zopc.top
             - name: SSO_COOKIE_SECURE
               value: "false"
+            # SSO 签名密钥：z-ctc-sso 1.0.5 起该密钥不再内置在 class 常量池里
+            # （那一版的明文密钥已随 1.0.4 发到中央、中央坐标不可撤回）⇒ 改为
+            # env 注入，缺失即 fail-closed 拒绝启动。值只走 secret 引用，
+            # 仓里不出现明文。⚠ 2026-10-23（卡 TASK-20261023-008）补进本清单：
+            # 此前 live 已有、清单缺（live 是靠一次 env 补丁派发补上的）。
+            - name: SSO_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sso-jwt
+                  key: sso-jwt-secret
           envFrom:
             - configMapRef:
                 name: z-ctc-sso-exclude
