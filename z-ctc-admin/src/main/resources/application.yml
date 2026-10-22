@@ -37,7 +37,13 @@ z:
         # DB_PASSWORD），切库只改 .env 一处。默认值保留为本机 mysql 容器，
         # 保持「没配环境变量时不要连生产」。
         # 固定串：阿里云 RDS 直连，allowPublicKeyRetrieval=true 解决 mysql 8 公钥问题。
-        url: jdbc:mysql://${DB_HOST:mysql.zopc.local}:${DB_PORT:3306}/${DB_DATABASE:oc}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+        # ⚠ 2026-10-22 (TASK-20261021-026): 这条是 **url 直接覆盖** (z-ctc-web 的
+        #   ZCompanyCtcWebAutoConfiguration 读到 z.base.db.ctc.url 就用它建池,
+        #   **不经过** ModuleDataSourceTemplate 拼 URL 的那条路) ⇒ 模板里加的
+        #   connectTimeout/socketTimeout 覆盖不到这里 ⇒ 必须在这条 URL 上自己带。
+        #   缺这两个参数时 Connector/J 默认 0 = 无限等待 ⇒ RDS 抖动 ⇒ 建连接挂住
+        #   ⇒ /actuator/health 挂 15.9 分钟 ⇒ 探针判死 ⇒ 容器重启。
+        url: jdbc:mysql://${DB_HOST:mysql.zopc.local}:${DB_PORT:3306}/${DB_DATABASE:oc}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&connectTimeout=3000&socketTimeout=10000
         username: ${DB_USERNAME:zopc}
         password: ${DB_PASSWORD:}
         initial-size: 5
