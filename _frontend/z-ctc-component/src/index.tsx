@@ -15,6 +15,16 @@ export const HelloCtc: FC<HelloCtcProps> = ({ name = '4A' }) => {
 /** 重导出 antd 常用组件，省得业务方自己再 import */
 export { Button, Table, Form, Input, Card, Space } from 'antd';
 
+/**
+ * 组件文档页（lead 008 §7）的具名再导出。
+ *
+ * 主壳按**统一名**取各域文档页：
+ *   lazyNamed(() => import('@yuku123/z-ctc-component'), 'ComponentDocPage')
+ * 本仓原先**完全没有**文档页导出 ⇒ 主壳按统一名取会取不到，运行期 lazy 抛错。
+ * 与默认导出桶并存：默认桶的形状不动（宿主可能依赖它），文档页走具名导出。
+ */
+export { default as ComponentDocPage } from './pages/ComponentDoc';
+
 export default { HelloCtc };
 // §8.7 域目录清退：ctc 域 named exports
 /**

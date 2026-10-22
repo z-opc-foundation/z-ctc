@@ -18,3 +18,9 @@ export {default as CtcOverview} from './components/CtcOverview'
 
 // FEATURE016: z-ctc-ac API client
 export {ctcAcTenantApi, ctcAcDomainApi} from './components/TenantManagement/api'
+
+// 组件文档页（lead 008 §7）：主壳按统一名取
+//   lazyNamed(() => import('@yuku123/z-ctc-component'), 'ComponentDocPage')
+// 本仓原先没有这个导出 ⇒ 主壳按统一名取会取不到，运行期 lazy 抛错。
+// 运行时走 src/index.tsx 的同名具名导出，这里同步声明以免 TS 侧报 TS2305。
+export {default as ComponentDocPage} from './pages/ComponentDoc'
