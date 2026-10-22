@@ -84,11 +84,16 @@
 
     <properties>
         <!-- 项目自身版本（CI-friendly versions 根，发版改这一处即可）。
+             1.0.5: **z-ctc-sso 的 HS256 签名密钥不再有内置默认值**（commit bf2b781）——
+             改由 `sso.jwt-secret`（env SSO_JWT_SECRET）注入，签发方缺失即启动失败（fail-closed）。
+             ⚠ **必须抬版本号**：Central 上 z-ctc-sso:1.0.4（2026-10-17 发布）已把旧密钥
+             编译进 class 常量池，而**中央的已发布坐标不可撤回、同版本号不可重发**
+             ⇒ 修复只能落在新坐标 1.0.5 上（1.0.5 在中央尚未存在）。
              1.0.4: 装配层改名后首发 —— z-ctc-client-spring-boot-starter → z-ctc-spring-boot-starter。
              这是新坐标在 Central 上的首个版本，1.0.3 的旧坐标不再维护。
              1.0.3: 修 SsoAutoConfiguration 把 null TokenService 交给 SsoInterceptor
              （addInterceptors 早于 @Bean 方法执行）→ Bearer 路径必 500。 -->
-        <revision>1.0.4</revision>
+        <revision>1.0.5</revision>
 
         <!-- 删掉的版本键逐格按**坐标**判过（parent_preflight.py 第 2/5 节），父链都供得到：
              java.version=8→1.8、maven.compiler.source/target=8、project.build.sourceEncoding=UTF-8、
