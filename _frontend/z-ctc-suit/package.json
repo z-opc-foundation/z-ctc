@@ -13,7 +13,7 @@
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
     "@yuku123/z-ctc-component": "file:../z-ctc-component",
-    "@yuku123/z-frontend-common": "^1.0.0",
+    "@yuku123/z-frontend-common": "^1.1.3",
     "antd": "^6.3.3",
     "axios": "^1.16.1",
     "react": "^19.2.0",
