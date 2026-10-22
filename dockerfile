@@ -24,7 +24,7 @@ RUN mkdir -p /app/logs
 # z-ctc-admin 走与 z-meta-admin 一致的双 jar 设计:
 #   z-ctc-admin-1.0.0-SNAPSHOT.jar       -> library jar (被 z-opc-main-starter 引用)
 #   z-ctc-admin-1.0.0-SNAPSHOT-exec.jar  -> Spring Boot 可执行 fat jar (本镜像使用)
-COPY z-ctc-admin/target/z-ctc-admin-1.0.0-SNAPSHOT-exec.jar app.jar
+COPY z-ctc-admin/target/z-ctc-admin-*-exec.jar app.jar
 
 # 复制启动脚本（数据库等待 + JVM 参数注入）
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
