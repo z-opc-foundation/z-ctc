@@ -34,6 +34,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -43,6 +44,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 /**
  * 认证 Controller — 登录 / 验证.
@@ -62,12 +64,43 @@ public class AuthnController {
     private static final int MAX_LOGIN_ATTEMPTS = 5;
     private static final long LOGIN_ATTEMPT_WINDOW_MILLIS = 60_000L;
 
+    /**
+     * 卡 TASK-20261022-027: 自助认证端点（send-code / register / phone-login / register-phone）
+     * <b>设计上必须免登录</b> ⇒ 收不到 SSO 闸门的保护 ⇒ 只能用<b>频率限制</b>收敛滥用面。
+     * 下面是限额的<b>默认值</b>（可被环境变量覆盖，见 z-ctc-admin 的 {@code z.ctc.authn.*}）。
+     */
+    private static final long MINUTE_MILLIS = 60_000L;
+    private static final long HOUR_MILLIS = 60 * 60 * 1000L;
+
+    /** 邮箱格式（宽松：只要求「有 @ 且 @ 后面还有一段」）。 */
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+
     private final AuthService authService;
     private final LoginLogMapper loginLogMapper;
     private final Cache<String, LoginAttempt> loginAttempts = Caffeine.newBuilder()
             .expireAfterWrite(1, TimeUnit.MINUTES)
             .maximumSize(100_000L)
             .build();
+
+    /**
+     * 自助认证端点的配额计数窗口（发码 / 改密）。
+     * <p>过期时间取 2 小时，覆盖最长的一小时窗口；窗口过期后计数自然归零。</p>
+     */
+    private final Cache<String, QuotaWindow> authnQuotas = Caffeine.newBuilder()
+            .expireAfterWrite(2, TimeUnit.HOURS)
+            .maximumSize(200_000L)
+            .build();
+
+    // ⚠ 字段初始值 = @Value 里的默认值: 这样**不启 Spring 容器**的单元测试
+    //   拿到的也是合理限额（否则 int 默认 0 ⇒ 一切都判超限）。
+    @Value("${z.ctc.authn.send-code.max-per-minute-per-ip:10}")
+    private int maxSendCodePerMinutePerIp = 10;
+
+    @Value("${z.ctc.authn.send-code.max-per-hour-per-receiver:5}")
+    private int maxSendCodePerHourPerReceiver = 5;
+
+    @Value("${z.ctc.authn.reset-password.max-per-hour-per-receiver:10}")
+    private int maxResetPasswordPerHourPerReceiver = 10;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -495,6 +528,17 @@ public class AuthnController {
      * 阶段: 用户注册后跳转 "选择组织" 页 (创建租户 / 输入邀请码).
      * <p>
      * 重构: 改用 UserService.register, 业务层统一管 user + auth 双写, 避免反射调 token.
+     * <p>
+     * ⚠ 卡 TASK-20261022-027:
+     * <ul>
+     *   <li><b>第 3 项 · 补验证</b>: 改前只要 {@code email} + {@code password}(≥6 位) 就能建号
+     *       ⇒ 匿名可批量建号。现在**必须带邮箱验证码**（先调 {@code /api/ctc/authn/send-code},
+     *       {@code channel=EMAIL, scene=REGISTER}; 验证码一次性消费）。</li>
+     *   <li><b>第 4 项 · 收口签发</b>: 改前注册成功**无条件签发一枚 SSO 闸门认可的 token**
+     *       ⇒ 匿名 → 零凭据 → 合法登录态。现在**不再签发 token**（{@code token} 字段为空）:
+     *       自助注册拿到的登录态必须由 {@code /api/ctc/authn/login} 正常登录产生
+     *       （密码凭证的 identifier 就是注册用的邮箱, 见 {@code UserServiceImpl.register}）。</li>
+     * </ul>
      */
     @Operation(summary = "注册 (FEATURE049, 创建游离 user)")
     @PostMapping("/register")
@@ -503,13 +547,28 @@ public class AuthnController {
             if (req == null || req.getEmail() == null || req.getPassword() == null) {
                 return Result.<RegisterResult>fail("email / password 必填").code(400);
             }
+            String email = req.getEmail().trim();
+            if (!EMAIL_PATTERN.matcher(email).matches()) {
+                return Result.<RegisterResult>fail("邮箱格式不正确").code(400);
+            }
             if (req.getPassword().length() < 6) {
                 return Result.<RegisterResult>fail("密码至少 6 位").code(400);
+            }
+            // 卡 TASK-20261022-027 第 3 项: 邮箱验证码是**必填项**（不是可选加固）。
+            if (req.getCode() == null || req.getCode().trim().isEmpty()) {
+                return Result.<RegisterResult>fail(
+                        "验证码必填 (先调用 /api/ctc/authn/send-code, channel=EMAIL, scene=REGISTER)").code(400);
+            }
+            try {
+                verifyCodeService.verifyCode(email, VerifyCodeService.CHANNEL_EMAIL,
+                        VerifyCodeService.SCENE_REGISTER, req.getCode().trim());
+            } catch (IllegalArgumentException e) {
+                return Result.<RegisterResult>fail(e.getMessage()).code(400);
             }
             // 委托给 UserService.register (含 BCrypt 哈希 + 查重 + 写 user + 写 auth)
             Long userId;
             try {
-                userId = userService.register(req.getEmail(), req.getUsername(), req.getNickname(), req.getPassword());
+                userId = userService.register(email, req.getUsername(), req.getNickname(), req.getPassword());
             } catch (IllegalStateException e) {
                 // 邮箱已被注册
                 return Result.<RegisterResult>fail(e.getMessage()).code(409);
@@ -521,23 +580,21 @@ public class AuthnController {
             // TODO: 等所有 Controller 切到 UserService 后删掉这段
             createAccountFallback(userId, req.getPassword());
 
-            // 签发临时 token (无 tenantCode, 阶段一)
             UserDO user = userService.findById(userId).orElseThrow(() -> new IllegalStateException("注册后 user 丢失"));
-            AccountVO accountVO = new AccountVO();
-            accountVO.setId(user.getId());
-            accountVO.setUsername(user.getUsername());
-            accountVO.setNickname(user.getNickname());
-            accountVO.setEmail(user.getEmail());
-            String token = issueTokenFromUser(user);
 
             RegisterResult body = new RegisterResult();
             body.setUserId(user.getId());
             body.setEmail(user.getEmail());
             body.setUsername(user.getUsername());
             body.setNickname(user.getNickname());
-            body.setToken(token);
+            // ⚠ 卡 TASK-20261022-027 第 4 项: **不签发 token**（留空）。
+            //   自助注册**不得**无条件拿到一枚「SSO 闸门认可」的登录态 ——
+            //   否则「匿名 → 零凭据 → 合法登录态 → 闸门被绕过」这条链又回来了。
+            //   用户接着调 /api/ctc/authn/login (identifier=注册邮箱) 走正常登录即可。
+            body.setToken(null);
             body.setOrphan(true);
-            log.info("AuthnController.register 成功: userId={}, email={}", userId, req.getEmail());
+            log.info("AuthnController.register 成功: userId={}, email={} (不签发 token, 请走 /api/ctc/authn/login)",
+                    userId, maskForLog(email));
             return Result.success(body);
         } catch (Exception ex) {
             log.error("AuthnController.register 失败: {}", ex.getMessage(), ex);
@@ -552,10 +609,21 @@ public class AuthnController {
     /**
      * 发送验证码. channel: PHONE/EMAIL; scene: LOGIN/REGISTER/RESET.
      * PHONE 场景预检手机号注册态, 避免发无用短信.
+     * <p>
+     * ⚠ 卡 TASK-20261022-027 第 3 项: 本端点<b>设计上必须免登录</b>（注册 / 手机登录 / 改密都要靠它）
+     * ⇒ 收不到 SSO 闸门的保护 ⇒ <b>必须自带频率限制</b>，否则可被用来对任意手机号/邮箱狂发码。
+     * 两层配额：
+     * <ul>
+     *   <li><b>按客户端 IP</b>（每分钟 N 次）: 挡住「一个来源狂刷」的批量滥用；</li>
+     *   <li><b>按接收方</b>（每小时 N 次，<b>跨 scene 计数</b>）: 挡住「换 scene 绕过 60s 冷却」
+     *       对同一个手机号反复发码。⚠ 这一层只在**真的要发码**时消耗（预检不通过不消耗），
+     *       免得被人用「查未注册邮箱」的探测请求把受害者的额度打光。</li>
+     * </ul>
      */
     @Operation(summary = "发送验证码 (注册/登录/找回密码)")
     @PostMapping("/send-code")
-    public Result<Map<String, Object>> sendCode(@RequestBody SendCodeRequest req) {
+    public Result<Map<String, Object>> sendCode(@RequestBody SendCodeRequest req,
+                                                HttpServletRequest httpRequest) {
         if (req == null || req.getReceiver() == null || req.getChannel() == null || req.getScene() == null) {
             return Result.<Map<String, Object>>fail("receiver / channel / scene 必填").code(400);
         }
@@ -574,6 +642,16 @@ public class AuthnController {
         if (VerifyCodeService.CHANNEL_PHONE.equals(channel) && !receiver.matches("^1[3-9]\\d{9}$")) {
             return Result.<Map<String, Object>>fail("手机号格式不正确").code(400);
         }
+        if (VerifyCodeService.CHANNEL_EMAIL.equals(channel) && !EMAIL_PATTERN.matcher(receiver).matches()) {
+            return Result.<Map<String, Object>>fail("邮箱格式不正确").code(400);
+        }
+
+        // ① 客户端 IP 维度: 每分钟最多 N 次（对任意号码狂发码的总闸门）
+        String clientIp = quotaClientIp(httpRequest);
+        if (!acquireQuota("send-code:ip:" + clientIp, maxSendCodePerMinutePerIp, MINUTE_MILLIS)) {
+            log.warn("AuthnController.sendCode 限流(按IP): ip={}, channel={}, scene={}", clientIp, channel, scene);
+            return Result.<Map<String, Object>>fail("发送过于频繁, 请稍后再试").code(429);
+        }
 
         // 场景预检: 注册要求未注册; 登录/重置要求已注册
         boolean registered = VerifyCodeService.CHANNEL_PHONE.equals(channel)
@@ -584,6 +662,14 @@ public class AuthnController {
         }
         if (!VerifyCodeService.SCENE_REGISTER.equals(scene) && !registered) {
             return Result.<Map<String, Object>>fail("该" + (VerifyCodeService.CHANNEL_PHONE.equals(channel) ? "手机号" : "邮箱") + "未注册").code(404);
+        }
+
+        // ② 接收方维度: 每小时最多 N 次（跨 scene 计数）—— 只在真的要发码时消耗
+        if (!acquireQuota("send-code:receiver:" + channel + ":" + receiver,
+                maxSendCodePerHourPerReceiver, HOUR_MILLIS)) {
+            log.warn("AuthnController.sendCode 限流(按接收方): channel={}, scene={}, receiver={}",
+                    channel, scene, maskForLog(receiver));
+            return Result.<Map<String, Object>>fail("该接收方获取验证码过于频繁, 请稍后再试").code(429);
         }
 
         VerifyCodeService.SendOutcome outcome = verifyCodeService.sendCode(receiver, channel, scene);
@@ -666,7 +752,11 @@ public class AuthnController {
     }
 
     /**
-     * 手机号 + 验证码注册. 与邮箱注册同构: 创建游离 user + account 兼容兑底 + 临时 token.
+     * 手机号 + 验证码注册. 与邮箱注册同构: 创建游离 user + account 兼容兑底.
+     * <p>
+     * ⚠ 卡 TASK-20261022-027 第 4 项: 与邮箱注册一致，<b>不再签发 token</b>
+     * （改前无条件签发一枚 SSO 闸门认可的 token ⇒ 零凭据登录态）。
+     * 手机号注册**本来就要求验证码**，所以第 3 项在邮箱注册侧补齐即可。
      */
     @Operation(summary = "手机号注册 (验证码)")
     @PostMapping("/register-phone")
@@ -707,9 +797,11 @@ public class AuthnController {
             body.setPhone(phone);
             body.setUsername(user.getUsername());
             body.setNickname(user.getNickname());
-            body.setToken(issueTokenFromUser(user));
+            // ⚠ 卡 TASK-20261022-027 第 4 项: **不签发 token**（留空），同 #register。
+            body.setToken(null);
             body.setOrphan(true);
-            log.info("AuthnController.registerPhone 成功: userId={}, phone={}", userId, phone);
+            log.info("AuthnController.registerPhone 成功: userId={}, phone={} (不签发 token, 请走 /api/ctc/authn/login)",
+                    userId, maskForLog(phone));
             return Result.success(body);
         } catch (Exception ex) {
             log.error("AuthnController.registerPhone 失败: {}", ex.getMessage(), ex);
@@ -719,6 +811,10 @@ public class AuthnController {
 
     /**
      * 找回密码: 手机/邮箱验证码 + 新密码重置 (user + auth + account 三表同步).
+     * <p>
+     * ⚠ 卡 TASK-20261022-027: 本端点<b>刻意不在</b> {@code sso.exclude-paths} 里
+     * （匿名可改密 = 账号接管面）⇒ 匿名请求在 SSO 闸门就被 401 挡掉；
+     * 已登录用户改密仍可用，本方法再叠<b>验证码 + 频率限制</b>两层。
      */
     @Operation(summary = "找回密码 (验证码重置)")
     @PostMapping("/reset-password")
@@ -735,6 +831,13 @@ public class AuthnController {
         }
         if (req.getNewPassword().length() < 6) {
             return Result.<Void>fail("密码至少 6 位").code(400);
+        }
+        // 频率限制: 同一接收方每小时最多 N 次改密尝试（验证码本身还有 5 次错误即作废）
+        if (!acquireQuota("reset-password:receiver:" + channel + ":" + receiver,
+                maxResetPasswordPerHourPerReceiver, HOUR_MILLIS)) {
+            log.warn("AuthnController.resetPassword 限流: channel={}, receiver={}",
+                    channel, maskForLog(receiver));
+            return Result.<Void>fail("改密尝试过于频繁, 请稍后再试").code(429);
         }
 
         // 验证码校验 (一次性消费)
@@ -853,6 +956,53 @@ public class AuthnController {
     }
 
     /**
+     * 原子消耗一次配额（卡 TASK-20261022-027 的频率限制）。
+     *
+     * <p><b>为什么需要</b>：{@code send-code} / {@code register} / {@code phone-login} /
+     * {@code register-phone} 这几个端点<b>设计上必须免登录</b>（否则用户登不进去 / 注册不了）
+     * ⇒ 收不到 SSO 闸门的保护 ⇒ 只能靠这里的频率限制收敛两个滥用面：
+     * 「对任意手机号/邮箱狂发码」与「批量零凭据建号」。</p>
+     *
+     * @param key          配额键（调用方决定维度：客户端 IP / 接收方 …）
+     * @param limit        窗口内允许的最大次数
+     * @param windowMillis 计数窗口长度
+     * @return 本次调用是否还在配额内（false ⇒ 已被限流，调用方应回 429）
+     */
+    private boolean acquireQuota(String key, int limit, long windowMillis) {
+        long now = System.currentTimeMillis();
+        QuotaWindow window = authnQuotas.asMap().compute(key, (k, current) -> {
+            if (current == null || now - current.windowStartedAt >= windowMillis) {
+                return new QuotaWindow(1, now);
+            }
+            return new QuotaWindow(current.count + 1, current.windowStartedAt);
+        });
+        return window.count <= limit;
+    }
+
+    /**
+     * 取本次请求的客户端 IP（口径与登录日志一致：服务端对端地址 + XFF 链最后一跳可信地址）。
+     * 取不到时退化成 "unknown" —— 仍然计数（宁可误伤也不放过匿名滥用）。
+     */
+    private static String quotaClientIp(HttpServletRequest httpRequest) {
+        String ip = SsoInterceptor.resolveClientIp(httpRequest);
+        return (ip == null || ip.trim().isEmpty()) ? "unknown" : ip.trim();
+    }
+
+    /**
+     * 日志脱敏（卡 TASK-20261022-027）：邮箱 / 手机号属 PII，**不落明文进日志**。
+     * 只保留首尾各一个字符，中间打码。
+     */
+    private static String maskForLog(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        if (value.length() <= 2) {
+            return "**";
+        }
+        return value.charAt(0) + "***" + value.charAt(value.length() - 1);
+    }
+
+    /**
      * 记录登录审计日志. 异常被吞掉, 写日志失败不影响登录主流程.
      *
      * @param account       登录涉及的账号, 可为 null (账号不存在场景); 为 null 时 accountId 字段写空
@@ -935,12 +1085,19 @@ public class AuthnController {
 
     /**
      * 注册请求体
+     * <p>
+     * ⚠ 卡 TASK-20261022-027: 新增 {@code code}（邮箱验证码）—— 改前只要 email + password
+     * 就能建号（零凭据自助注册）。验证码由 {@code /api/ctc/authn/send-code}
+     * （channel=EMAIL, scene=REGISTER）下发，一次性消费。
+     * </p>
      */
     public static class RegisterRequest {
         private String email;
         private String password;
         private String username;
         private String nickname;
+        /** 邮箱验证码（scene=REGISTER）。 */
+        private String code;
 
         public String getEmail() {
             return email;
@@ -956,6 +1113,14 @@ public class AuthnController {
 
         public void setPassword(String password) {
             this.password = password;
+        }
+
+        public String getCode() {
+            return code;
+        }
+
+        public void setCode(String code) {
+            this.code = code;
         }
 
         public String getUsername() {
@@ -1162,6 +1327,19 @@ public class AuthnController {
         final long windowStartedAt;
 
         LoginAttempt(int count, long windowStartedAt) {
+            this.count = count;
+            this.windowStartedAt = windowStartedAt;
+        }
+    }
+
+    /**
+     * 配额计数窗口（卡 TASK-20261022-027）：与 {@link LoginAttempt} 同构，只是窗口更长。
+     */
+    private static class QuotaWindow {
+        final int count;
+        final long windowStartedAt;
+
+        QuotaWindow(int count, long windowStartedAt) {
             this.count = count;
             this.windowStartedAt = windowStartedAt;
         }

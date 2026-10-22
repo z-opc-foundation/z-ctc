@@ -57,6 +57,21 @@ z:
         database: ${DB_DATABASE:oc}
         username: ${DB_USERNAME:root}
         password: ${DB_PASSWORD:}
+  # 自助认证端点的**频率限制** (卡 TASK-20261022-027)
+  # ⚠ 为什么必须限流: send-code / register / phone-login / register-phone 这几个端点
+  #   **设计上必须免登录** (否则用户登不进去 / 注册不了) ⇒ 不能靠 SSO 闸门挡
+  #   ⇒ 只能用频率限制收敛「对任意手机号/邮箱狂发码」「批量建号」两个滥用面。
+  #   下面是**非敏感**的限额参数 (可用环境变量覆盖), 这里只登记键名与默认值。
+  ctc:
+    authn:
+      send-code:
+        # 同一客户端 IP 每分钟最多发码次数
+        max-per-minute-per-ip: ${Z_CTC_AUTHN_SEND_CODE_MAX_PER_MINUTE_PER_IP:10}
+        # 同一接收方每小时最多发码次数 (**跨 scene 计数**, 防换 scene 绕过 60s 冷却)
+        max-per-hour-per-receiver: ${Z_CTC_AUTHN_SEND_CODE_MAX_PER_HOUR_PER_RECEIVER:5}
+      reset-password:
+        # 同一接收方每小时最多改密尝试次数 (闸门内 + 验证码 + 本项 = 三层)
+        max-per-hour-per-receiver: ${Z_CTC_AUTHN_RESET_PASSWORD_MAX_PER_HOUR_PER_RECEIVER:10}
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -97,6 +112,21 @@ sso:
   exclude-paths:
     # FEATURE: 本地 z-ctc-admin 启动需要放行登录端点
     - /api/ctc/authn/login
+    # 卡 TASK-20261022-027: 自助认证端点 —— 设计上必须免登录（否则用户登不进去 / 注册不了）
+    # ⇒ **逐条显式登记**, 不用 /api/ctc/authn/** 宽前缀。
+    # ⚠ 为什么不用宽前缀: exclude-paths 是**纯路径前缀**匹配 (AntPathMatcher, 没有 HTTP 方法维度)
+    #   ⇒ 宽前缀会把 /api/ctc/authn/reset-password (找回密码; 匿名可改密 = 账号接管面)
+    #   以及 verify / whoami / my-tenants / select-tenant / switch-tenant 一起豁免。
+    #   回归断言 (反向钉) 见
+    #   z-ctc-admin/src/test/java/com/zifang/ctc/admin/authz/SsoExcludePathsBoundaryTest.java
+    #   —— 谁把宽前缀加回来, 那条测试必须红。
+    - /api/ctc/authn/send-code
+    - /api/ctc/authn/phone-login
+    - /api/ctc/authn/register
+    - /api/ctc/authn/register-phone
+    # ⚠ /api/ctc/authn/reset-password **刻意不在** exclude-paths:
+    #   匿名可改密 = 账号接管面 ⇒ 留在 SSO 闸门内 (卡 TASK-20261022-027 §三.1 拍板结论)。
+    #   已登录用户改密仍可用 (闸门放行 + 验证码 + 频率限制, 见 AuthnController#resetPassword)。
     # FEATURE: whoami 需要 SsoInterceptor 注入 ssoUser, 不能 exclude
     # - /api/ctc/authn/whoami
     - /api/auth/login
