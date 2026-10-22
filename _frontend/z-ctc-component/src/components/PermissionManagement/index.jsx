@@ -14,7 +14,6 @@ import {
     Popconfirm,
     Select,
     Space,
-    Table,
     Tag,
     Tooltip
 } from 'antd'
@@ -30,7 +29,7 @@ import {
     UndoOutlined,
 } from '@ant-design/icons'
 import {ctcAuthorizationApi} from './api'
-import {PageHeader} from '@yuku123/z-frontend-common/ui'
+import {ListTable, PageHeader} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 权限管理 (FEATURE015) — 按"应用维度"管理权限点（资源 CRUD）
@@ -295,7 +294,6 @@ export default function PermissionManagement({apiBaseURL}) {
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
             <PageHeader
                 title="权限管理"
-                subtitle="4A AUTHZ 域 · 按应用维度管理权限点（资源 CRUD）"
                 breadcrumb={[{label: '4A 中心'}, {label: '权限管理'}]}
             />
 
@@ -490,12 +488,13 @@ export default function PermissionManagement({apiBaseURL}) {
                                         label="更新时间">{detailRecord.updatedAt || '-'}</Descriptions.Item>
                                 </Descriptions>
                             ) : (
-                                <Table
+                                <ListTable
+                                    rows={detailRoles}
                                     rowKey="id"
                                     loading={detailRolesLoading}
-                                    dataSource={detailRoles}
-                                    pagination={{pageSize: 10, size: 'small'}}
-                                    size="small"
+                                    searchKeys={['roleCode', 'roleName']}
+                                    searchPlaceholder="按角色编码 / 角色名称过滤"
+                                    emptyTitle="该权限点暂未被任何角色绑定"
                                     columns={[
                                         {title: '角色ID', dataIndex: 'id', width: 80},
                                         {title: '角色编码', dataIndex: 'roleCode', width: 160},
@@ -509,7 +508,6 @@ export default function PermissionManagement({apiBaseURL}) {
                                         {title: '租户', dataIndex: 'tenantCode', width: 100},
                                         {title: '描述', dataIndex: 'description', ellipsis: true},
                                     ]}
-                                    locale={{emptyText: '该权限点暂未被任何角色绑定'}}
                                 />
                             )}
                         </div>

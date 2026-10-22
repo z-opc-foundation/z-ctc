@@ -13,8 +13,6 @@ import {
     Modal,
     Select,
     Space,
-    Spin,
-    Table,
     Tag,
     Tooltip
 } from 'antd'
@@ -33,7 +31,7 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {ctcAcAccountApi, ctcAcLoginLogApi} from './api'
-import {PageHeader, SearchInput} from '@yuku123/z-frontend-common/ui'
+import {ListTable, PageHeader, SearchInput} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 账号管理页 (4A AC 域) — 标准数据管理布局
@@ -515,32 +513,22 @@ export default function AccountManagement({apiBaseURL}) {
                                     </Descriptions.Item>
                                 </Descriptions>
                             ) : (
-                                <div>
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        marginBottom: 12,
-                                    }}>
-                                        <span style={{fontWeight: 600}}>
-                                            登录日志（{loginLogs.length}）
-                                        </span>
+                                <ListTable
+                                    cardTitle={`登录日志（${loginLogs.length}）`}
+                                    cardExtra={
                                         <Button size="small" icon={<ReloadOutlined/>}
                                                 onClick={() => detailAccount.id && fetchLoginLogs(detailAccount.id)}>
                                             刷新
                                         </Button>
-                                    </div>
-                                    <Spin spinning={loginLogsLoading}>
-                                        <Table
-                                            rowKey="id"
-                                            columns={loginLogColumns}
-                                            dataSource={loginLogs}
-                                            pagination={{pageSize: 10, size: 'small'}}
-                                            size="small"
-                                            locale={{emptyText: '暂无登录记录'}}
-                                        />
-                                    </Spin>
-                                </div>
+                                    }
+                                    rows={loginLogs}
+                                    columns={loginLogColumns}
+                                    rowKey="id"
+                                    loading={loginLogsLoading}
+                                    searchKeys={['identifier', 'clientIp']}
+                                    searchPlaceholder="按登录标识 / 客户端 IP 过滤"
+                                    emptyTitle="暂无登录记录"
+                                />
                             )}
                         </div>
                     </div>

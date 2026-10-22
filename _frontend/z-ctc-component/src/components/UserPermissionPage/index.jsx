@@ -1,8 +1,8 @@
 import {useEffect, useState} from 'react'
-import {Button, Card, Empty, List, Select, Space, Table, Tag, Tree, Typography} from 'antd'
+import {Button, Card, Empty, List, Select, Space, Tag, Tree, Typography} from 'antd'
 import {ReloadOutlined} from '@ant-design/icons'
 import {userPermissionApi} from '../_api/userPermission'
-import {PageHeader, TableToolbar} from '@yuku123/z-frontend-common/ui'
+import {ListTable, PageHeader, TableToolbar} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 4A 用户权限 — 查看某用户拥有的角色 + 资源（权限点）树
@@ -106,7 +106,6 @@ export default function UserPermissionPage({apiBaseURL}) {
         <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
             <PageHeader
                 title="用户权限查询"
-                subtitle="查看某用户拥有的角色 + 资源（权限点）树"
                 breadcrumb={[{label: '4A 中心'}, {label: '用户权限'}]}
             />
 
@@ -159,31 +158,29 @@ export default function UserPermissionPage({apiBaseURL}) {
                     )}
                 </Card>
 
-                <Card size="small" title={`用户权限 (${permissions.length})`} loading={permissionsLoading}>
-                    {permissions.length === 0 && !permissionsLoading ? (
-                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="该用户暂无直接权限"/>
-                    ) : (
-                        <Table
-                            size="small"
-                            rowKey={(r, i) => r.code || r.resourceCode || r.id || i}
-                            pagination={{pageSize: 8, size: 'small'}}
-                            dataSource={permissions}
-                            columns={[
-                                {
-                                    title: '资源编码', dataIndex: 'code', width: 200,
-                                    render: (_, r) => <span style={{fontFamily: 'monospace'}}>
-                                        {r.code || r.resourceCode || '-'}
-                                    </span>,
-                                },
-                                {
-                                    title: '资源名称', dataIndex: 'name', ellipsis: true,
-                                    render: (_, r) => r.name || r.resourceName || '-'
-                                },
-                            ]}
-                            locale={{emptyText: '该用户暂无直接权限'}}
-                        />
-                    )}
-                </Card>
+                <ListTable
+                    cardTitle={`用户权限 (${permissions.length})`}
+                    rows={permissions}
+                    rowKey={(r, i) => r.code || r.resourceCode || r.id || i}
+                    // 后端返回的权限对象里编码/名称可能是 code/name，也可能是 resourceCode/resourceName，
+                    // 两套字段名都列上，否则用户按列上的字样搜却搜不到。
+                    searchKeys={['code', 'name', 'resourceCode', 'resourceName']}
+                    searchPlaceholder="按资源编码 / 名称过滤"
+                    emptyTitle="该用户暂无直接权限"
+                    columns={[
+                        {
+                            title: '资源编码', dataIndex: 'code', width: 200,
+                            render: (_, r) => <span style={{fontFamily: 'monospace'}}>
+                                {r.code || r.resourceCode || '-'}
+                            </span>,
+                        },
+                        {
+                            title: '资源名称', dataIndex: 'name', ellipsis: true,
+                            render: (_, r) => r.name || r.resourceName || '-'
+                        },
+                    ]}
+                    cardProps={{size: 'small', loading: permissionsLoading}}
+                />
 
                 <Card size="small" title={
                     activeRoleId

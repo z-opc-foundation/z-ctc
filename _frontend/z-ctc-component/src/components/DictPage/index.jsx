@@ -1,8 +1,8 @@
 import {useEffect, useState} from 'react'
-import {Button, Card, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Table, Tag} from 'antd'
+import {Button, Card, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Tag} from 'antd'
 import {DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import {dictApi} from '../_api/dict'
-import {PageHeader, SearchInput} from '@yuku123/z-frontend-common/ui'
+import {ListTable, PageHeader} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 元典管理 — 字典类型 + 字典项 树形管理
@@ -36,8 +36,6 @@ export default function DictPage() {
     const [itemFormOpen, setItemFormOpen] = useState(false)
     const [editingItem, setEditingItem] = useState(null)
     const [itemForm] = Form.useForm()
-
-    const [searchText, setSearchText] = useState('')
 
     const loadTypes = async () => {
         setTypesLoading(true)
@@ -178,12 +176,6 @@ export default function DictPage() {
         }
     }
 
-    const filteredTypes = types.filter(t => {
-        if (!searchText) return true
-        const k = searchText.toLowerCase()
-        return (t.dictCode?.toLowerCase().includes(k) || t.dictName?.toLowerCase().includes(k))
-    })
-
     const itemColumns = [
         {title: 'ID', dataIndex: 'id', width: 70},
         {
@@ -217,99 +209,89 @@ export default function DictPage() {
         <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
             <PageHeader
                 title="字典管理"
-                subtitle="左侧为字典类型，右侧为该类型下的字典项"
                 breadcrumb={[{label: '4A 中心'}, {label: '字典管理'}]}
             />
             <div style={{display: 'grid', gridTemplateColumns: '380px 1fr', gap: 16}}>
-                <Card
-                    size="small"
-                    title={`字典类型 (${types.length})`}
-                    loading={typesLoading}
-                    extra={
+                {/* 左栏字典类型：搜索框与「新增/刷新」并排在 cardExtra（lead 008 §2），
+                    过滤交给基座 useListFilter，口径与全库一致。 */}
+                <ListTable
+                    cardTitle={`字典类型 (${types.length})`}
+                    cardExtra={
                         <Space>
                             <Button size="small" icon={<PlusOutlined/>} onClick={openCreateType}>新增</Button>
                             <Button size="small" icon={<ReloadOutlined/>} onClick={loadTypes}/>
                         </Space>
                     }
-                >
-                    <div style={{marginBottom: 12}}>
-                        <SearchInput
-                            placeholder="搜索编码 / 名称"
-                            value={searchText}
-                            onChange={(v) => setSearchText(v)}
-                            width="100%"
-                        />
-                    </div>
-                    <Table
-                        size="small"
-                        rowKey="id"
-                        pagination={{pageSize: 10, size: 'small'}}
-                        dataSource={filteredTypes}
-                        onRow={(r) => ({
+                    rows={types}
+                    rowKey="id"
+                    searchKeys={['dictCode', 'dictName']}
+                    searchPlaceholder="搜索编码 / 名称"
+                    cardProps={{size: 'small', loading: typesLoading}}
+                    tableProps={{
+                        onRow: (r) => ({
                             onClick: () => setSelectedType(r),
                             style: {
                                 cursor: 'pointer',
                                 background: selectedType?.id === r.id ? '#e6f4ff' : undefined,
                             },
-                        })}
-                        columns={[
-                            {
-                                title: '编码', dataIndex: 'dictCode', width: 100, ellipsis: true,
-                                render: v => <span style={{fontFamily: 'monospace'}}>{v}</span>
-                            },
-                            {title: '名称', dataIndex: 'dictName', width: 110, ellipsis: true},
-                            {
-                                title: '状态', dataIndex: 'status', width: 60,
-                                render: v => <Tag color={v === 1 ? 'success' : 'default'}>
-                                    {v === 1 ? '启' : '禁'}
-                                </Tag>,
-                            },
-                            {
-                                title: '操作', width: 100,
-                                render: (_, r) => (
-                                    <Space onClick={e => e.stopPropagation()}>
-                                        <Button type="text" size="small" icon={<EditOutlined/>}
-                                                onClick={() => openEditType(r)}/>
-                                        <Popconfirm title="删除该类型?" okText="删除" cancelText="取消"
-                                                    okButtonProps={{danger: true}}
-                                                    onConfirm={() => handleDeleteType(r.id)}>
-                                            <Button type="text" size="small" danger icon={<DeleteOutlined/>}/>
-                                        </Popconfirm>
-                                    </Space>
-                                ),
-                            },
-                        ]}
-                    />
-                </Card>
+                        }),
+                    }}
+                    columns={[
+                        {
+                            title: '编码', dataIndex: 'dictCode', width: 100, ellipsis: true,
+                            render: v => <span style={{fontFamily: 'monospace'}}>{v}</span>
+                        },
+                        {title: '名称', dataIndex: 'dictName', width: 110, ellipsis: true},
+                        {
+                            title: '状态', dataIndex: 'status', width: 60,
+                            render: v => <Tag color={v === 1 ? 'success' : 'default'}>
+                                {v === 1 ? '启' : '禁'}
+                            </Tag>,
+                        },
+                        {
+                            title: '操作', width: 100,
+                            render: (_, r) => (
+                                <Space onClick={e => e.stopPropagation()}>
+                                    <Button type="text" size="small" icon={<EditOutlined/>}
+                                            onClick={() => openEditType(r)}/>
+                                    <Popconfirm title="删除该类型?" okText="删除" cancelText="取消"
+                                                okButtonProps={{danger: true}}
+                                                onConfirm={() => handleDeleteType(r.id)}>
+                                        <Button type="text" size="small" danger icon={<DeleteOutlined/>}/>
+                                    </Popconfirm>
+                                </Space>
+                            ),
+                        },
+                    ]}
+                />
 
-                <Card
-                    size="small"
-                    title={selectedType ? `字典项 — ${selectedType.dictName} (${items.length})` : '字典项'}
-                    extra={
-                        <Space>
-                            <Button size="small" icon={<PlusOutlined/>} onClick={openCreateItem}
-                                    disabled={!selectedType}>新增项</Button>
-                            <Button size="small" icon={<ReloadOutlined/>}
-                                    disabled={!selectedType}
-                                    onClick={() => selectedType && loadItems(selectedType.id)}/>
-                        </Space>
-                    }
-                >
-                    {!selectedType ? (
+                {!selectedType ? (
+                    <Card size="small" title="字典项">
                         <div style={{padding: 40, textAlign: 'center', color: '#999'}}>
                             请在左侧选择一个字典类型以查看其字典项
                         </div>
-                    ) : (
-                        <Table
-                            size="small"
-                            rowKey="id"
-                            dataSource={items}
-                            columns={itemColumns}
-                            pagination={{pageSize: 15, size: 'small', showTotal: t => `共 ${t} 条`}}
-                            loading={itemsLoading}
-                        />
-                    )}
-                </Card>
+                    </Card>
+                ) : (
+                    <ListTable
+                        cardTitle={`字典项 — ${selectedType.dictName} (${items.length})`}
+                        cardExtra={
+                            <Space>
+                                <Button size="small" icon={<PlusOutlined/>} onClick={openCreateItem}
+                                        disabled={!selectedType}>新增项</Button>
+                                <Button size="small" icon={<ReloadOutlined/>}
+                                        disabled={!selectedType}
+                                        onClick={() => selectedType && loadItems(selectedType.id)}/>
+                            </Space>
+                        }
+                        rows={items}
+                        rowKey="id"
+                        loading={itemsLoading}
+                        searchKeys={['itemCode', 'itemName']}
+                        searchPlaceholder="按项编码 / 项名称过滤"
+                        cardProps={{size: 'small'}}
+                        columns={itemColumns}
+                    />
+                )}
             </div>
 
             <Modal

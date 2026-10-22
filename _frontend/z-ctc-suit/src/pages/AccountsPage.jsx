@@ -1,5 +1,6 @@
-import { Button, Card, Space, Table, Tag } from 'antd'
+import { Button, Space, Tag } from 'antd'
 import { HelloCtc } from '@yuku123/z-ctc-component'
+import { ListTable } from '@yuku123/z-frontend-common/ui'
 
 // 原 App.jsx TabPane 内容迁出（lead 008 §13/§14）；数据仍为占位 mock
 const mockAccounts = [
@@ -24,8 +25,16 @@ const columns = [
 
 export default function AccountsPage() {
     return (
-        <Card title="账号管理" extra={<HelloCtc name="accounts" />}>
-            <Table rowKey="id" dataSource={mockAccounts} columns={columns} />
-        </Card>
+        // 列表页三件套（分页 + 查询 + EmptyState）由基座 ListTable 一次带齐，
+        // mock 数据也照样走同一套组件，避免占位页与真实页两套写法。
+        <ListTable
+            cardTitle="账号管理"
+            cardExtra={<HelloCtc name="accounts" />}
+            rows={mockAccounts}
+            rowKey="id"
+            columns={columns}
+            searchKeys={['username', 'role']}
+            searchPlaceholder="按用户名 / 角色过滤"
+        />
     )
 }

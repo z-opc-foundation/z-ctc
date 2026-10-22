@@ -1,8 +1,9 @@
 /**
  * 用户管理表格组件 - 可复用
  */
-import {Button, Space, Table, Tag} from 'antd'
+import {Button, Space, Tag} from 'antd'
 import {DeleteOutlined, EditOutlined} from '@ant-design/icons'
+import {ListTable} from '@yuku123/z-frontend-common/ui'
 
 export default function UserTable({dataSource, loading, onEdit, onDelete, onRefresh}) {
     const columns = [
@@ -36,13 +37,16 @@ export default function UserTable({dataSource, loading, onEdit, onDelete, onRefr
         },
     ]
 
+    // 列表页三件套（lead 008 §2：分页 + 查询 + EmptyState）由基座 ListTable 一次带齐，
+    // 这里只声明「按哪几个字段过滤」——过滤口径统一收在基座 useListFilter，各仓不再各写各的。
     return (
-        <Table
+        <ListTable
+            rows={dataSource}
             columns={columns}
-            dataSource={dataSource}
             loading={loading}
             rowKey="id"
-            pagination={{pageSize: 10}}
+            searchKeys={['userName', 'nickName', 'phone', 'email']}
+            searchPlaceholder="按用户名 / 昵称 / 手机号 / 邮箱过滤"
         />
     )
 }
