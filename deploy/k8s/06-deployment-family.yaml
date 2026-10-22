@@ -53,7 +53,7 @@ spec:
         kubernetes.io/hostname: zifang001
       containers:
         - name: z-ctc
-          image: z-ctc-admin:262
+          image: z-ctc-admin:1.0.5-authn-1
           imagePullPolicy: Never
           ports:
             - containerPort: 8888

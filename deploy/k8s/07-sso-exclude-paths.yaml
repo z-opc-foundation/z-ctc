@@ -9,9 +9,23 @@
 # 这里用 Spring 的索引式环境变量整体覆盖这个 List。
 # 注意是**替换**不是追加, 所以 actuator / swagger 那几条必须一起带上。
 #
+# ⚠⚠ 索引式环境变量的下标必须是**连续的** (SSO_EXCLUDE_PATHS_0 .. _N):
+#    Spring 按下标解析, 中间跳号会让后面的条目**直接丢失** ⇒ 删掉中间一条
+#    必须把后面的整体重编号。
+#
 # 只放开真正需要匿名的那几条: 换 token / 建号 / 发验证码 / 验证码登录。
 # whoami / select-tenant / switch-tenant 仍留在闸内 —— 它们拿着 token 就能
 # 读用户身份和租户列表, 不该匿名可达。
+#
+# ⚠ /api/ctc/authn/reset-password **刻意不在**豁免里 (卡 TASK-20261022-027 拍板):
+#   匿名可改密 = 账号接管面 ⇒ 它必须留在 SSO 闸门内 ⇒ 匿名请求应当 401。
+#   ⚠ **本文件才是生产的真源**: 索引式 env 整体覆盖 application.yml 的
+#     sso.exclude-paths (替换, 不是追加) ⇒ **只改 application.yml 不生效**,
+#     仓内清单与生产 ConfigMap **两处都要改**。
+#   回归断言 (反向钉):
+#   z-ctc-admin/src/test/java/com/zifang/ctc/admin/authz/SsoExcludePathsBoundaryTest.java
+#   —— resetPasswordIsNeverExempted / protectedAuthnEndpointsAreAuthenticated
+#      两条断言在宽前缀被加回来时必须红。
 # ============================================================
 apiVersion: v1
 kind: ConfigMap
@@ -24,13 +38,17 @@ data:
   SSO_EXCLUDE_PATHS_2: /api/ctc/authn/send-code
   SSO_EXCLUDE_PATHS_3: /api/ctc/authn/phone-login
   SSO_EXCLUDE_PATHS_4: /api/ctc/authn/register-phone
-  SSO_EXCLUDE_PATHS_5: /api/ctc/authn/reset-password
-  SSO_EXCLUDE_PATHS_6: /doc.html
-  SSO_EXCLUDE_PATHS_7: /webjars/**
-  SSO_EXCLUDE_PATHS_8: /swagger-resources/**
-  SSO_EXCLUDE_PATHS_9: /v3/api-docs/**
-  SSO_EXCLUDE_PATHS_10: /actuator/**
+  # ⚠ 卡 TASK-20261022-027: 原 _5 = /api/ctc/authn/reset-password 已**删除**。
+  #   匿名可改密 = 账号接管面 ⇒ 它必须留在 SSO 闸门内（匿名请求应 401）。
+  #   ⚠ 删除后 _6.._11 已**整体重编号**为 _5.._10（索引式 env 下标必须连续，
+  #     跳号会让后面的条目直接丢失）⇒ 最终共 **11** 条，下标 _0.._10 连续。
+  SSO_EXCLUDE_PATHS_5: /doc.html
+  SSO_EXCLUDE_PATHS_6: /webjars/**
+  SSO_EXCLUDE_PATHS_7: /swagger-resources/**
+  SSO_EXCLUDE_PATHS_8: /v3/api-docs/**
+  SSO_EXCLUDE_PATHS_9: /actuator/**
   # 员工名录免登录端点（服务端到服务端调用）—— 显式登记为豁免（卡 TASK-20261021-034）。
   # 之前它在生产配置里也没登记 ⇒ 落在「谁都没管」的灰色区；出网字段已收窄，
   # 但**是否限制调用来源**仍待人工拍板 ⇒ 登记只代表「这是有意设计」，不代表已加固。
-  SSO_EXCLUDE_PATHS_11: /ctc-osc/staff/getStaffSimpleListWithoutLogin
+  # （该路径不在 sso.intercept-paths(/api/**) 内 ⇒ 登记与否不改变拦截行为）
+  SSO_EXCLUDE_PATHS_10: /ctc-osc/staff/getStaffSimpleListWithoutLogin
