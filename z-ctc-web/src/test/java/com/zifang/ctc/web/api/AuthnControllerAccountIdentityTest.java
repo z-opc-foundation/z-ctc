@@ -46,6 +46,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -124,30 +125,59 @@ class AuthnControllerAccountIdentityTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("撞号（account.id 已被他人占用）⇒ 注册明确失败 409, 不建号, 本次注册回滚")
-    void registerFailsLoudlyWhenAccountIdCollides() {
+    @DisplayName("连续撞号 ⇒ 注册明确失败 409, 不建号, 每次尝试都回滚")
+    void registerFailsLoudlyWhenAccountIdAlwaysCollides() {
         UserDO me = user(USER_ID);
-        AccountDO foreign = foreignAccount(USER_ID);
-        AuthDO cred = credential(77L, USER_ID);
 
+        // 每次尝试都撞上（同一个 user.id 被他人账号占着）
         when(userService.register(anyString(), any(), any(), anyString())).thenReturn(USER_ID);
         when(userService.findById(USER_ID)).thenReturn(Optional.of(me));
-        when(accountMapper.selectById(USER_ID)).thenReturn(foreign);
-        when(authMapper.selectByIdentity(1, EMAIL)).thenReturn(cred);
+        when(accountMapper.selectById(USER_ID)).thenReturn(foreignAccount(USER_ID));
+        when(authMapper.selectByIdentity(1, EMAIL)).thenReturn(credential(77L, USER_ID));
         when(userMapper.selectById(USER_ID)).thenReturn(me);
 
         Result<RegisterResult> r = controller.register(registerRequest());
 
-        assertEquals(409, r.getCode(), "撞号必须明确失败, 不许返回 200");
+        assertEquals(409, r.getCode(), "连续撞号必须明确失败, 不许返回 200");
         assertNotNull(r.getMessage());
         assertTrue(r.getMessage().contains("冲突"), "错误信息要说明是账号编号冲突: " + r.getMessage());
         // 不许把别人的 account 行当成自己的（更不许改它）
         verify(accountService, never()).createAccount(any(), anyString());
-        // 本次注册的行必须回滚 ⇒ 邮箱不被占用, 用户可重试
-        verify(authMapper).deleteById(77L);
-        verify(userMapper).deleteById(USER_ID);
+        // 每次尝试都回滚 ⇒ 邮箱不被占用, 用户可重试
+        verify(authMapper, times(5)).deleteById(77L);
+        verify(userMapper, times(5)).deleteById(USER_ID);
         // 不许签出任何登录态
         verify(jwtUtil, never()).generateToken(anyMap(), anyLong());
+    }
+
+    @Test
+    @DisplayName("撞号 ⇒ 回滚本次注册并换 id 重试, 换到没被占的 id 后注册成功")
+    void registerRetriesWithAnotherIdAfterCollision() {
+        UserDO first = user(1004L);
+        UserDO second = user(1005L);
+
+        // 第 1 次拿到 1004（撞上 ops），回滚后重试拿到 1005（没被占）
+        when(userService.register(anyString(), any(), any(), anyString()))
+                .thenReturn(1004L).thenReturn(1005L);
+        when(userService.findById(1004L)).thenReturn(Optional.of(first));
+        when(userService.findById(1005L)).thenReturn(Optional.of(second));
+        when(accountMapper.selectById(1004L)).thenReturn(foreignAccount(1004L));
+        when(accountMapper.selectById(1005L)).thenReturn(null);
+        when(authMapper.selectByIdentity(1, EMAIL)).thenReturn(credential(77L, 1004L));
+        when(userMapper.selectById(1004L)).thenReturn(first);
+
+        Result<RegisterResult> r = controller.register(registerRequest());
+
+        assertTrue(r.isSuccess(), "换 id 后应当注册成功: " + r.getMessage());
+        assertNotNull(r.getData());
+        assertEquals(1005L, r.getData().getUserId());
+        // 撞号那一次必须回滚, 成功的这一次必须建出**自己**的 account 行
+        verify(authMapper).deleteById(77L);
+        verify(userMapper).deleteById(1004L);
+        ArgumentCaptor<AccountDO> cap = ArgumentCaptor.forClass(AccountDO.class);
+        verify(accountService).createAccount(cap.capture(), eq(PASSWORD));
+        assertEquals(1005L, cap.getValue().getId());
+        assertEquals(second.getUsername(), cap.getValue().getUsername());
     }
 
     @Test

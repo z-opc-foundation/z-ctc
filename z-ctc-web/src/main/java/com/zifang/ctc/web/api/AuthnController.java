@@ -76,6 +76,14 @@ public class AuthnController {
     /** 邮箱格式（宽松：只要求「有 @ 且 @ 后面还有一段」）。 */
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
+    /**
+     * 卡 TASK-20261023-037: 注册撞号（{@code z_ctc_ac_account.id} 已被他人账号占用）时的
+     * **最大重试次数** —— 每次撞号都回滚本次注册并换一个 {@code user.id} 重试
+     * （{@code user.id} 是服务端自增 ⇒ 下一个 id 通常就没被占）。
+     * 连续撞满 ⇒ 明确失败（409），绝不允许产出「用户 A + 身份 B」。
+     */
+    private static final int MAX_ACCOUNT_ID_ATTEMPTS = 5;
+
     private final AuthService authService;
     private final LoginLogMapper loginLogMapper;
     private final Cache<String, LoginAttempt> loginAttempts = Caffeine.newBuilder()
@@ -587,31 +595,47 @@ public class AuthnController {
                 return Result.<RegisterResult>fail(e.getMessage()).code(400);
             }
             // 委托给 UserService.register (含 BCrypt 哈希 + 查重 + 写 user + 写 auth)
-            Long userId;
-            try {
-                userId = userService.register(email, req.getUsername(), req.getNickname(), req.getPassword());
-            } catch (IllegalStateException e) {
-                // 邮箱已被注册
-                return Result.<RegisterResult>fail(e.getMessage()).code(409);
-            } catch (IllegalArgumentException e) {
-                return Result.<RegisterResult>fail(e.getMessage()).code(400);
-            }
+            // ⚠ 卡 TASK-20261023-037: 注册与 account 兑底写是**一体**的 ——
+            //   撞号时必须回滚本次注册并换一个 user.id 重试（见下）。
 
             // 兜底: 兼容期同步写一条 account (4A 老接口仍依赖 z_ctc_ac_account)
             // TODO: 等所有 Controller 切到 UserService 后删掉这段
-            // ⚠ 卡 TASK-20261023-037: 撞号 / 写失败 ⇒ **明确失败 + 回滚本次注册**
+            // ⚠ 卡 TASK-20261023-037: 撞号 / 写失败 ⇒ **明确失败或换 id 重试**, 不许静默跳过
             //   (改前是静默跳过 ⇒ 注册"成功"但登录会拿到别人的身份)
-            try {
-                createAccountFallback(userId, req.getPassword());
-            } catch (AccountIdentityConflictException e) {
-                rollbackRegistration(userId, email, 1);
-                log.error("AuthnController.register 中止: 撞号, accountId={} 已被他人账号占用 (accountNo={}), 本次注册已回滚",
-                        e.getUserId(), e.getOccupiedAccountNo());
-                return Result.<RegisterResult>fail("注册失败: 账号编号冲突（已被他人账号占用），请重试").code(409);
-            } catch (RuntimeException e) {
-                rollbackRegistration(userId, email, 1);
-                log.error("AuthnController.register 中止: 账号兑底写失败, 本次注册已回滚: {}", e.getMessage());
-                return Result.<RegisterResult>fail("注册失败: 账号初始化失败，请重试").code(500);
+            Long userId = null;
+            boolean accountReady = false;
+            AccountIdentityConflictException lastConflict = null;
+            for (int attempt = 1; attempt <= MAX_ACCOUNT_ID_ATTEMPTS; attempt++) {
+                try {
+                    userId = userService.register(email, req.getUsername(), req.getNickname(), req.getPassword());
+                } catch (IllegalStateException e) {
+                    // 邮箱已被注册
+                    return Result.<RegisterResult>fail(e.getMessage()).code(409);
+                } catch (IllegalArgumentException e) {
+                    return Result.<RegisterResult>fail(e.getMessage()).code(400);
+                }
+                try {
+                    createAccountFallback(userId, req.getPassword());
+                    accountReady = true;
+                    break;
+                } catch (AccountIdentityConflictException e) {
+                    // 撞号: 换一个 user.id 重试（user.id 是服务端自增 ⇒ 下一个 id 通常就没被占）
+                    lastConflict = e;
+                    rollbackRegistration(userId, email, 1);
+                    log.warn("AuthnController.register 撞号: 第 {}/{} 次, accountId={} 已被他人账号占用 (accountNo={}) ⇒ 回滚本次注册并换 id 重试",
+                            attempt, MAX_ACCOUNT_ID_ATTEMPTS, e.getUserId(), e.getOccupiedAccountNo());
+                } catch (RuntimeException e) {
+                    rollbackRegistration(userId, email, 1);
+                    log.error("AuthnController.register 中止: 账号兑底写失败, 本次注册已回滚: {}", e.getMessage());
+                    return Result.<RegisterResult>fail("注册失败: 账号初始化失败，请重试").code(500);
+                }
+            }
+            if (!accountReady) {
+                log.error("AuthnController.register 中止: 连续 {} 次撞号 (accountId={}, accountNo={})",
+                        MAX_ACCOUNT_ID_ATTEMPTS, lastConflict == null ? null : lastConflict.getUserId(),
+                        lastConflict == null ? null : lastConflict.getOccupiedAccountNo());
+                return Result.<RegisterResult>fail("注册失败: 账号编号冲突（连续 " + MAX_ACCOUNT_ID_ATTEMPTS
+                        + " 次撞上他人账号），请稍后重试").code(409);
             }
 
             UserDO user = userService.findById(userId).orElseThrow(() -> new IllegalStateException("注册后 user 丢失"));
@@ -812,28 +836,40 @@ public class AuthnController {
                 return Result.<RegisterResult>fail(e.getMessage()).code(400);
             }
 
-            Long userId;
-            try {
-                userId = userService.registerByPhone(phone, req.getUsername(), req.getNickname(), req.getPassword());
-            } catch (IllegalStateException e) {
-                return Result.<RegisterResult>fail(e.getMessage()).code(409);
-            } catch (IllegalArgumentException e) {
-                return Result.<RegisterResult>fail(e.getMessage()).code(400);
-            }
-
             // 兑底: 兼容期同步写一条 account
-            // ⚠ 卡 TASK-20261023-037: 同 #register —— 撞号 / 写失败 ⇒ 明确失败 + 回滚
-            try {
-                createAccountFallback(userId, req.getPassword());
-            } catch (AccountIdentityConflictException e) {
-                rollbackRegistration(userId, phone, 1);
-                log.error("AuthnController.registerPhone 中止: 撞号, accountId={} 已被他人账号占用 (accountNo={}), 本次注册已回滚",
-                        e.getUserId(), e.getOccupiedAccountNo());
-                return Result.<RegisterResult>fail("注册失败: 账号编号冲突（已被他人账号占用），请重试").code(409);
-            } catch (RuntimeException e) {
-                rollbackRegistration(userId, phone, 1);
-                log.error("AuthnController.registerPhone 中止: 账号兑底写失败, 本次注册已回滚: {}", e.getMessage());
-                return Result.<RegisterResult>fail("注册失败: 账号初始化失败，请重试").code(500);
+            // ⚠ 卡 TASK-20261023-037: 同 #register —— 撞号 ⇒ 回滚本次注册并换 id 重试；写失败 ⇒ 明确失败
+            Long userId = null;
+            boolean accountReady = false;
+            AccountIdentityConflictException lastConflict = null;
+            for (int attempt = 1; attempt <= MAX_ACCOUNT_ID_ATTEMPTS; attempt++) {
+                try {
+                    userId = userService.registerByPhone(phone, req.getUsername(), req.getNickname(), req.getPassword());
+                } catch (IllegalStateException e) {
+                    return Result.<RegisterResult>fail(e.getMessage()).code(409);
+                } catch (IllegalArgumentException e) {
+                    return Result.<RegisterResult>fail(e.getMessage()).code(400);
+                }
+                try {
+                    createAccountFallback(userId, req.getPassword());
+                    accountReady = true;
+                    break;
+                } catch (AccountIdentityConflictException e) {
+                    lastConflict = e;
+                    rollbackRegistration(userId, phone, 1);
+                    log.warn("AuthnController.registerPhone 撞号: 第 {}/{} 次, accountId={} 已被他人账号占用 (accountNo={}) ⇒ 回滚本次注册并换 id 重试",
+                            attempt, MAX_ACCOUNT_ID_ATTEMPTS, e.getUserId(), e.getOccupiedAccountNo());
+                } catch (RuntimeException e) {
+                    rollbackRegistration(userId, phone, 1);
+                    log.error("AuthnController.registerPhone 中止: 账号兑底写失败, 本次注册已回滚: {}", e.getMessage());
+                    return Result.<RegisterResult>fail("注册失败: 账号初始化失败，请重试").code(500);
+                }
+            }
+            if (!accountReady) {
+                log.error("AuthnController.registerPhone 中止: 连续 {} 次撞号 (accountId={}, accountNo={})",
+                        MAX_ACCOUNT_ID_ATTEMPTS, lastConflict == null ? null : lastConflict.getUserId(),
+                        lastConflict == null ? null : lastConflict.getOccupiedAccountNo());
+                return Result.<RegisterResult>fail("注册失败: 账号编号冲突（连续 " + MAX_ACCOUNT_ID_ATTEMPTS
+                        + " 次撞上他人账号），请稍后重试").code(409);
             }
 
             UserDO user = userService.findById(userId)
