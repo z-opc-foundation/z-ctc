@@ -123,13 +123,23 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp/ctc-tmp
-          readinessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8888
-            initialDelaySeconds: 45
-            periodSeconds: 10
-            failureThreshold: 10
+          # 就绪探针：/actuator/health
+          # ⚠ 2026-10-23（卡 TASK-20261023-041）显式补 timeoutSeconds。
+          #   此前**清单里没写** timeoutSeconds ⇒ 线上取的是 k8s API 的默认值 **1 秒**；
+          #   而「JVM 起来后的第一次 HTTP 请求」要背 DispatcherServlet 类加载 + actuator
+          #   健康检查首次装配 + 第一条 RDS 连接 ⇒ 实测首次请求 > 1s ⇒ **每次滚动必出一条**
+          #   `Readiness probe failed … context deadline exceeded`。
+          #   取值 15s 的依据（卡内实测）：
+          #     热态 10 次采样 = 9.0~10.2ms（max 0.0102s）⇒ 端点本身不慢；
+          #     冷态首次请求实测被 1s 预算砍断 ⇒ > 1s；第二次探测（10s 后）成功
+          #     ⇒ 冷态首次请求窗口 ∈ (1s, ~11s] ⇒ 15s 留约 1.4 倍余量。
+          #   initialDelaySeconds 保持 45：实测应用本体 T+13.5s 就 Started
+          #   （`Started ZCtcAdminApplication in 10.65 seconds`）⇒ 45s 已远大于冷启动，
+          #   慢的是「第一次请求」而不是「应用起来」⇒ 延后探测并不能消除首请求冷路径。
+          timeoutSeconds: 15
+          initialDelaySeconds: 45
+          periodSeconds: 10
+          failureThreshold: 10
       volumes:
         - name: tmp
           emptyDir: {}
