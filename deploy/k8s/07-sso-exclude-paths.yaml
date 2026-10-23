@@ -26,6 +26,34 @@
 #   z-ctc-admin/src/test/java/com/zifang/ctc/admin/authz/SsoExcludePathsBoundaryTest.java
 #   —— resetPasswordIsNeverExempted / protectedAuthnEndpointsAreAuthenticated
 #      两条断言在宽前缀被加回来时必须红。
+#
+# ⚠⚠⚠ 2026-10-23（卡 TASK-20261023-049）: 本 ConfigMap **同时承载拦截范围**
+#   （SSO_INTERCEPT_PATHS_*）—— 之前拦截范围只在镜像里的 application.yml,
+#   生产无法改 ⇒ `/ctc-osc/**` 结构上不被闸门覆盖。
+#
+#   实测坐实（2026-10-23 13:55, 只读）: 不带任何 Cookie / Authorization 的
+#     POST /ctc-osc/dept/getStaffDeptList | getStaffDeptTree | health
+#   经**公网边缘 nginx (101.37.80.51)** 直达业务处理器 ⇒ **200 + 业务信封**
+#   ⇒ 真·匿名可调（对照: 同域 GET /api/ctc/authn/whoami 匿名 = 401 ⇒ 闸门本身是好的,
+#   只是**够不着** /ctc-osc/**）。
+#
+#   ⚠⚠ **本条目是「方案①」的落地清单, apply 属生产写 ⇒ 待用户拍板后执行**:
+#     kubectl -n z-ctc apply -f deploy/k8s/07-sso-exclude-paths.yaml
+#     kubectl -n z-ctc rollout restart deploy/z-ctc-admin   # envFrom 变更必须重启才生效
+#   ⇒ **本仓无任何自动 apply 机制** (deploy/bin/k8s-apply.sh 只 apply 00~05, 不含本文件)
+#     ⇒ 提交本文件**不会**改动生产。
+#   ⇒ 若用户最终拍板 ② (服务自身鉴权) / ③ (服务令牌) ⇒ **本段需回退**:
+#     git revert <本段对应的 commit>  (删掉下面 SSO_INTERCEPT_PATHS_* 两行即可)
+#
+#   ⚠ **同样的两个坑 (照抄 exclude-paths 的老教训)**:
+#     ① **替换语义**: 索引式 env 是**整体替换** sso.intercept-paths ⇒
+#        **必须把 /api/** 一并带上** (_0) ⇒ 只写 _1 会让 /api/** 整站失去闸门;
+#     ② **下标必须连续** (_0.._1) ⇒ 以后增删要整体重编号, 跳号 ⇒ 条目直接丢失。
+#
+#   📌 **仓内源侧口径的另一半** (sso.intercept-paths, 在镜像里的
+#      z-ctc-admin/src/main/resources/application.yml) **本轮刻意未改**:
+#      改它 = 打进镜像 = 触发规矩 B 的发版 = 等于替用户把方案①拍了板 ⇒ 越权。
+#      拍板后随发版同批改 (见 evidence/TASK-20261023-049/03-三方案一键执行runbook.md §2)。
 # ============================================================
 apiVersion: v1
 kind: ConfigMap
@@ -50,5 +78,12 @@ data:
   # 员工名录免登录端点（服务端到服务端调用）—— 显式登记为豁免（卡 TASK-20261021-034）。
   # 之前它在生产配置里也没登记 ⇒ 落在「谁都没管」的灰色区；出网字段已收窄，
   # 但**是否限制调用来源**仍待人工拍板 ⇒ 登记只代表「这是有意设计」，不代表已加固。
-  # （该路径不在 sso.intercept-paths(/api/**) 内 ⇒ 登记与否不改变拦截行为）
+  # （该路径不在 sso.intercept-paths(/api/**, /ctc-osc/dept/**) 内 ⇒ 登记与否不改变拦截行为）
   SSO_EXCLUDE_PATHS_10: /ctc-osc/staff/getStaffSimpleListWithoutLogin
+  # ---- 拦截范围 (SSO_INTERCEPT_PATHS_*) ----
+  # ⚠⚠ 索引式 env 是**整体替换** sso.intercept-paths ⇒ _0 必须把 /api/** 带上,
+  #    否则 /api/** 整站失去闸门; 下标必须**连续** (_0.._1), 跳号 ⇒ 条目丢失。
+  # ⚠ 卡 TASK-20261023-049: 把 /ctc-osc/dept/** 纳入闸门 (真·匿名可调, 实测坐实)。
+  #    **apply 属生产写 ⇒ 待用户拍板** (见文件头) ⇒ 本文件进仓 ≠ 生产已生效。
+  SSO_INTERCEPT_PATHS_0: /api/**
+  SSO_INTERCEPT_PATHS_1: /ctc-osc/dept/**
