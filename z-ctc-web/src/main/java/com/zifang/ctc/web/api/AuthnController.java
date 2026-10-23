@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.zifang.ctc.common.vo.VerifyResponseVO;
 import com.zifang.ctc.core.domain.entity.AccountDO;
+import com.zifang.ctc.core.domain.entity.AuthDO;
 import com.zifang.ctc.core.domain.entity.LoginLogDO;
 import com.zifang.ctc.core.domain.entity.MembershipDO;
 import com.zifang.ctc.core.domain.entity.UserDO;
@@ -188,6 +189,26 @@ public class AuthnController {
         }
 
         AccountWithAuth aw = result.get();
+
+        // ⚠ 卡 TASK-20261023-037（身份串号）: 凭证解析出来的 account 行**必须属于**该凭证的 user.
+        //   改前没有这一步 ⇒ user.id 撞上别人的 account.id 时, 签出的 token 里
+        //   staffId / username / accountNo / tenantCode **全是别人的**（实测 userId=1004 ⇒ staffId=ops）。
+        //   ⇒ 这里宁可拒签, 也不许签出「用户 A + 身份 B」的登录态。
+        UserDO credOwner = (aw.auth == null || aw.auth.getUserId() == null)
+                ? null : userMapper.selectById(aw.auth.getUserId());
+        if (credOwner != null && !accountBelongsToUser(aw.account, credOwner)) {
+            recordLoginLog(aw.account, request.getIdentifier(), identityType, 0, "账号身份异常(撞号)",
+                    clientIp, userAgent, request.getTenantCode());
+            log.error("AuthnController.login 拒绝签发: 凭证归属 userId={} 与 account 行不匹配 (accountId={}, accountNo={})",
+                    aw.auth.getUserId(), aw.account.getId(), aw.account.getAccountNo());
+            return Result.<LoginResponseVO>fail("账号身份异常，请联系管理员").code(409);
+        }
+        if (credOwner == null) {
+            // 老账号没有对应 user 行（4A 老数据）⇒ 不在此卡处置范围, 只留痕
+            log.warn("AuthnController.login: accountId={} 无对应 user 行, 跳过归属校验",
+                    aw.account == null ? null : aw.account.getId());
+        }
+
         recordLoginLog(aw.account, request.getIdentifier(), identityType, 1, null, clientIp, userAgent, request.getTenantCode());
 
         // 签发 token: tenantCode 优先用 request.tenantCode (从 URL/前端传入)
@@ -578,7 +599,20 @@ public class AuthnController {
 
             // 兜底: 兼容期同步写一条 account (4A 老接口仍依赖 z_ctc_ac_account)
             // TODO: 等所有 Controller 切到 UserService 后删掉这段
-            createAccountFallback(userId, req.getPassword());
+            // ⚠ 卡 TASK-20261023-037: 撞号 / 写失败 ⇒ **明确失败 + 回滚本次注册**
+            //   (改前是静默跳过 ⇒ 注册"成功"但登录会拿到别人的身份)
+            try {
+                createAccountFallback(userId, req.getPassword());
+            } catch (AccountIdentityConflictException e) {
+                rollbackRegistration(userId, email, 1);
+                log.error("AuthnController.register 中止: 撞号, accountId={} 已被他人账号占用 (accountNo={}), 本次注册已回滚",
+                        e.getUserId(), e.getOccupiedAccountNo());
+                return Result.<RegisterResult>fail("注册失败: 账号编号冲突（已被他人账号占用），请重试").code(409);
+            } catch (RuntimeException e) {
+                rollbackRegistration(userId, email, 1);
+                log.error("AuthnController.register 中止: 账号兑底写失败, 本次注册已回滚: {}", e.getMessage());
+                return Result.<RegisterResult>fail("注册失败: 账号初始化失败，请重试").code(500);
+            }
 
             UserDO user = userService.findById(userId).orElseThrow(() -> new IllegalStateException("注册后 user 丢失"));
 
@@ -788,7 +822,19 @@ public class AuthnController {
             }
 
             // 兑底: 兼容期同步写一条 account
-            createAccountFallback(userId, req.getPassword());
+            // ⚠ 卡 TASK-20261023-037: 同 #register —— 撞号 / 写失败 ⇒ 明确失败 + 回滚
+            try {
+                createAccountFallback(userId, req.getPassword());
+            } catch (AccountIdentityConflictException e) {
+                rollbackRegistration(userId, phone, 1);
+                log.error("AuthnController.registerPhone 中止: 撞号, accountId={} 已被他人账号占用 (accountNo={}), 本次注册已回滚",
+                        e.getUserId(), e.getOccupiedAccountNo());
+                return Result.<RegisterResult>fail("注册失败: 账号编号冲突（已被他人账号占用），请重试").code(409);
+            } catch (RuntimeException e) {
+                rollbackRegistration(userId, phone, 1);
+                log.error("AuthnController.registerPhone 中止: 账号兑底写失败, 本次注册已回滚: {}", e.getMessage());
+                return Result.<RegisterResult>fail("注册失败: 账号初始化失败，请重试").code(500);
+            }
 
             UserDO user = userService.findById(userId)
                     .orElseThrow(() -> new IllegalStateException("注册后 user 丢失"));
@@ -866,7 +912,14 @@ public class AuthnController {
         try {
             AccountDO account = accountMapper.selectById(user.getId());
             if (account != null) {
-                accountService.resetPassword(account.getId(), req.getNewPassword(), "self");
+                // ⚠ 卡 TASK-20261023-037: account.id 撞号时, 这一行是**别人的账号**
+                //   ⇒ 绝不能拿它改密码（否则等于「改密 ⇒ 接管他人账号」）。
+                if (accountBelongsToUser(account, user)) {
+                    accountService.resetPassword(account.getId(), req.getNewPassword(), "self");
+                } else {
+                    log.error("AuthnController.resetPassword 跳过 account 兑底: accountId={} 撞号（他人账号）, 不改其密码",
+                            user.getId());
+                }
             }
         } catch (Exception e) {
             log.warn("reset-password 兑底重置 account 密码失败: {}", e.getMessage());
@@ -878,25 +931,157 @@ public class AuthnController {
 
     /**
      * 兑底: 兼容期同步写一条 account (4A 老接口仍依赖 z_ctc_ac_account).
-     * 写失败不影响主流程.
+     *
+     * <p>⚠ 卡 TASK-20261023-037（自助注册撞号 ⇒ 登录拿到**别人的身份**）:
+     * 改前这里是<b>静默跳过</b> —— {@code accountMapper.selectById(userId) != null} ⇒ 不建号、
+     * 异常也只 {@code log.warn} ⇒ 注册返回 200、看起来成功, 但
+     * {@code z_ctc_ac_account.id} 与 {@code z_ctc_ac_user.id} 是<b>两套独立 id 空间</b>,
+     * 一旦同号, 登录按 user id 反查到的就是**别人的 account 行**
+     * ⇒ token 的 staffId / username / accountNo / tenantCode 全是别人的
+     * （实测: userId=1004 的 token 里 {@code staffId=ops}）。</p>
+     *
+     * <p>现在改成 <b>撞号 ⇒ 明确失败</b>（抛 {@link AccountIdentityConflictException},
+     * 由注册端点回滚本次注册）⇒ 恒等式成立:
+     * <b>「注册成功的用户, 其 account 行必然是自己那条」</b>。</p>
+     *
+     * <p>为什么本轮不选「换 id 成功」: 登录链路
+     * {@code AcAuthServiceImpl.findAccountByCredential} 把 {@code z_ctc_ac_auth.user_id}
+     * <b>直接当 account.id</b> 反查（{@code selectAccountById(auth.getUserId())}）,
+     * 且签发的 token 里 {@code userId} claim = {@code account.id}
+     * ⇒ account.id 与 user.id 一旦分开, 登录就查不到行、token 的 userId 也会指错人
+     * ⇒ 彻底解耦要改 core 层（account 加 {@code user_id} 列 + 改反查口径 + 改 claim 来源），
+     * 不在本卡授权的文件范围内 ⇒ 本卡只做「卡内最小改动」路线, 解耦另落卡。</p>
+     *
+     * @throws AccountIdentityConflictException account.id 已被**别的**账号占用（撞号）
+     * @throws IllegalStateException            注册后 user 丢失 / account 写入失败
      */
     private void createAccountFallback(Long userId, String rawPassword) {
+        UserDO user = userService.findById(userId).orElse(null);
+        if (user == null) {
+            throw new IllegalStateException("注册后 user 不存在, 账号兑底写失败");
+        }
+        AccountDO existing = accountMapper.selectById(userId);
+        if (existing != null) {
+            if (accountBelongsToUser(existing, user)) {
+                // 幂等: 这条 account 行本来就是本人的 ⇒ 不用重写
+                return;
+            }
+            // 撞号: account.id 被**别人的账号**占着 ⇒ 明确失败, 不许再静默跳过
+            log.error("AuthnController.createAccountFallback 撞号: accountId={} 已被他人账号占用 (accountNo={}), 注册中止",
+                    userId, existing.getAccountNo());
+            throw new AccountIdentityConflictException(userId, existing.getAccountNo());
+        }
+        AccountDO account = new AccountDO();
+        account.setId(user.getId());
+        account.setAccountNo(user.getUserNo());
+        account.setUsername(user.getUsername());
+        account.setNickname(user.getNickname());
+        account.setEmail(user.getEmail());
+        account.setPhone(user.getPhone());
+        account.setAccountType(2);  // 普通用户
+        account.setStatus(1);
+        accountService.createAccount(account, rawPassword);
+    }
+
+    /**
+     * 判断一条 account 行是不是**属于**这个 user（卡 TASK-20261023-037）.
+     *
+     * <p>{@code z_ctc_ac_account.id} 与 {@code z_ctc_ac_user.id} 是两套独立 id 空间,
+     * 撞号时 login 会按 {@code auth.user_id} 取到**别人的** account 行 ⇒ 必须能判定
+     * 「这条 account 行是不是这个 user 的」。判定信号按<b>强弱</b>依次取, 命中即定:</p>
+     * <ol>
+     *   <li><b>email</b> —— 自助注册与 4A 老路径写的是同一个邮箱 ⇒ 最强信号;</li>
+     *   <li><b>phone</b> —— 手机号注册同理;</li>
+     *   <li><b>account_no == user_no</b> —— user_no 是服务端生成的 {@code U+毫秒}, 登记人伪造不了;</li>
+     *   <li><b>username</b> —— 只可能落在「account_no 与 user_no 都为空」的老行上（兜底）。</li>
+     * </ol>
+     *
+     * <p>⚠ 第 ③ 条<b>不相等就直接判否</b>: 撞号的老账号（{@code ops} / {@code tunnel-test-…}）
+     * email / phone 都是 NULL, 只有 account_no 是 {@code ops} 这类值 ⇒ 会在第 ③ 条被挡住,
+     * <b>不会</b>掉到第 ④ 条被「用户名相同」蒙混过关。</p>
+     *
+     * @param account account 行, 可为 null
+     * @param user    user 行, 可为 null
+     * @return true = 这条 account 行属于该 user
+     */
+    private boolean accountBelongsToUser(AccountDO account, UserDO user) {
+        if (account == null || user == null) {
+            return false;
+        }
+        if (isNotBlank(account.getEmail()) && isNotBlank(user.getEmail())) {
+            return account.getEmail().equals(user.getEmail());
+        }
+        if (isNotBlank(account.getPhone()) && isNotBlank(user.getPhone())) {
+            return account.getPhone().equals(user.getPhone());
+        }
+        if (isNotBlank(account.getAccountNo()) && isNotBlank(user.getUserNo())) {
+            return account.getAccountNo().equals(user.getUserNo());
+        }
+        if (isNotBlank(account.getUsername()) && isNotBlank(user.getUsername())) {
+            return account.getUsername().equals(user.getUsername());
+        }
+        return false;
+    }
+
+    private static boolean isNotBlank(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    /**
+     * 注册失败时的回滚: 删掉**本次注册刚写**的凭证行 + user 行
+     * ⇒ 邮箱不被占用, 用户拿同一个邮箱可以直接重试。
+     *
+     * <p>⚠ 严格校验归属（凭证行的 user_id / user 行的邮箱或手机号必须与本次注册一致）
+     * ⇒ 只可能删掉本次请求自己创建的行, <b>绝不碰任何既有数据</b>
+     * （既有行的清理由卡 §三 修法建议 3 决定, 属「数据订正」, 不在本卡自主授权内）。</p>
+     */
+    private void rollbackRegistration(Long userId, String identifier, int identityType) {
         try {
-            UserDO user = userService.findById(userId).orElse(null);
-            if (user != null && accountMapper.selectById(userId) == null) {
-                AccountDO account = new AccountDO();
-                account.setId(user.getId());
-                account.setAccountNo(user.getUserNo());
-                account.setUsername(user.getUsername());
-                account.setNickname(user.getNickname());
-                account.setEmail(user.getEmail());
-                account.setPhone(user.getPhone());
-                account.setAccountType(2);  // 普通用户
-                account.setStatus(1);
-                accountService.createAccount(account, rawPassword);
+            if (identifier != null) {
+                AuthDO auth = authMapper.selectByIdentity(identityType, identifier);
+                if (auth != null && userId.equals(auth.getUserId())) {
+                    authMapper.deleteById(auth.getId());
+                }
             }
         } catch (Exception e) {
-            log.warn("兑底写 account 失败, 不影响主流程: {}", e.getMessage());
+            log.warn("回滚注册凭证行失败: userId={}, err={}", userId, e.getMessage());
+        }
+        try {
+            UserDO user = userMapper.selectById(userId);
+            if (user != null && userId.equals(user.getId())
+                    && (identifier == null
+                        || identifier.equals(user.getEmail())
+                        || identifier.equals(user.getPhone()))) {
+                userMapper.deleteById(userId);
+            }
+        } catch (Exception e) {
+            log.warn("回滚注册 user 行失败: userId={}, err={}", userId, e.getMessage());
+        }
+    }
+
+    /**
+     * 撞号异常: {@code z_ctc_ac_account.id} 已被**别的**账号占用。
+     * 触发路径 = 自助注册（{@code /api/ctc/authn/register} / {@code /register-phone}）。
+     */
+    static class AccountIdentityConflictException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        private final Long userId;
+        private final String occupiedAccountNo;
+
+        AccountIdentityConflictException(Long userId, String occupiedAccountNo) {
+            super("account.id 撞号: userId=" + userId + " 已被他人账号占用 (accountNo=" + occupiedAccountNo + ")");
+            this.userId = userId;
+            this.occupiedAccountNo = occupiedAccountNo;
+        }
+
+        Long getUserId() {
+            return userId;
+        }
+
+        String getOccupiedAccountNo() {
+            return occupiedAccountNo;
         }
     }
 
