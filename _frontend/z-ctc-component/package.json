@@ -1,6 +1,6 @@
 {
   "name": "@yuku123/z-ctc-component",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "z-ctc 4A 中心共享 UI 组件层（library mode）—— 与 z-schedule-frontend-component 同规范",
   "type": "module",
   "main": "./dist/index.cjs",
