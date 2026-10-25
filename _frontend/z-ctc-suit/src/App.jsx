@@ -53,6 +53,11 @@ function ProtectedShell() {
             appTitle="z-ctc 4A 中心"
             appShort="CTC"
             appVersion="1.0.1"
+            appIcon={{
+                icon: <img src="/icon.png" alt="z-ctc 4A 中心" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />,
+                color: '#0ea5e9',
+                label: 'z-ctc 4A 中心',
+            }}
             appUser={user}
         />
     )
