@@ -1,12 +1,4 @@
-import { Card, Typography } from 'antd'
-
-const { Paragraph } = Typography
-
-/** 审计日志 —— 占位页（lead 008 §13：菜单直达页不渲染 PageHeader）。 */
-export default function AuditPage() {
-    return (
-        <Card title="审计日志">
-            <Paragraph type="secondary">占位内容，由后续迭代填充（FEATURE035 / FEATURE036）。</Paragraph>
-        </Card>
-    )
-}
+/**
+ * 审计日志 —— z-ctc-component 的 AuditPage（按日志类型 Tabs，登录日志走 /api/ctc/ac/login-log/**）。
+ */
+export { AuditPage as default } from '@yuku123/z-ctc-component'

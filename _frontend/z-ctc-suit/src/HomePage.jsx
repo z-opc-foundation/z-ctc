@@ -48,7 +48,7 @@ export default function HomePage() {
                                 </div>
                                 <div style={{ minWidth: 0 }}>
                                     <div style={{ fontSize: 15, fontWeight: 600, color: '#0f172a' }}>{m.label}</div>
-                                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{m.key}</div>
+                                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{m.desc || '进入'}</div>
                                 </div>
                             </Space>
                         </Card>

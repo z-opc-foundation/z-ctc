@@ -1,40 +1,5 @@
-import { Button, Space, Tag } from 'antd'
-import { HelloCtc } from '@yuku123/z-ctc-component'
-import { ListTable } from '@yuku123/z-frontend-common/ui'
-
-// 原 App.jsx TabPane 内容迁出（lead 008 §13/§14）；数据仍为占位 mock
-const mockAccounts = [
-    { id: 1, username: 'admin', role: '管理员', status: '启用', createdAt: '2026-09-01 10:00' },
-    { id: 2, username: 'auditor', role: '审计员', status: '启用', createdAt: '2026-09-05 14:20' },
-    { id: 3, username: 'readonly', role: '只读', status: '停用', createdAt: '2026-09-10 09:15' },
-]
-
-const columns = [
-    { title: 'ID', dataIndex: 'id', width: 60 },
-    { title: '用户名', dataIndex: 'username' },
-    { title: '角色', dataIndex: 'role', render: (r) => <Tag color="blue">{r}</Tag> },
-    { title: '状态', dataIndex: 'status', render: (s) => <Tag color={s === '启用' ? 'green' : 'red'}>{s}</Tag> },
-    { title: '创建时间', dataIndex: 'createdAt' },
-    { title: '操作', render: () => (
-        <Space>
-            <Button size="small">编辑</Button>
-            <Button size="small" danger>删除</Button>
-        </Space>
-    ) },
-]
-
-export default function AccountsPage() {
-    return (
-        // 列表页三件套（分页 + 查询 + EmptyState）由基座 ListTable 一次带齐，
-        // mock 数据也照样走同一套组件，避免占位页与真实页两套写法。
-        <ListTable
-            cardTitle="账号管理"
-            cardExtra={<HelloCtc name="accounts" />}
-            rows={mockAccounts}
-            rowKey="id"
-            columns={columns}
-            searchKeys={['username', 'role']}
-            searchPlaceholder="按用户名 / 角色过滤"
-        />
-    )
-}
+/**
+ * 账号管理 —— z-ctc-component 的 AccountManagement（真实数据，走 /api/ctc/ac/**）。
+ * 本壳只做路由挂载，页面实现不在这里复制一份。
+ */
+export { AccountManagement as default } from '@yuku123/z-ctc-component'
