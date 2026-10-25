@@ -46,6 +46,8 @@ export {default as AccountManagement} from './components/AccountManagement'
 export {default as ApplicationManagement} from './components/ApplicationManagement'
 export {default as RoleManagement} from './components/RoleManagement'
 export {default as PermissionManagement} from './components/PermissionManagement'
+export {default as ResourcePage} from './components/ResourcePage'
+export {default as UserPermissionPage} from './components/UserPermissionPage'
 export {default as SurlManagement} from './components/SurlManagement'
 
 // 4A 中心补齐 FEATURE015+ 后未迁入的页面

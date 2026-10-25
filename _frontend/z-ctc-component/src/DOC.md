@@ -10,8 +10,8 @@ z-ctc 4A 中心的**可复用前端组件层**（library mode）：账号 / 组�
 - **技术栈**：React 19 + antd 6 + `@yuku123/z-frontend-common`（基座 `createRequest` 统一解包 `Result<T>`）
 
 > ⚠ 本仓与 `z-ctc-suit` 是**两个不同的包**：suit 是 4A 中心的独立运行壳（`private: true`，不发布 npm），
-> 页面代码（AccountsPage / AuthnPage / AuthzPage / AuditPage）目前仍住在 suit 的 `src/pages/**` 下。
-> 本包承载的是**组件层**（`src/components/**`）—— 两边视角不同、API 大体重叠 —— 本文件描述的是**本包**的能力面。
+> 它不再自建页面，菜单里的每一页都是本包组件的薄包装；本包承载的是**组件层**（`src/components/**`）。
+> 两边视角不同、API 大体重叠 —— 本文件描述的是**本包**的能力面。
 
 ---
 
@@ -47,8 +47,9 @@ import HelloCtc from '@yuku123/z-ctc-component';               // 默认导出�
 
 // 管理组件
 import { OrgPage, TenantManagement, AccountManagement, ApplicationManagement,
-         RoleManagement, PermissionManagement, SurlManagement,
-         DictPage, AuditPage, CtcOverview, OrgManagement, UserTable, StatusTag } from '@yuku123/z-ctc-component';
+         RoleManagement, PermissionManagement, ResourcePage, UserPermissionPage,
+         SurlManagement, DictPage, AuditPage, CtcOverview, OrgManagement,
+         UserTable, StatusTag } from '@yuku123/z-ctc-component';
 
 // API client（顶栏租户 / 域下拉要用）
 import { ctcAcTenantApi, ctcAcDomainApi } from '@yuku123/z-ctc-component';

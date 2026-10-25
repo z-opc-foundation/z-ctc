@@ -7,6 +7,8 @@ export {default as AccountManagement} from './components/AccountManagement'
 export {default as ApplicationManagement} from './components/ApplicationManagement'
 export {default as RoleManagement} from './components/RoleManagement'
 export {default as PermissionManagement} from './components/PermissionManagement'
+export {default as ResourcePage} from './components/ResourcePage'
+export {default as UserPermissionPage} from './components/UserPermissionPage'
 export {default as SurlManagement} from './components/SurlManagement'
 
 // 以下三项 index.js 已导出、此处原先漏声明：TS 走 .d.ts（同目录优先解析声明文件），
