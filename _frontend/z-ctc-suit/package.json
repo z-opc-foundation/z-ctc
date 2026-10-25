@@ -1,6 +1,6 @@
 {
   "name": "z-ctc-suit",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "z-ctc 4A 中心管理 SPA（应用层）—— 与 z-schedule-frontend 同规范",
   "private": true,
   "type": "module",
