@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 import {
     Button,
     Card,
@@ -312,6 +312,19 @@ export default function TenantManagement({apiBaseURL}) {
         ? tenants.find(t => t.tenantCode === selectedDomain.tenantCode)
         : null
 
+    // ── 扩展配置列表查询过滤（lead 008 §2 规则 3，端侧过滤） ──
+    // 过滤字段取本表 columns 里真实存在的 dataIndex：key / value。
+    const [kvKeyword, setKvKeyword] = useState('')
+    const kvRows = useMemo(
+        () => configData.map((r, i) => ({...r, _idx: i})),
+        [configData],
+    )
+    const filteredKvRows = useMemo(() => {
+        const kw = kvKeyword.trim().toLowerCase()
+        if (!kw) return kvRows
+        return kvRows.filter((r) => `${r.key || ''} ${r.value || ''}`.toLowerCase().includes(kw))
+    }, [kvRows, kvKeyword])
+
     const kvColumns = [
         {title: 'Key', dataIndex: 'key', key: 'key', width: 200},
         {title: 'Value', dataIndex: 'value', key: 'value', ellipsis: true},
@@ -502,23 +515,31 @@ export default function TenantManagement({apiBaseURL}) {
                                 title="扩展配置 (K-V)"
                                 size="small"
                                 extra={
-                                    <Button
-                                        type="primary"
-                                        size="small"
-                                        icon={<PlusOutlined/>}
-                                        onClick={() => {
-                                            setEditingKv(null)
-                                            kvForm.resetFields()
-                                            setKvModalOpen(true)
-                                        }}
-                                    >
-                                        新增
-                                    </Button>
+                                    <Space>
+                                        <Input.Search
+                                            allowClear
+                                            placeholder="按 Key / Value 过滤"
+                                            style={{width: 220}}
+                                            onChange={(e) => setKvKeyword(e.target.value)}
+                                        />
+                                        <Button
+                                            type="primary"
+                                            size="small"
+                                            icon={<PlusOutlined/>}
+                                            onClick={() => {
+                                                setEditingKv(null)
+                                                kvForm.resetFields()
+                                                setKvModalOpen(true)
+                                            }}
+                                        >
+                                            新增
+                                        </Button>
+                                    </Space>
                                 }
                             >
                                 <Table
                                     columns={kvColumns}
-                                    dataSource={configData.map((r, i) => ({...r, _idx: i}))}
+                                    dataSource={filteredKvRows}
                                     rowKey={r => `${r.key}_${r._idx}`}
                                     pagination={false /* §2 规则 2 豁免：租户扩展配置是键值配置项，条数有界 */}
                                     size="small"

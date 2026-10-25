@@ -1,6 +1,6 @@
-import {useRef, useState} from 'react'
+import {useMemo, useRef, useState} from 'react'
 import {ProForm, ProFormDigit, ProFormText, ProTable} from '@ant-design/pro-components'
-import {Button, Card, Form, message, Popconfirm, Space, Tag, Tooltip} from 'antd'
+import {Button, Card, Form, Input, message, Popconfirm, Space, Tag, Tooltip} from 'antd'
 import {CopyOutlined, DeleteOutlined, LinkOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import {configureApiBaseURL, ctcSurlApi} from './api'
 import {PageHeader} from '@yuku123/z-frontend-common/ui'
@@ -34,6 +34,17 @@ export default function SurlManagement({apiBaseURL}) {
         () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'),
     )
     const [generating, setGenerating] = useState(false)
+
+    // ── 历史短链查询过滤（lead 008 §2 规则 3，端侧过滤） ──
+    // 过滤字段取本表 columns 里真实存在的 dataIndex：mapKey / originUrl / remark。
+    const [keyword, setKeyword] = useState('')
+    const filteredHistory = useMemo(() => {
+        const kw = keyword.trim().toLowerCase()
+        if (!kw) return history
+        return history.filter(
+            (r) => `${r.mapKey || ''} ${r.originUrl || ''} ${r.remark || ''}`.toLowerCase().includes(kw),
+        )
+    }, [history, keyword])
 
     const persistHistory = (next) => {
         setHistory(next)
@@ -201,12 +212,20 @@ export default function SurlManagement({apiBaseURL}) {
                 )}
             </Card>
 
-            <Card title="历史短链" style={{marginTop: 16}}>
+            <Card title="历史短链" style={{marginTop: 16}}
+                  extra={
+                      <Input.Search
+                          allowClear
+                          placeholder="按短码 / 原始 URL / 备注过滤"
+                          style={{width: 260}}
+                          onChange={(e) => setKeyword(e.target.value)}
+                      />
+                  }>
                 <ProTable
                     actionRef={actionRef}
                     rowKey="mapKey"
                     columns={columns}
-                    dataSource={history}
+                    dataSource={filteredHistory}
                     search={false}
                     pagination={{pageSize: 10, showSizeChanger: true}}
                     toolBarRender={() => [

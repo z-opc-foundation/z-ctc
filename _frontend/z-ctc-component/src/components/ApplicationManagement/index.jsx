@@ -65,6 +65,9 @@ export default function ApplicationManagement({apiBaseURL}) {
     const [detailDrawerOpen, setDetailDrawerOpen] = useState(false)
     const [resources, setResources] = useState([])
 
+    // --- 资源列表查询关键字（lead 008 §2 规则 3，端侧过滤） ---
+    const [resKeyword, setResKeyword] = useState('')
+
     // --- 新建资源 Modal ---
     const [createResOpen, setCreateResOpen] = useState(false)
     const [createResForm] = Form.useForm()
@@ -306,35 +309,59 @@ export default function ApplicationManagement({apiBaseURL}) {
     const buttonResources = resources.filter(r => r.resourceType === 3)
     const dataResources = resources.filter(r => r.resourceType === 4)
 
-    const renderResTable = (list, type) => (
-        <div>
-            <div style={{marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                <span style={{color: '#666'}}>
-                    共 <b>{list.length}</b> 条 {TYPE_MAP[type].text} 资源
-                </span>
-                <Button type="primary" size="small" icon={<PlusOutlined/>}
-                        onClick={() => openCreateResourceFor(type)}>
-                    新建{TYPE_MAP[type].text}
-                </Button>
+    const renderResTable = (list, type) => {
+        // ── 资源列表查询过滤（lead 008 §2 规则 3，端侧过滤） ──
+        // 过滤字段取 resColumns 里真实存在的 dataIndex：resourceCode / resourceName / path。
+        const kw = resKeyword.trim().toLowerCase()
+        const filtered = kw
+            ? list.filter(
+                (r) => `${r.resourceCode || ''} ${r.resourceName || ''} ${r.path || ''}`
+                    .toLowerCase().includes(kw),
+            )
+            : list
+        return (
+            <div>
+                <div style={{marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <span style={{color: '#666'}}>
+                        共 <b>{list.length}</b> 条 {TYPE_MAP[type].text} 资源
+                    </span>
+                    <Space>
+                        <Input.Search
+                            allowClear
+                            placeholder="按资源编码 / 名称过滤"
+                            style={{width: 220}}
+                            onChange={(e) => setResKeyword(e.target.value)}
+                        />
+                        <Button type="primary" size="small" icon={<PlusOutlined/>}
+                                onClick={() => openCreateResourceFor(type)}>
+                            新建{TYPE_MAP[type].text}
+                        </Button>
+                    </Space>
+                </div>
+                {list.length > 0 ? (
+                    <Table
+                        rowKey="id"
+                        columns={resColumns}
+                        dataSource={filtered}
+                        pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t) => `共 ${t} 条` }}
+                        size="small"
+                        scroll={{x: 800}}
+                        locale={{
+                            emptyText: <EmptyState title={`没有匹配的 ${TYPE_MAP[type].text} 资源`}
+                                                   description="换个关键字再试一次"
+                                                   size="sm"/>
+                        }}
+                    />
+                ) : (
+                    <EmptyState
+                        title={`该应用暂无 ${TYPE_MAP[type].text} 资源`}
+                        description="点击上方按钮新增"
+                        size="sm"
+                    />
+                )}
             </div>
-            {list.length > 0 ? (
-                <Table
-                    rowKey="id"
-                    columns={resColumns}
-                    dataSource={list}
-                    pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t) => `共 ${t} 条` }}
-                    size="small"
-                    scroll={{x: 800}}
-                />
-            ) : (
-                <EmptyState
-                    title={`该应用暂无 ${TYPE_MAP[type].text} 资源`}
-                    description="点击上方按钮新增"
-                    size="sm"
-                />
-            )}
-        </div>
-    )
+        )
+    }
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>

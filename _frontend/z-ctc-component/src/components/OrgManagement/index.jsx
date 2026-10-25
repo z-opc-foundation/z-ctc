@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 import {
     Button,
     Card,
@@ -425,6 +425,21 @@ export default function OrgManagement({
         else setChildList([])
     }
 
+    // ── 下级部门 / 组列表查询过滤（lead 008 §2 规则 3，端侧过滤） ──
+    // 过滤字段取本表渲染用的真实字段：编码 codeOf(r, detectType(r)) / 名称 nameOf(r)。
+    const [childKeyword, setChildKeyword] = useState('')
+    const childRows = useMemo(
+        () => childList.map((r, i) => ({...r, key: i})),
+        [childList],
+    )
+    const filteredChildRows = useMemo(() => {
+        const kw = childKeyword.trim().toLowerCase()
+        if (!kw) return childRows
+        return childRows.filter(
+            (r) => `${codeOf(r, detectType(r)) || ''} ${nameOf(r) || ''}`.toLowerCase().includes(kw),
+        )
+    }, [childRows, childKeyword])
+
     // ── 子列表 / K-V 列 ──
     const childColumns = [
         {title: '编码', dataIndex: 'code', width: 140, render: (_, r) => codeOf(r, detectType(r))},
@@ -583,10 +598,20 @@ export default function OrgManagement({
                             {selectedNode.type !== 'group' && (
                                 <Card type="inner"
                                       title={selectedNode.type === 'org' ? '下级部门 / 组' : '下级组'}
-                                      size="small" style={{marginBottom: 16}}>
+                                      size="small" style={{marginBottom: 16}}
+                                      extra={
+                                          <Space>
+                                              <Input.Search
+                                                  allowClear
+                                                  placeholder="按编码 / 名称过滤"
+                                                  style={{width: 220}}
+                                                  onChange={(e) => setChildKeyword(e.target.value)}
+                                              />
+                                          </Space>
+                                      }>
                                     <Table
                                         columns={childColumns}
-                                        dataSource={childList.map((r, i) => ({...r, key: i}))}
+                                        dataSource={filteredChildRows}
                                         rowKey="key"
                                         pagination={false /* §2 规则 2 豁免：下级部门/组是选中节点的子表，行数由该节点的子节点数决定 */} size="small"
                                         locale={{emptyText: '暂无下级'}}

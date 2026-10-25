@@ -1,5 +1,5 @@
-import {useEffect, useState} from 'react'
-import {Button, Card, Empty, List, Select, Space, Tag, Tree, Typography} from 'antd'
+import {useEffect, useMemo, useState} from 'react'
+import {Button, Card, Empty, Input, List, Select, Space, Tag, Tree, Typography} from 'antd'
 import {ReloadOutlined} from '@ant-design/icons'
 import {userPermissionApi} from '../_api/userPermission'
 import {ListTable, PageHeader, TableToolbar} from '@yuku123/z-frontend-common/ui'
@@ -102,6 +102,17 @@ export default function UserPermissionPage({apiBaseURL}) {
         label: `${a.username || a.nickname || a.id} (${a.tenantCode || 'default'})`,
     }))
 
+    // ── 角色列表查询过滤（lead 008 §2 规则 3，端侧过滤） ──
+    // 过滤字段取角色条目上真实存在的字段：roleCode / roleName。
+    const [roleKeyword, setRoleKeyword] = useState('')
+    const filteredRoles = useMemo(() => {
+        const kw = roleKeyword.trim().toLowerCase()
+        if (!kw) return roles
+        return roles.filter(
+            (r) => `${r.roleCode || ''} ${r.roleName || ''}`.toLowerCase().includes(kw),
+        )
+    }, [roles, roleKeyword])
+
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
             <PageHeader
@@ -126,13 +137,21 @@ export default function UserPermissionPage({apiBaseURL}) {
             />
 
             <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16}}>
-                <Card size="small" title={`用户角色 (${roles.length})`} loading={rolesLoading}>
+                <Card size="small" title={`用户角色 (${roles.length})`} loading={rolesLoading}
+                      extra={
+                          <Input.Search
+                              allowClear
+                              placeholder="按角色编码 / 名称过滤"
+                              style={{width: 220}}
+                              onChange={(e) => setRoleKeyword(e.target.value)}
+                          />
+                      }>
                     {roles.length === 0 && !rolesLoading ? (
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="该用户暂无角色"/>
                     ) : (
                         <List
                             size="small"
-                            dataSource={roles}
+                            dataSource={filteredRoles}
                             renderItem={r => (
                                 <List.Item
                                     actions={[
