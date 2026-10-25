@@ -48,12 +48,13 @@ spec:
       labels:
         app: z-ctc-admin
     spec:
-      # 镜像只灌进了控制平面的 containerd, worker 上没有
+      # 2026-10-25: 集群重建成后只剩单节点 zifang002, 原 zifang001 不存在,
+      # 钉它 pod 永远 Pending。镜像直接灌进 zifang002 的 containerd。
       nodeSelector:
-        kubernetes.io/hostname: zifang001
+        kubernetes.io/hostname: zifang002
       containers:
         - name: z-ctc
-          image: z-ctc-admin:1.0.5-zboot112
+          image: z-ctc-admin:1.0.5-zboot112-amd64
           imagePullPolicy: Never
           ports:
             - containerPort: 8888
@@ -70,6 +71,14 @@ spec:
                 secretKeyRef:
                   name: aliyun-db
                   key: db-host
+            # 2026-10-25: Dockerfile.backend 的 ENV 钉的是 Mode1 compose 形态
+            # (SERVER_PORT=8080, ctx=/ctc), 而 family 形态按 application.yml 跑
+            # 8888/ctx=/。镜像重建(Dockerfile 未改)后 env 必须显式压回, 否则
+            # Service 8888 打到一个 8080 容器上, 集群内全断。
+            - name: SERVER_PORT
+              value: "8888"
+            - name: SERVER_SERVLET_CONTEXT_PATH
+              value: "/"
             - name: DB_PORT
               value: "3306"
             - name: DB_DATABASE
@@ -136,10 +145,16 @@ spec:
           #   initialDelaySeconds 保持 45：实测应用本体 T+13.5s 就 Started
           #   （`Started ZCtcAdminApplication in 10.65 seconds`）⇒ 45s 已远大于冷启动，
           #   慢的是「第一次请求」而不是「应用起来」⇒ 延后探测并不能消除首请求冷路径。
-          timeoutSeconds: 15
-          initialDelaySeconds: 45
-          periodSeconds: 10
-          failureThreshold: 10
+          # 2026-10-25: 上面四个字段此前裸挂在 container 层(k8s 严格解码直接拒)，
+          #   且整个清单从未有过 readinessProbe 块 —— 本轮重部署时修正成正经探针。
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8888
+            timeoutSeconds: 15
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            failureThreshold: 10
       volumes:
         - name: tmp
           emptyDir: {}
