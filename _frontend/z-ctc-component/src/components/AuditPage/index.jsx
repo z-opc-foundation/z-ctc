@@ -28,7 +28,6 @@ export default function AuditPage() {
         <div>
             <PageHeader
                 title="审计中心"
-                subtitle="按日志类型隔离. 登录行为、操作行为、资源访问等不同维度的审计追溯."
                 breadcrumb={[{label: '4A 中心'}, {label: '审计中心'}]}
             />
             <Tabs

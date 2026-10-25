@@ -396,7 +396,6 @@ export default function TenantManagement({apiBaseURL}) {
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
             <PageHeader
                 title="租户管理"
-                subtitle="4A AC 域 · 多租户与域的层级管理"
                 breadcrumb={[{label: '4A 中心'}, {label: '租户管理'}]}
             />
             {/* ── 左树 + 右表 ── */}
@@ -521,7 +520,7 @@ export default function TenantManagement({apiBaseURL}) {
                                     columns={kvColumns}
                                     dataSource={configData.map((r, i) => ({...r, _idx: i}))}
                                     rowKey={r => `${r.key}_${r._idx}`}
-                                    pagination={false}
+                                    pagination={false /* §2 规则 2 豁免：租户扩展配置是键值配置项，条数有界 */}
                                     size="small"
                                     locale={{emptyText: '暂无扩展配置，点击右上"新增"添加'}}
                                 />

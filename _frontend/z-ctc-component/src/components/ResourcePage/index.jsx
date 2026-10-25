@@ -128,7 +128,6 @@ export default function ResourcePage({apiBaseURL}) {
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
             <PageHeader
                 title="资源管理"
-                subtitle="4A AUTHZ 域 · 所有资源（权限点）的统一视图"
                 breadcrumb={[{label: '4A 中心'}, {label: '资源管理'}]}
             />
 

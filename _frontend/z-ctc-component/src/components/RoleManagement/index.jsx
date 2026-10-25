@@ -318,7 +318,6 @@ export default function RoleManagement({apiBaseURL}) {
         <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
             <PageHeader
                 title="角色管理"
-                subtitle="4A AUTHZ 域 · 角色创建、权限授权与生命周期管理"
                 breadcrumb={[{label: '4A 中心'}, {label: '角色管理'}]}
             />
 
@@ -366,7 +365,7 @@ export default function RoleManagement({apiBaseURL}) {
                 size="small"
                 options={false}
                 toolBarRender={false}
-                pagination={false}
+                pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t) => `共 ${t} 条` }}
                 rowSelection={{
                     selectedRowKeys,
                     onChange: (keys, rows) => {

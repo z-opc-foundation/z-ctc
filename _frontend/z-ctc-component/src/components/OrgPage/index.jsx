@@ -98,7 +98,6 @@ export default function OrgPage({apiBaseURL, defaultTenant, defaultDomain}) {
         <div style={{display: 'flex', flexDirection: 'column', gap: 12, height: '100%'}}>
             <PageHeader
                 title="组织管理"
-                subtitle="4A AC 域 · 组织/部门/组 三级树管理"
                 breadcrumb={[{label: '4A 中心'}, {label: '组织管理'}]}
             />
             <OrgManagement

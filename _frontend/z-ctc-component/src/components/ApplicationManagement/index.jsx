@@ -322,7 +322,7 @@ export default function ApplicationManagement({apiBaseURL}) {
                     rowKey="id"
                     columns={resColumns}
                     dataSource={list}
-                    pagination={false}
+                    pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: (t) => `共 ${t} 条` }}
                     size="small"
                     scroll={{x: 800}}
                 />
@@ -340,7 +340,6 @@ export default function ApplicationManagement({apiBaseURL}) {
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
             <PageHeader
                 title="应用管理"
-                subtitle="4A AUTHZ 域 · 应用与资源"
                 breadcrumb={[{label: '4A 中心'}, {label: '应用管理'}]}
             />
 

@@ -588,7 +588,7 @@ export default function OrgManagement({
                                         columns={childColumns}
                                         dataSource={childList.map((r, i) => ({...r, key: i}))}
                                         rowKey="key"
-                                        pagination={false} size="small"
+                                        pagination={false /* §2 规则 2 豁免：下级部门/组是选中节点的子表，行数由该节点的子节点数决定 */} size="small"
                                         locale={{emptyText: '暂无下级'}}
                                     />
                                 </Card>
@@ -609,7 +609,7 @@ export default function OrgManagement({
                                     columns={configColumns}
                                     dataSource={configData.map((r, i) => ({...r, key: r.key || i}))}
                                     rowKey="key"
-                                    pagination={false} size="small"
+                                    pagination={false /* §2 规则 2 豁免：扩展配置是选中组织的键值配置项，条数有界 */} size="small"
                                     locale={{emptyText: '暂无扩展配置'}}
                                 />
                             </Card>

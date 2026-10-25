@@ -334,7 +334,6 @@ export default function AccountManagement({apiBaseURL}) {
         <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
             <PageHeader
                 title="账号管理"
-                subtitle="4A AC 域 · 账号生命周期管理、状态控制与登录日志"
                 breadcrumb={[{label: '4A 中心'}, {label: '账号管理'}]}
             />
 

@@ -128,7 +128,6 @@ export default function SurlManagement({apiBaseURL}) {
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
             <PageHeader
                 title="短链生成器 (4A-SURL)"
-                subtitle="z-ctc-surl 域 — 长链转短链，支持过期与命中统计"
                 breadcrumb={[{label: '4A 中心'}, {label: '短链管理'}]}
             />
 
