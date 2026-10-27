@@ -2,8 +2,7 @@ import {useEffect, useMemo, useState} from 'react'
 import {Button, Card, Empty, Input, List, Select, Space, Tag, Tree, Typography} from 'antd'
 import {ReloadOutlined} from '@ant-design/icons'
 import {userPermissionApi} from '../_api/userPermission'
-import {ListTable, PageHeader, TableToolbar} from '@yuku123/z-frontend-common/ui'
-
+import { ListTable, TableToolbar } from '@yuku123/z-frontend-common/ui'
 /**
  * 4A 用户权限 — 查看某用户拥有的角色 + 资源（权限点）树
  *
@@ -115,10 +114,6 @@ export default function UserPermissionPage({apiBaseURL}) {
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
-            <PageHeader
-                title="用户权限查询"
-                breadcrumb={[{label: '4A 中心'}, {label: '用户权限'}]}
-            />
 
             <TableToolbar
                 left={

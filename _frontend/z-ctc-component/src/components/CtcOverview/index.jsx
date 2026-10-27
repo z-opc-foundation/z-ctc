@@ -1,7 +1,6 @@
 import {useEffect, useState} from 'react'
 import {Card, Col, Row, Statistic} from 'antd'
 import {AppstoreOutlined, LinkOutlined, SafetyCertificateOutlined, TeamOutlined} from '@ant-design/icons'
-import {PageHeader} from '@yuku123/z-frontend-common/ui'
 import {createRequest} from '@yuku123/z-frontend-common'
 
 const request = createRequest({baseURL: '/api', timeout: 10000})
@@ -38,10 +37,6 @@ export default function CtcOverview() {
 
     return (
         <div style={{padding: 24}}>
-            <PageHeader
-                title="4A 中心概览"
-                subtitle="账号 · 角色 · 租户 · 短链总量指标"
-            />
             <Row gutter={[16, 16]}>
                 <Col xs={24} sm={12} lg={6}>
                     <Card loading={loading}><Statistic title="账号数" value={stats.account}

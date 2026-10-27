@@ -31,8 +31,7 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {ctcAcAccountApi, ctcAcLoginLogApi} from './api'
-import {ListTable, PageHeader, SearchInput} from '@yuku123/z-frontend-common/ui'
-
+import { ListTable, SearchInput } from '@yuku123/z-frontend-common/ui'
 /**
  * 账号管理页 (4A AC 域) — 标准数据管理布局
  *
@@ -332,10 +331,6 @@ export default function AccountManagement({apiBaseURL}) {
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
-            <PageHeader
-                title="账号管理"
-                breadcrumb={[{label: '4A 中心'}, {label: '账号管理'}]}
-            />
 
             <Card size="small" styles={{body: {padding: '12px 16px'}}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12}}>

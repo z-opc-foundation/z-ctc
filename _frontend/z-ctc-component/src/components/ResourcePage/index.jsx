@@ -4,8 +4,6 @@ import {Button, Card, Form, Input, message, Popconfirm, Select, Space, Tag} from
 import {DeleteOutlined, ReloadOutlined, SearchOutlined, UndoOutlined} from '@ant-design/icons'
 import {ctcAuthorizationApi} from '../_api/ctcAuthorization'
 import {metaAppApi} from '../_api/metaApp'
-import {PageHeader} from '@yuku123/z-frontend-common/ui'
-
 /**
  * 4A 资源管理 — 4A AUTHZ 域所有资源（权限点）的统一视图
  *
@@ -126,10 +124,6 @@ export default function ResourcePage({apiBaseURL}) {
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
-            <PageHeader
-                title="资源管理"
-                breadcrumb={[{label: '4A 中心'}, {label: '资源管理'}]}
-            />
 
             <Card size="small" style={{marginBottom: 16}} styles={{body: {padding: '12px 16px'}}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12}}>

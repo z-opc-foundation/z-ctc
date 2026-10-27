@@ -13,8 +13,7 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {ctcAuthorizationApi} from './api'
-import {PageHeader, SearchInput} from '@yuku123/z-frontend-common/ui'
-
+import { SearchInput } from '@yuku123/z-frontend-common/ui'
 /**
  * 角色管理 (4A AUTHZ 域) — 标准数据管理布局
  *
@@ -316,10 +315,6 @@ export default function RoleManagement({apiBaseURL}) {
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
-            <PageHeader
-                title="角色管理"
-                breadcrumb={[{label: '4A 中心'}, {label: '角色管理'}]}
-            />
 
             <Card size="small" styles={{body: {padding: '12px 16px'}}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12}}>

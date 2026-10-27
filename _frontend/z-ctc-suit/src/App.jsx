@@ -1,22 +1,12 @@
-import { Component, Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
-import { AppLayout } from '@yuku123/z-frontend-common'
+import { AppLayout, ErrorBoundary } from '@yuku123/z-frontend-common'
 import { menuItems, routes } from './pages-manifest'
 import { at } from './routes-base'
 import LoginPage from './LoginPage'
 import { Result, Button, Spin } from 'antd'
 // 版本号只认 package.json，避免顶栏版本与发版号两处各写一遍慢慢漂移。
 import { version as appVersion } from '../package.json'
-
-class ErrorBoundary extends Component {
-    constructor(props) { super(props); this.state = { err: null } }
-    static getDerivedStateFromError(err) { return { err } }
-    componentDidCatch(err, info) { console.error('[App ErrorBoundary]', err, info) }
-    render() {
-        if (this.state.err) return <pre style={{ padding: 24, color: 'red', whiteSpace: 'pre-wrap' }}>{String(this.state.err?.stack || this.state.err)}</pre>
-        return this.props.children
-    }
-}
 
 function NotFound() {
     const navigate = useNavigate()

@@ -12,9 +12,7 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {ctcAuthorizationApi, metaAppApi} from './api'
-import {EmptyState, PageHeader} from '@yuku123/z-frontend-common/ui'
-
-
+import { EmptyState } from '@yuku123/z-frontend-common/ui'
 /**
  * 应用管理 (4A-AUTHZ) — split-panel 布局
  *
@@ -365,10 +363,6 @@ export default function ApplicationManagement({apiBaseURL}) {
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
-            <PageHeader
-                title="应用管理"
-                breadcrumb={[{label: '4A 中心'}, {label: '应用管理'}]}
-            />
 
             <Card size="small" styles={{body: {padding: '12px 16px'}}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12}}>

@@ -29,8 +29,7 @@ import {
     UndoOutlined,
 } from '@ant-design/icons'
 import {ctcAuthorizationApi} from './api'
-import {ListTable, PageHeader} from '@yuku123/z-frontend-common/ui'
-
+import { ListTable } from '@yuku123/z-frontend-common/ui'
 /**
  * 权限管理 (FEATURE015) — 按"应用维度"管理权限点（资源 CRUD）
  *
@@ -292,10 +291,6 @@ export default function PermissionManagement({apiBaseURL}) {
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
-            <PageHeader
-                title="权限管理"
-                breadcrumb={[{label: '4A 中心'}, {label: '权限管理'}]}
-            />
 
             <Card size="small" style={{marginBottom: 16}} styles={{body: {padding: '12px 16px'}}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12}}>

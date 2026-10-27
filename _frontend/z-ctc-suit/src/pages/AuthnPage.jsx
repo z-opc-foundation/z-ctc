@@ -1,6 +1,5 @@
 import { LockOutlined } from '@ant-design/icons'
-import { EmptyState, PageHeader } from '@yuku123/z-frontend-common/ui'
-
+import { EmptyState } from '@yuku123/z-frontend-common/ui'
 /**
  * 认证配置（密码策略 / LDAP / OAuth2 / SAML）—— 后端尚未提供配置端点，
  * 因此这里只给一个明确的空态，不做假表单（lead 008 §2：占位不等于可用）。
@@ -8,11 +7,6 @@ import { EmptyState, PageHeader } from '@yuku123/z-frontend-common/ui'
 export default function AuthnPage() {
     return (
         <div>
-            <PageHeader
-                title="认证配置"
-                subtitle="密码策略与外部身份源（LDAP / OAuth2 / SAML）的接入配置。"
-                breadcrumb={[{ label: '4A 中心' }, { label: '认证配置' }]}
-            />
             <EmptyState
                 icon={<LockOutlined />}
                 title="认证源配置尚未接入"

@@ -2,8 +2,7 @@ import {useEffect, useState} from 'react'
 import {Button, Card, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Tag} from 'antd'
 import {DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import {dictApi} from '../_api/dict'
-import {ListTable, PageHeader} from '@yuku123/z-frontend-common/ui'
-
+import { ListTable } from '@yuku123/z-frontend-common/ui'
 /**
  * 元典管理 — 字典类型 + 字典项 树形管理
  *
@@ -207,10 +206,6 @@ export default function DictPage() {
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
-            <PageHeader
-                title="字典管理"
-                breadcrumb={[{label: '4A 中心'}, {label: '字典管理'}]}
-            />
             <div style={{display: 'grid', gridTemplateColumns: '380px 1fr', gap: 16}}>
                 {/* 左栏字典类型：搜索框与「新增/刷新」并排在 cardExtra（lead 008 §2），
                     过滤交给基座 useListFilter，口径与全库一致。 */}

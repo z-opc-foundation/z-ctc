@@ -3,8 +3,7 @@ import {Card, Col, Row, Select, Space, Statistic, Table, Tabs, Tag, Tooltip} fro
 import {LoginOutlined, ReloadOutlined, SearchOutlined} from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {loginLogApi} from '../_api/loginLog'
-import {PageHeader, SearchInput} from '@yuku123/z-frontend-common/ui'
-
+import { SearchInput } from '@yuku123/z-frontend-common/ui'
 /**
  * 审计中心 — 按类型 Tabs 隔离日志
  *
@@ -26,10 +25,6 @@ import {PageHeader, SearchInput} from '@yuku123/z-frontend-common/ui'
 export default function AuditPage() {
     return (
         <div>
-            <PageHeader
-                title="审计中心"
-                breadcrumb={[{label: '4A 中心'}, {label: '审计中心'}]}
-            />
             <Tabs
                 defaultActiveKey="login"
                 size="small"

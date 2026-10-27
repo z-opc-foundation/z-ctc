@@ -1,8 +1,6 @@
 import {useEffect, useState} from 'react'
 import {OrgManagement} from '../OrgManagement'
 import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi} from '../TenantManagement/api'
-import {PageHeader} from '@yuku123/z-frontend-common/ui'
-
 /**
  * 4A 中心 / 组织管理 (4a/org).
  *
@@ -96,10 +94,6 @@ export default function OrgPage({apiBaseURL, defaultTenant, defaultDomain}) {
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 12, height: '100%'}}>
-            <PageHeader
-                title="组织管理"
-                breadcrumb={[{label: '4A 中心'}, {label: '组织管理'}]}
-            />
             <OrgManagement
                 tenants={tenants}
                 domains={domains}

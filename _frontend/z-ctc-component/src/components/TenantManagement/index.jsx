@@ -18,8 +18,6 @@ import {
 import {DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined,} from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi} from './api'
-import {PageHeader} from '@yuku123/z-frontend-common/ui'
-
 /**
  * 租户管理 (4A AC 域) — 左树右表布局
  *
@@ -407,10 +405,6 @@ export default function TenantManagement({apiBaseURL}) {
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
-            <PageHeader
-                title="租户管理"
-                breadcrumb={[{label: '4A 中心'}, {label: '租户管理'}]}
-            />
             {/* ── 左树 + 右表 ── */}
             <div style={{display: 'flex', gap: 16, height: 'calc(100vh - 140px)'}}>
                 {/* 左：租户/域树 */}
