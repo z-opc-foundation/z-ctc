@@ -27,7 +27,7 @@ RUN mkdir -p /app/logs
 COPY z-ctc-admin/target/z-ctc-admin-*-exec.jar app.jar
 
 # 复制启动脚本（数据库等待 + JVM 参数注入）
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY _doc/003_script/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 # 暴露端口

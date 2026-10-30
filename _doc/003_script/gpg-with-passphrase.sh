@@ -4,7 +4,7 @@
 #
 # 位置：_doc/003_script/gpg-with-passphrase.sh（仓内 tracked）
 # 上游 pom：`<executable>${maven.multiModuleProjectDirectory}/_doc/003_script/gpg-with-passphrase.sh</executable>`
-# 与 `_doc/006_release/01-release-to-maven-central.md` 同步描述，避免被「scripts/」根级目录层级误导。
+# 发布细节以 z-util/_doc/006_release/01-release-to-maven-central.md 为准（本仓未复刻该文档）。
 #
 # 为什么需要
 # ----------

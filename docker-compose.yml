@@ -34,7 +34,7 @@ services:
   ctc-app:
     build:
       context: .
-      dockerfile: dockerfile
+      dockerfile: Dockerfile
     container_name: ctc-app
     depends_on:
       - mysql
