@@ -78,7 +78,7 @@ z-ctc/
 
 | 层级 | 技术 |
 |------|------|
-| 语言 / 运行时 | Java 8（全组织口径 1.8） |
+| 语言 / 运行时 | Java 17（全组织口径 1.8） |
 | 框架 | Spring Boot 2.7.18（版本由 `z-boot-parent` 自带地板统一供给） |
 | 持久层 | MyBatis-Plus（`z-ctc-admin` 钉 **3.5.3.1**，其余模块走 `z-boot-parent` 地板 **3.5.7**）+ Druid 连接池 |
 | 数据库 | MySQL 8.0（生产）/ H2（`dev` profile，免外部依赖启动） |

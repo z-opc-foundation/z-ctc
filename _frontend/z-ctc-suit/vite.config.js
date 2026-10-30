@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
+import {safeEmptyOutDir} from '../../build-tools/safe-vite-plugin.mjs'
 
 // z-ctc 应用层：SPA，输出 dist/ 给 admin pom 通过 frontend-maven-plugin 注入。
 // base 必须匹配 z-ctc-admin 的 context-path，两者不一致就是线上白屏：
@@ -18,7 +19,7 @@ export default defineConfig(({ mode }) => ({
     dedupe: ['react', 'react-dom', 'react-router-dom', 'antd', '@ant-design/icons', 'axios'],
         alias: { '@': path.resolve(__dirname, 'src'), ...(process.env.LOCAL_SIBLINGS === '1' ? { '@yuku123/z-ctc-component': '../z-ctc-component/src' } : {}) }
     },
-    plugins: [react()],
+    plugins: [safeEmptyOutDir(), react()],
     server: {
         port: 5174,
         host: '0.0.0.0',
@@ -32,7 +33,7 @@ export default defineConfig(({ mode }) => ({
     build: {
         outDir: 'dist',
         assetsDir: 'assets',
-        emptyOutDir: true,
+        emptyOutDir: false,
         sourcemap: false
     }
 }));
