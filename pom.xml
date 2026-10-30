@@ -15,7 +15,7 @@
     <parent>
         <groupId>io.github.yuku123</groupId>
         <artifactId>z-boot-parent</artifactId>
-        <version>1.1.2</version>
+        <version>1.2.0</version>
         <relativePath/>
     </parent>
 
@@ -84,6 +84,11 @@
 
     <properties>
         <!-- 项目自身版本（CI-friendly versions 根，发版改这一处即可）。
+             1.0.6: **SB3 火车全量迁移**（2026-10-30）——
+             parent 抬到 z-boot-parent 1.2.0（Boot 3.3.13 地板）、javax.* → jakarta.*、
+             spring.factories → AutoConfiguration.imports。
+             ⚠ 1.0.5 已被 2026-10-17 那次发布占位（Central 上 z-ctc-sso:1.0.5 在列），
+             **同版本号不可重发** ⇒ 本次必须跳到 1.0.6。
              1.0.5: **z-ctc-sso 的 HS256 签名密钥不再有内置默认值**（commit bf2b781）——
              改由 `sso.jwt-secret`（env SSO_JWT_SECRET）注入，签发方缺失即启动失败（fail-closed）。
              ⚠ **必须抬版本号**：Central 上 z-ctc-sso:1.0.4（2026-10-17 发布）已把旧密钥
@@ -93,7 +98,7 @@
              这是新坐标在 Central 上的首个版本，1.0.3 的旧坐标不再维护。
              1.0.3: 修 SsoAutoConfiguration 把 null TokenService 交给 SsoInterceptor
              （addInterceptors 早于 @Bean 方法执行）→ Bearer 路径必 500。 -->
-        <revision>1.0.5</revision>
+        <revision>1.0.6</revision>
 
         <!-- 删掉的版本键逐格按**坐标**判过（parent_preflight.py 第 2/5 节），父链都供得到：
              java.version=8→1.8、maven.compiler.source/target=8、project.build.sourceEncoding=UTF-8、
@@ -218,6 +223,10 @@
     </dependencyManagement>
 
     <dependencies>
+<dependency><groupId>io.swagger</groupId><artifactId>swagger-annotations</artifactId></dependency>
+    
+        <dependency><groupId>jakarta.annotation</groupId><artifactId>jakarta.annotation-api</artifactId></dependency>
+    
         <!-- 迁移实测：父链的 pluginManagement 把 surefire 从"没钉⇒浮动到最新"（基线抓到 3.5.4，
              它会自己补引擎）压成 2.22.2，而本仓只声明了 junit-jupiter-api 没有引擎 ⇒ z-ctc-sso
              那 12 个 Jupiter @Test 静默变成 0 个（JwtCompatCrossCheckTest 连跑都没跑）。
@@ -385,11 +394,19 @@
                         <version>${maven-gpg-plugin.version}</version>
                         <configuration>
                             <skip>${central.gpg.skip}</skip>
-                            <gpgArguments>
-                                <arg>--pinentry-mode</arg>
-                                <arg>loopback</arg>
-                                <arg>--no-tty</arg>
-                            </gpgArguments>
+                            <!-- 2026-10-30 修 gpg 签名失败（与 z-util 1.2.11 实发同款根因）：
+                                 ① maven-gpg-plugin 会自己传 pinentry-mode 参数（值 error），
+                                    gpg 对同一选项取最后一次出现的值 ⇒ 调用方的 error 盖掉
+                                    wrapper 自己的 loopback ⇒ 报 "No pinentry" / Exit code: 2。
+                                    修法：wrapper 先剔除入参里的 pinentry-mode 整组，
+                                    再以 loopback 追加（见 _doc/003_script/gpg-with-passphrase.sh）。
+                                 ② 插件默认按 local-user=default 找密钥，本机密钥环里没有
+                                    名为 default 的密钥（只有 uid yuku123 / key A403FCCFD7EF5DA6）
+                                    ⇒ 显式钉 keyname。
+                                 注：XML 注释里不能出现连续两个减号，下面刻意用「pinentry-mode 参数」
+                                 /「local-user=default」措辞。 -->
+                            <keyname>A403FCCFD7EF5DA6</keyname>
+                            <executable>${maven.multiModuleProjectDirectory}/_doc/003_script/gpg-with-passphrase.sh</executable>
                         </configuration>
                         <executions>
                             <execution>

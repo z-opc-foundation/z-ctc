@@ -8,13 +8,11 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.math.BigDecimal;
-import lombok.Data;
 
 /**
 * ${comment!"无注释"}
 */
 @TableName("${tableName}")
-@Data
 public class ${entityName} implements Serializable {
 
 private static final long serialVersionUID = 1L;
@@ -31,4 +29,23 @@ private static final long serialVersionUID = 1L;
     </#if>
     private ${column.javaType} ${column.javaFieldName};
 </#list>
+<#list columns as column >
+
+    public ${column.javaType} get${column.javaFieldName?cap_first}() {
+        return ${column.javaFieldName};
+    }
+
+    public void set${column.javaFieldName?cap_first}(${column.javaType} ${column.javaFieldName}) {
+        this.${column.javaFieldName} = ${column.javaFieldName};
+    }
+</#list>
+
+    @Override
+    public String toString() {
+        return "${entityName}{" +
+<#list columns as column >
+                "${column.javaFieldName}=" + ${column.javaFieldName} +
+</#list>
+                '}';
+    }
 }

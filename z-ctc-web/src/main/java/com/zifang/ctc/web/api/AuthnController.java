@@ -38,8 +38,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -359,11 +359,11 @@ public class AuthnController {
             token = authHeader;
         }
         if (token == null) {
-            javax.servlet.http.Cookie[] cookies = request.getCookies();
+            jakarta.servlet.http.Cookie[] cookies = request.getCookies();
             if (cookies != null && ssoProperties != null) {
                 java.util.List<String> candidateNames = ssoProperties.getEffectiveTokenCookieNames();
                 for (String name : candidateNames) {
-                    for (javax.servlet.http.Cookie c : cookies) {
+                    for (jakarta.servlet.http.Cookie c : cookies) {
                         if (name.equals(c.getName())) {
                             String v = c.getValue();
                             if (v != null && !v.isEmpty()) {

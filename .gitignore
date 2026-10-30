@@ -85,3 +85,13 @@ z-*/src/main/resources/static/assets/
 /.cache/
 **/__pycache__/
 *.pyc
+
+# ---------- Maven Central 发布凭证与 GPG 私钥环 ----------
+# .env 存 Central User Token 与 GPG passphrase；.gnupg 是本地私钥环。
+# 两者都绝不能入库（z-util / z-mcp / z-lc / z-agent 同款）。
+.env
+.gnupg/
+
+# ---------- 构建备份目录（本机 safe-delete 闸的产物：只移不删） ----------
+dist.bak-*/
+**/dist.bak-*/

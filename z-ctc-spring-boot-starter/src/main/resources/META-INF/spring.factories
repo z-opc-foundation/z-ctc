@@ -1,5 +1,0 @@
-# z-ctc 授权 SDK 的自动装配入口。
-# 消费方加 z-ctc-client-spring-boot-starter 依赖 + 配 z.ctc.base-url 即可注入 ZCtcClient,
-# 无需自己调 ZCtcClientFactory。登录态装配在 z-ctc-sso (SsoAutoConfiguration), 与此无关。
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-com.zifang.ctc.client.starter.ZCtcClientAutoConfiguration

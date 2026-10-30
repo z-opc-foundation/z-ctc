@@ -1,15 +1,13 @@
 package com.zifang.generator;
 
-import lombok.Data;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 /**
  * 表DTO
+ * （2026-10-30 全仓去 Lombok：原 @Data 的合成成员在此显式展开；final 字段不生成 setter）
  */
-@Data
 public class TableDTO {
     public final String tableName;
     public final String entityName;
@@ -45,11 +43,55 @@ public class TableDTO {
         return new ArrayList<>(columns);
     }
 
+    public String getTableName() {
+        return tableName;
+    }
+
+    public String getEntityName() {
+        return entityName;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public ColumnDTO getPrimaryKey() {
+        return primaryKey;
+    }
+
+    public void setPrimaryKey(ColumnDTO primaryKey) {
+        this.primaryKey = primaryKey;
+    }
+
     public void debugPrint() {
         System.out.println("=== TableDTO调试 ===");
         System.out.println("tableName: " + tableName);
         System.out.println("entityName: " + entityName);
         System.out.println("字段数: " + columns.size());
         System.out.println("===================");
+    }
+
+    @Override
+    public String toString() {
+        return "TableDTO(tableName=" + tableName + ", entityName=" + entityName
+                + ", comment=" + comment + ", columns=" + getColumns()
+                + ", primaryKey=" + primaryKey + ")";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof TableDTO)) return false;
+        TableDTO other = (TableDTO) o;
+        return Objects.equals(tableName, other.tableName)
+                && Objects.equals(entityName, other.entityName)
+                && Objects.equals(comment, other.comment)
+                && Objects.equals(getColumns(), other.getColumns())
+                && Objects.equals(primaryKey, other.primaryKey);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(tableName, entityName, comment, getColumns(), primaryKey);
     }
 }
