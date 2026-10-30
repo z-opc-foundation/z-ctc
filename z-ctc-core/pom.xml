@@ -12,7 +12,7 @@
 
     <artifactId>z-ctc-core</artifactId>
     <version>${revision}</version>
-    <name>z-ctc-core</name>
+    <name>z-ctc :: core</name>
     <description>4A 中心 - core 模块：实体 (DO) + mapper + service + service impl（数据 + 业务层）</description>
 
     <properties>

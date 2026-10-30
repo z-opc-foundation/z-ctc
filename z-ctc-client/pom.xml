@@ -14,7 +14,7 @@
     <artifactId>z-ctc-client</artifactId>
     <packaging>jar</packaging>
 
-    <name>Z CTC Client</name>
+    <name>z-ctc :: client</name>
     <description>
         z-ctc 4A 中心 HTTP SDK。供**不再内嵌 z-ctc-web 的进程**使用（典型是 k8s 里
         各自独立成工作负载的板块)：登录态查询 + 权限读 + 直挂授权写。

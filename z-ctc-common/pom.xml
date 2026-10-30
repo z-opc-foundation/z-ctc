@@ -12,7 +12,7 @@
 
     <artifactId>z-ctc-common</artifactId>
     <version>${revision}</version>
-    <name>z-ctc-common</name>
+    <name>z-ctc :: common</name>
     <description>4A 中心 - common 模块：共享 VO / DTO / Request / Response（z-ctc 业务对象传输契约）</description>
 
     <properties>

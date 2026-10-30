@@ -11,7 +11,7 @@
 
     <artifactId>z-ctc-sso</artifactId>
     <version>${revision}</version>
-    <name>z-ctc-sso</name>
+    <name>z-ctc :: sso</name>
 
     <dependencies>
         <!-- Jackson databind (本模块 src/main/java 用 ObjectMapper / JsonNode 等) -->

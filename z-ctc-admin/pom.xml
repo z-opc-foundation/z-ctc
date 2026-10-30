@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>z-ctc-admin</artifactId>
-    <name>z-ctc-admin</name>
+    <name>z-ctc :: admin</name>
     <description>4A 中心 - admin 入口：依赖 z-ctc-web, 复用其自动装配; 同时作为独立 Spring Boot 启动模块
         (z-ctc-admin-*-exec.jar) 供 Docker 部署
     </description>

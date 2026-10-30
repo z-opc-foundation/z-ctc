@@ -12,7 +12,7 @@
 
     <artifactId>z-ctc-web</artifactId>
     <version>${revision}</version>
-    <name>z-ctc-web</name>
+    <name>z-ctc :: web</name>
     <description>4A 中心 - web 模块：用户面向 API（AuthController 登录/注册）+ DataSource + SqlSessionFactory 主装配点
     </description>
 

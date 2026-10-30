@@ -23,8 +23,8 @@
     <artifactId>z-ctc</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
-    <name>z-ctc (4A Center Aggregator)</name>
-    <description>Z-CTC: 4A Center - Authentication, Authorization, Accounting, Audit for Spring Boot.</description>
+    <name>z-ctc :: root</name>
+    <description>Z-CTC: 4A Center - Authentication, Authorization, Accounting, Audit for Spring Boot. / 4A Center Aggregator</description>
 
     <url>https://github.com/yuku123/z-ctc</url>
     <licenses>
