@@ -2,161 +2,56 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <groupId>com.zifang</groupId>
-        <artifactId>z-ctc</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
-    </parent>
-
     <modelVersion>4.0.0</modelVersion>
 
+    <!--
+        挂在 z-ctc 仓根之下：原先写的是 com.zifang:z-ctc:1.0.0-SNAPSHOT（老 namespace，
+        本地仓解析不到 ⇒ mvn 直接 ProjectBuildingException），且整块 properties/DM 是
+        SB2 时代的遗产（springfox / mybatis 3.5.10 / mall-* SNAPSHOT / SB 2.7.5 与 3.5.12 混用），
+        与本仓的 JDK17 + Spring Boot 3.3.13 地板不对齐。
+
+        本模块只是「样板代码生成器」的聚合壳：源码只依赖 HikariCP + freemarker，
+        版本由 z-boot-parent 的 DM 兜底 ⇒ 不再自带一整套版本属性。
+    -->
+    <parent>
+        <groupId>io.github.yuku123</groupId>
+        <artifactId>z-ctc</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
     <artifactId>bootstrap</artifactId>
+    <name>z-ctc :: bootstrap</name>
+    <description>z-ctc 样板代码生成器聚合工程（构建期工具，不发 Maven Central）。</description>
     <packaging>pom</packaging>
-    <modules>
-        <module>bootstrap-gennerate</module>
-    </modules>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>17</java.version>
         <skipTests>true</skipTests>
-        <docker.host>http://192.168.3.101:2375</docker.host>
-        <docker.maven.plugin.version>0.40.2</docker.maven.plugin.version>
-        <pagehelper-starter.version>1.4.5</pagehelper-starter.version>
-        <pagehelper.version>6.1.1</pagehelper.version>
-        <druid.version>1.2.18</druid.version>
-        <hutool.version>5.8.21</hutool.version>
-        <springfox-swagger.version>3.0.0</springfox-swagger.version>
-        <swagger-models.version>1.6.0</swagger-models.version>
-        <swagger-annotations.version>1.6.0</swagger-annotations.version>
-        <mybatis-generator.version>1.4.1</mybatis-generator.version>
-        <mybatis.version>3.5.10</mybatis.version>
-        <mysql-connector.version>8.4.0</mysql-connector.version>
-        <spring-data-commons.version>2.7.5</spring-data-commons.version>
-        <jjwt.version>0.9.1</jjwt.version>
-        <aliyun-oss.version>2.5.0</aliyun-oss.version>
-        <alipay-sdk.version>4.38.61.ALL</alipay-sdk.version>
-        <logstash-logback.version>7.2</logstash-logback.version>
-        <minio.version>8.6.0</minio.version>
-        <jaxb-api.version>2.3.1</jaxb-api.version>
-        <mall-common.version>1.0-SNAPSHOT</mall-common.version>
-        <mall-mbg.version>1.0-SNAPSHOT</mall-mbg.version>
-        <mall-security.version>1.0-SNAPSHOT</mall-security.version>
     </properties>
+
+    <modules>
+        <module>bootstrap-gennerate</module>
+    </modules>
 
     <dependencies>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-            <version>3.5.12</version>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>4.0.3</version>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
-            <version>2.7.5</version>
+            <groupId>org.freemarker</groupId>
+            <artifactId>freemarker</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <!--解决JDK 11 兼容性问题-->
-        <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-            <version>${jaxb-api.version}</version>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
         </dependency>
     </dependencies>
-
-    <dependencyManagement>
-        <dependencies>
-
-            <!--MyBatis分页插件starter-->
-            <dependency>
-                <groupId>com.github.pagehelper</groupId>
-                <artifactId>pagehelper-spring-boot-starter</artifactId>
-                <version>${pagehelper-starter.version}</version>
-            </dependency>
-            <!--MyBatis分页插件-->
-            <dependency>
-                <groupId>com.github.pagehelper</groupId>
-                <artifactId>pagehelper</artifactId>
-                <version>${pagehelper.version}</version>
-            </dependency>
-            <!--集成druid连接池-->
-            <dependency>
-                <groupId>com.alibaba</groupId>
-                <artifactId>druid-spring-boot-3-starter</artifactId>
-                <version>${druid.version}</version>
-            </dependency>
-            <!--Hutool Java工具包-->
-            <dependency>
-                <groupId>cn.hutool</groupId>
-                <artifactId>hutool-all</artifactId>
-                <version>${hutool.version}</version>
-            </dependency>
-            <!-- MyBatis 生成器 -->
-            <dependency>
-                <groupId>org.mybatis.generator</groupId>
-                <artifactId>mybatis-generator-core</artifactId>
-                <version>${mybatis-generator.version}</version>
-            </dependency>
-            <!-- MyBatis-->
-            <dependency>
-                <groupId>org.mybatis</groupId>
-                <artifactId>mybatis</artifactId>
-                <version>${mybatis.version}</version>
-            </dependency>
-            <!--Mysql数据库驱动-->
-            <dependency>
-                <groupId>com.mysql</groupId>
-                <artifactId>mysql-connector-j</artifactId>
-                <version>${mysql-connector.version}</version>
-            </dependency>
-            <!--SpringData工具包-->
-            <dependency>
-                <groupId>org.springframework.data</groupId>
-                <artifactId>spring-data-commons</artifactId>
-                <version>${spring-data-commons.version}</version>
-            </dependency>
-            <!--JWT(Json Web Token)登录支持-->
-            <dependency>
-                <groupId>io.jsonwebtoken</groupId>
-                <artifactId>jjwt</artifactId>
-                <version>${jjwt.version}</version>
-            </dependency>
-            <!-- 阿里云OSS -->
-            <dependency>
-                <groupId>com.aliyun.oss</groupId>
-                <artifactId>aliyun-sdk-oss</artifactId>
-                <version>${aliyun-oss.version}</version>
-            </dependency>
-            <!--集成logstash-->
-            <dependency>
-                <groupId>net.logstash.logback</groupId>
-                <artifactId>logstash-logback-encoder</artifactId>
-                <version>${logstash-logback.version}</version>
-            </dependency>
-            <!--MinIO JAVA SDK-->
-            <dependency>
-                <groupId>io.minio</groupId>
-                <artifactId>minio</artifactId>
-                <version>${minio.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
 </project>

@@ -2,15 +2,20 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>bootstrap</artifactId>
-        <groupId>com.zifang</groupId>
-        <version>1.0.0-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
-    </parent>
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- parent 的 groupId/version 原为 com.zifang:1.0.0-SNAPSHOT（老 namespace）⇒ 解析不到；
+         现与 bootstrap 聚合壳对齐（groupId 随父继承，只写 artifactId + relativePath 即可）。 -->
+    <parent>
+        <artifactId>bootstrap</artifactId>
+        <groupId>io.github.yuku123</groupId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
     <artifactId>bootstrap-gennerate</artifactId>
+    <name>z-ctc :: bootstrap-gennerate</name>
+    <description>z-ctc 样板代码生成器（构建期工具，不发 Maven Central）。</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -19,37 +24,10 @@
     </properties>
 
     <dependencies>
-
-        <dependency>
-            <groupId>io.github.yuku123</groupId>
-            <artifactId>z-util-core</artifactId>
-        </dependency>
-        <!-- MyBatis 核心 -->
-        <dependency>
-            <groupId>org.mybatis</groupId>
-            <artifactId>mybatis</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.mybatis.generator</groupId>
-            <artifactId>mybatis-generator-core</artifactId>
-            <version>1.4.2</version> <!-- 与插件版本保持一致 -->
-        </dependency>
-
-        <dependency>
-            <groupId>com.zaxxer</groupId>
-            <artifactId>HikariCP</artifactId>
-            <version>4.0.3</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.freemarker</groupId>
-            <artifactId>freemarker</artifactId>
-        </dependency>
-
-        <!-- 数据库驱动（以 MySQL 为例）。代码生成器独立运行，采用 HikariCP 而非 Druid，
-             故不适用 z-boot-datasource-starter（包含 Druid + MyBatis-Plus）。
-             version 由 bootstrap 父 pom 中 <mysql-connector.version> 统一管控。 -->
+        <!-- 源码只用 JDBC + freemarker 模板生成，不引 mybatis / mybatis-generator：
+             模板是仓内手写的 .ftl（entity / mapper / service / serviceImpl / mapperXml），
+             走的是 DatabaseMetaData 反射，不是 mybatis-generator 引擎。
+             HikariCP / freemarker / mysql-connector-j 的版本由父 pom 与 z-boot-parent 的 DM 兜底。 -->
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
