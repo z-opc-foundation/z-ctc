@@ -11,6 +11,8 @@ public class UserInfo implements Serializable {
     private String domainCode;
     private Set<String> roles;
     private Set<String> permissions;
+    /** 平台管理员标志 (whoami 填充, 默认 null = 未判定). */
+    private Boolean isPlatformAdmin;
 
     public String getUserId() {
         return userId;
@@ -66,5 +68,13 @@ public class UserInfo implements Serializable {
 
     public void setPermissions(Set<String> permissions) {
         this.permissions = permissions;
+    }
+
+    public Boolean getIsPlatformAdmin() {
+        return isPlatformAdmin;
+    }
+
+    public void setIsPlatformAdmin(Boolean isPlatformAdmin) {
+        this.isPlatformAdmin = isPlatformAdmin;
     }
 }

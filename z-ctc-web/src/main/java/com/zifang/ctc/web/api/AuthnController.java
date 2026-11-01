@@ -136,6 +136,21 @@ public class AuthnController {
     @Autowired
     private VerifyCodeService verifyCodeService;
 
+    /** 平台管理员判定 (平台级租户管理面板): AccountVO.isPlatformAdmin 由它填充. */
+    @Autowired(required = false)
+    private com.zifang.ctc.core.service.PlatformAdminService platformAdminService;
+
+    /**
+     * 给 AccountVO 填充平台管理员标志 (null 安全: 判定服务未装配时置 false).
+     */
+    private AccountVO fillPlatformAdminFlag(AccountVO vo) {
+        if (vo != null && vo.getId() != null) {
+            vo.setIsPlatformAdmin(platformAdminService != null
+                    && platformAdminService.isPlatformAdmin(vo.getId()));
+        }
+        return vo;
+    }
+
     public AuthnController(AuthService authService, LoginLogMapper loginLogMapper) {
         this.authService = authService;
         this.loginLogMapper = loginLogMapper;
@@ -222,7 +237,7 @@ public class AuthnController {
         // 签发 token: tenantCode 优先用 request.tenantCode (从 URL/前端传入)
         // domainCode 不在账号主表, 只能从 request 拿 (URL 决定租户/域)
         String token = issueToken(aw.account, request.getTenantCode(), request.getDomainCode());
-        LoginResponseVO body = new LoginResponseVO(token, AccountVO.from(aw.account));
+        LoginResponseVO body = new LoginResponseVO(token, fillPlatformAdminFlag(AccountVO.from(aw.account)));
 
         // 写 SSO cookie (跨子域共享, e.g. .zopc.top)
         writeSsoCookie(response, token);
@@ -296,6 +311,14 @@ public class AuthnController {
             UserInfo user = extractUserFromRequest(request);
             if (user == null) {
                 return Result.<UserInfo>fail("未登录").code(401);
+            }
+            // 平台管理员标志: 用户中心/管理面板入口按它显隐
+            try {
+                Long uid = Long.parseLong(user.getUserId());
+                user.setIsPlatformAdmin(platformAdminService != null
+                        && platformAdminService.isPlatformAdmin(uid));
+            } catch (NumberFormatException ignore) {
+                user.setIsPlatformAdmin(false);
             }
             return Result.success(user);
         } catch (Exception e) {
@@ -467,7 +490,7 @@ public class AuthnController {
         AccountVO accountVO = AccountVO.from(account);
         accountVO.setTenantCode(newTenant);
         // 注: AccountVO 没有 domainCode 字段, 放在 extra 里或通过新字段扩展
-        LoginResponseVO body = new LoginResponseVO(newToken, accountVO);
+        LoginResponseVO body = new LoginResponseVO(newToken, fillPlatformAdminFlag(accountVO));
         log.info("AuthnController.switchTenant 成功: accountId={}, newTenant={}, newDomain={}",
                 account.getId(), newTenant, newDomain);
         return Result.success(body);
@@ -546,7 +569,7 @@ public class AuthnController {
         String newToken = issueToken(account, request.getTenantCode(), request.getDomainCode());
         AccountVO accountVO = AccountVO.from(account);
         accountVO.setTenantCode(request.getTenantCode());
-        LoginResponseVO body = new LoginResponseVO(newToken, accountVO);
+        LoginResponseVO body = new LoginResponseVO(newToken, fillPlatformAdminFlag(accountVO));
         log.info("AuthnController.selectTenant 成功: userId={}, tenant={}, role={}",
                 userId, request.getTenantCode(), ms.getRoleCode());
         return Result.success(body);
@@ -806,7 +829,7 @@ public class AuthnController {
         recordLoginLog(account, phone, 2, 1, null, clientIp, userAgent, request.getTenantCode());
         log.info("AuthnController.phoneLogin 成功: userId={}, phone={}, tenant={}, source={}",
                 user.getId(), phone, request.getTenantCode(), request.getSource());
-        return Result.success(new LoginResponseVO(token, accountVO));
+        return Result.success(new LoginResponseVO(token, fillPlatformAdminFlag(accountVO)));
     }
 
     /**

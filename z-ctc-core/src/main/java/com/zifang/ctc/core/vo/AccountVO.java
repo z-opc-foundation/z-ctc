@@ -22,6 +22,8 @@ public class AccountVO implements Serializable {
     private LocalDateTime expireAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    /** 平台管理员标志 (由 Controller 层判定后填充, AccountDO 无此列). */
+    private Boolean isPlatformAdmin;
 
     public static AccountVO from(AccountDO d) {
         if (d == null) { return null; }
@@ -136,5 +138,13 @@ public class AccountVO implements Serializable {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Boolean getIsPlatformAdmin() {
+        return isPlatformAdmin;
+    }
+
+    public void setIsPlatformAdmin(Boolean isPlatformAdmin) {
+        this.isPlatformAdmin = isPlatformAdmin;
     }
 }
