@@ -86,22 +86,20 @@
             <dependency>
                 <groupId>com.github.jsqlparser</groupId>
                 <artifactId>jsqlparser</artifactId>
-                <version>4.4</version>
+                <version>4.9</version>
             </dependency>
-            <!-- 同一刀的另外两格：地板的直接 DM 条目把 mybatis 钉 3.5.16 / mybatis-spring 钉 2.0.6
-                 （那是地板给 mybatis-plus 3.5.7 配的配套），而 3.5.3.1 那套配套是 3.5.10 / 2.1.2 ——
-                 迁移实测 admin 树里这两格被拽走。按"分歧要写成直接条目才顶得住继承来的直接 DM"补回来，
-                 admin 的运行期栈与迁移前逐字相同。 -->
-            <dependency>
-                <groupId>org.mybatis</groupId>
-                <artifactId>mybatis</artifactId>
-                <version>3.5.10</version>
-            </dependency>
-            <dependency>
-                <groupId>org.mybatis</groupId>
-                <artifactId>mybatis-spring</artifactId>
-                <version>2.1.2</version>
-            </dependency>
+            <!-- mybatis / mybatis-spring 不再在本模块钉版本。
+                 历史：01c99b8 时地板（1.0.19, SB2）钉 mybatis 3.5.16 / mybatis-spring 2.0.6，
+                 而当时 admin 的 mybatis-plus 还是 3.5.3.1，其配套是 mybatis 3.5.10 /
+                 mybatis-spring 2.1.2，故写直接条目顶住 —— 那是 SB2 栈内部的配套对齐。
+                 db6d126 SB3 迁移后 starter 换成 mybatis-plus-spring-boot3-starter:3.5.7
+                 （自带 mybatis-spring 3.0.3 配套），这里若继续拽回 2.1.2（SB2 配套），
+                 Boot 3.3 下 Mapper 扫描直接炸
+                 BeanDefinitionStoreException: Invalid value type for attribute
+                 'factoryBeanObjectType': java.lang.String（2026-11-01 本地起 1.0.6 exec
+                 jar 实测）。现地板 1.2.0 已是 SB3 火车：mybatis=3.5.16 /
+                 mybatis-spring=3.0.4 / mybatis-plus=3.5.7 / jsqlparser=4.9，全套配套
+                 由地板下发，本模块不再与地板分歧。 -->
         </dependencies>
     </dependencyManagement>
 
