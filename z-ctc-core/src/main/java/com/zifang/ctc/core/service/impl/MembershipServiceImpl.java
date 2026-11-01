@@ -28,6 +28,12 @@ public class MembershipServiceImpl implements MembershipService {
 
     private static final Logger log = LogManager.getLogger(MembershipServiceImpl.class);
 
+    /** member_status: 1 = 正常在租户内. */
+    private static final int MEMBER_ACTIVE = 1;
+
+    /** 租户内可做管理操作的角色 (owner 创建者 / admin 管理员). */
+    private static final List<String> TENANT_ADMIN_ROLES = java.util.Arrays.asList("owner", "admin");
+
     private final MembershipDbService membershipDbService;
 
     public MembershipServiceImpl(MembershipDbService membershipDbService) {
@@ -97,6 +103,38 @@ public class MembershipServiceImpl implements MembershipService {
         if (userId == null || tenantCode == null) { return Optional.empty(); }
 
         return Optional.ofNullable(membershipDbService.selectByUserAndTenant(userId, tenantCode));
+    }
+
+    /**
+     * 用户是否为该租户的活跃成员 (member_status = 1).
+     *
+     * @param userId     用户ID
+     * @param tenantCode 租户编码
+     * @return true = 活跃成员
+     */
+    @Override
+    public boolean isMember(Long userId, String tenantCode) {
+        if (userId == null || tenantCode == null || tenantCode.isEmpty()) { return false; }
+        return findByUserAndTenant(userId, tenantCode)
+                .filter(m -> m.getMemberStatus() != null && m.getMemberStatus() == MEMBER_ACTIVE)
+                .isPresent();
+    }
+
+    /**
+     * 用户是否能在该租户下做管理操作 (活跃成员 且 role_code ∈ {owner, admin}).
+     *
+     * @param userId     用户ID
+     * @param tenantCode 租户编码
+     * @return true = 该租户的 owner/admin
+     */
+    @Override
+    public boolean isTenantAdmin(Long userId, String tenantCode) {
+        if (userId == null || tenantCode == null || tenantCode.isEmpty()) { return false; }
+        return findByUserAndTenant(userId, tenantCode)
+                .filter(m -> m.getMemberStatus() != null && m.getMemberStatus() == MEMBER_ACTIVE)
+                .map(MembershipDO::getRoleCode)
+                .filter(TENANT_ADMIN_ROLES::contains)
+                .isPresent();
     }
 
     /**

@@ -25,6 +25,20 @@ public interface MembershipService {
 
     Optional<MembershipDO> findByUserAndTenant(Long userId, String tenantCode);
 
+    /**
+     * 用户是否为该租户的活跃成员 (member_status = 1).
+     * <p>
+     * 用于"能不能看这个租户的数据"的判定, 不区分租户内角色.
+     */
+    boolean isMember(Long userId, String tenantCode);
+
+    /**
+     * 用户是否能在该租户下做管理操作 (活跃成员 且 role_code ∈ {owner, admin}).
+     * <p>
+     * 用于"能不能改这个租户的数据"的判定. 平台管理员不走这里, 由调用方另判.
+     */
+    boolean isTenantAdmin(Long userId, String tenantCode);
+
     Optional<MembershipDO> findById(Long id);
 
     List<MembershipDO> listActiveByUserId(Long userId);
