@@ -80,6 +80,27 @@ data:
   # 但**是否限制调用来源**仍待人工拍板 ⇒ 登记只代表「这是有意设计」，不代表已加固。
   # （该路径不在 sso.intercept-paths(/api/**, /ctc-osc/dept/**) 内 ⇒ 登记与否不改变拦截行为）
   SSO_EXCLUDE_PATHS_10: /ctc-osc/staff/getStaffSimpleListWithoutLogin
+  # ---- FEATURE-OAUTH (2026-11-01)：OAuth2 端点的豁免登记 ----
+  # /token 与 /userinfo 是**程序调用**（家族桌面客户端 / 各产品服务端），
+  # 凭 code / access_token 自证身份，浏览器登录态（sso_token cookie）对它们无意义
+  # ⇒ 不豁免的话 SSO 闸门 302 到登录页，客户端拿到 HTML 当 JSON 解析。
+  # ⚠ /api/ctc/oauth/authorize **刻意不豁免**：浏览器交互端点，未登录要被闸门带去登录页。
+  #   （controller 里另有「读 cookie 判登录态」的兜底，双保险。）
+  # 下标接续 _10 ⇒ _11/_12，保持连续。
+  SSO_EXCLUDE_PATHS_11: /api/ctc/oauth/token
+  SSO_EXCLUDE_PATHS_12: /api/ctc/oauth/userinfo
+  # ---- FEATURE-OAUTH：接入方（client）注册表 ----
+  # application.yml 里的 z.ctc.oauth.clients 在生产**不可改**（烧在镜像里）⇒
+  # 生产真源在这里，用索引式 env 覆盖（松散绑定：Z_CTC_OAUTH_CLIENTS_0_CLIENT_ID 等）。
+  # ⚠ 同样的两条坑：整体替换语义（镜像里那份被 env 覆盖掉，不用重复登记）+
+  #   下标连续。redirect-uris 是 List<String>，走 _REDIRECT_URIS_0/_1 索引。
+  # 通配端口形态：127.0.0.1 任意端口 + /callback（桌面客户端动态端口）。
+  Z_CTC_OAUTH_CLIENTS_0_CLIENT_ID: z-biz-tool-remote
+  Z_CTC_OAUTH_CLIENTS_0_REDIRECT_URIS_0: "http://127.0.0.1:*/callback"
+  Z_CTC_OAUTH_CLIENTS_0_SCOPE: "openid profile email"
+  Z_CTC_OAUTH_CLIENTS_1_CLIENT_ID: z-biz-tool-mind
+  Z_CTC_OAUTH_CLIENTS_1_REDIRECT_URIS_0: "http://127.0.0.1:*/callback"
+  Z_CTC_OAUTH_CLIENTS_1_SCOPE: "openid profile email"
   # ---- 拦截范围 (SSO_INTERCEPT_PATHS_*) ----
   # ⚠⚠ 索引式 env 是**整体替换** sso.intercept-paths ⇒ _0 必须把 /api/** 带上,
   #    否则 /api/** 整站失去闸门; 下标必须**连续** (_0.._1), 跳号 ⇒ 条目丢失。
