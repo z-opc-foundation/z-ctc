@@ -7,6 +7,7 @@ import com.zifang.ctc.core.init.TenantInitContext;
 import com.zifang.ctc.core.init.TenantInitOrchestrator;
 import com.zifang.ctc.core.init.TenantInitReport;
 import com.zifang.ctc.core.service.MembershipService;
+import com.zifang.ctc.core.service.PlatformAdminService;
 import com.zifang.ctc.core.service.TenantService;
 import com.zifang.ctc.core.tenant.TenantContext;
 import com.zifang.ctc.core.vo.TenantVO;
@@ -24,7 +25,10 @@ import java.util.stream.Collectors;
  * <p>
  * API 基础路径: /api/ctc/ac/tenants
  * 所属模块: z-ctc-ac
- * 鉴权: 由 SsoInterceptor 统一拦截, 修改类操作通过 X-User-Id 头识别操作者
+ * 鉴权: 由 SsoInterceptor 统一拦截; 平台级写操作 (status/update/delete) 与全量视图
+ * (list/page) 要求平台管理员 — 判定口径见 {@link PlatformAdminService}
+ * (全局公共角色 SUPER_ADMIN / PLATFORM_ADMIN). create 允许平台管理员或
+ * 游离态用户自助开通 (OrphanGuard 白名单依赖). 修改类操作通过 X-User-Id 头识别操作者
  *
  * <p>主要端点:
  * <ul>
@@ -52,13 +56,30 @@ public class TenantController {
 
     private final TenantService tenantService;
     private final TenantInitOrchestrator tenantInitOrchestrator;
+    private final PlatformAdminService platformAdminService;
 
     @org.springframework.beans.factory.annotation.Autowired
     private MembershipService membershipService;
 
-    public TenantController(TenantService tenantService, TenantInitOrchestrator tenantInitOrchestrator) {
+    public TenantController(TenantService tenantService, TenantInitOrchestrator tenantInitOrchestrator,
+                            PlatformAdminService platformAdminService) {
         this.tenantService = tenantService;
         this.tenantInitOrchestrator = tenantInitOrchestrator;
+        this.platformAdminService = platformAdminService;
+    }
+
+    /**
+     * 当前登录用户是否平台管理员.
+     */
+    private boolean isPlatformAdmin() {
+        return platformAdminService.isPlatformAdmin(TenantContext.getUserId());
+    }
+
+    /**
+     * 构造 403 拒绝响应体.
+     */
+    private <T> Result<T> forbidden() {
+        return Result.<T>fail("需要平台管理员权限").code(ResultCode.REQ_REJECT.getCode());
     }
 
     /**
@@ -117,6 +138,17 @@ public class TenantController {
      */
     @GetMapping
     public Result<TenantVO> findByCode(@RequestParam("tenantCode") String tenantCode) {
+        // 详情: 平台管理员可看任意租户; 普通用户只能看自己所属租户
+        if (!isPlatformAdmin()) {
+            Long userId = TenantContext.getUserId();
+            boolean member = userId != null && membershipService
+                    .findByUserAndTenant(userId, tenantCode)
+                    .filter(ms -> ms.getMemberStatus() != null && ms.getMemberStatus() == 1)
+                    .isPresent();
+            if (!member) {
+                return Result.<TenantVO>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
+            }
+        }
         return tenantService.findByTenantCode(tenantCode)
                 .map(tenant -> Result.<TenantVO>success(TenantVO.from(tenant)))
                 .orElseGet(() -> Result.<TenantVO>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode()));
@@ -132,6 +164,10 @@ public class TenantController {
     @PostMapping("/status")
     public Result<Void> updateStatus(@RequestParam("tenantCode") String tenantCode,
                                      @RequestParam("status") int status) {
+        // 平台级操作: 仅平台管理员可启停任意租户
+        if (!isPlatformAdmin()) {
+            return forbidden();
+        }
         boolean ok = tenantService.updateStatus(tenantCode, status);
         return ok ? Result.<Void>success() : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
     }
@@ -158,6 +194,11 @@ public class TenantController {
         // 3. 其他情况 → 按 user 的 active membership 过滤
         if (userId == null) {
             return Result.success(java.util.Collections.<TenantVO>emptyList());
+        }
+        // 平台管理员: 返回所有租户 (补齐注释中声明但未实现的分支)
+        if (isPlatformAdmin()) {
+            data = tenantService.listAll();
+            return Result.success(data.stream().map(TenantVO::from).collect(Collectors.toList()));
         }
         if (ctxTenant == null || ctxTenant.isEmpty()) {
             // 没有选中租户, 按 membership 列表
@@ -191,20 +232,25 @@ public class TenantController {
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "pageNum", defaultValue = "1") int pageNum,
             @RequestParam(value = "pageSize", defaultValue = "20") int pageSize) {
-        // === 多租户隔离 (FEATURE049): 只显示当前用户所属租户 ===
+        // === 多租户隔离 (FEATURE049) + 平台管理员例外 ===
+        // 平台管理员: 分页查全部租户; 普通用户: 只显示所属租户
         Long userId = TenantContext.getUserId();
         List<TenantDO> all;
         if (userId == null) {
             return Result.success(new PageResponseVO<>(java.util.Collections.emptyList(), 0, pageNum, pageSize));
         }
-        List<MembershipDO> memberships = membershipService.listActiveByUserId(userId);
-        if (memberships.isEmpty()) {
-            return Result.success(new PageResponseVO<>(java.util.Collections.emptyList(), 0, pageNum, pageSize));
+        if (isPlatformAdmin()) {
+            all = tenantService.listAll();
+        } else {
+            List<MembershipDO> memberships = membershipService.listActiveByUserId(userId);
+            if (memberships.isEmpty()) {
+                return Result.success(new PageResponseVO<>(java.util.Collections.emptyList(), 0, pageNum, pageSize));
+            }
+            all = memberships.stream()
+                    .map(m -> tenantService.findByTenantCode(m.getTenantCode()).orElse(null))
+                    .filter(t -> t != null)
+                    .collect(Collectors.toList());
         }
-        all = memberships.stream()
-                .map(m -> tenantService.findByTenantCode(m.getTenantCode()).orElse(null))
-                .filter(t -> t != null)
-                .collect(Collectors.toList());
         List<TenantDO> filtered = all.stream()
                 .filter(t -> {
                     if (keyword == null || keyword.isEmpty()) {
@@ -235,6 +281,10 @@ public class TenantController {
     public Result<Void> update(
             @RequestParam("tenantCode") String tenantCode,
             @RequestBody TenantDO patch) {
+        // 平台级操作: 仅平台管理员可改任意租户字段
+        if (!isPlatformAdmin()) {
+            return forbidden();
+        }
         boolean ok = tenantService.updateTenant(tenantCode, patch);
         return ok ? Result.<Void>success() : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
     }
@@ -247,6 +297,10 @@ public class TenantController {
      */
     @DeleteMapping
     public Result<Void> delete(@RequestParam("tenantCode") String tenantCode) {
+        // 平台级操作: 仅平台管理员可删除租户
+        if (!isPlatformAdmin()) {
+            return forbidden();
+        }
         boolean ok = tenantService.deleteTenant(tenantCode);
         return ok ? Result.<Void>success() : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
     }
