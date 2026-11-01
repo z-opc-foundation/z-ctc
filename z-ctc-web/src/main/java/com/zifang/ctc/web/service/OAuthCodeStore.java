@@ -2,6 +2,7 @@ package com.zifang.ctc.web.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
 
@@ -23,6 +24,7 @@ import java.util.concurrent.TimeUnit;
  * 换 token 时必须逐项对上 —— 这是防「code 换手」的关键：截获 code 的攻击者
  * 拿着别的 client_id 或别的 redirect_uri 来换，一律对不上。
  */
+@Service
 public class OAuthCodeStore {
 
     /** 一条待消费的授权码。 */
