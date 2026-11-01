@@ -9,6 +9,12 @@ import { HelloCtc, ComponentDocPage } from '.';
 
 export const appMeta = { title: 'z-ctc 控制台', short: 'z-ctc' }
 
+// 菜单清单（按 routes 派生；页面实体仍在 suit 侧，见上方占位说明）
+export const menuItems = [
+    { key: '/z-ctc/hello', label: 'Hello Ctc' },
+    { key: '/z-ctc/docs', label: '组件文档' },
+]
+
 export const routes = [
     { path: '/z-ctc/hello', title: 'Hello Ctc', order: 1, Component: HelloCtc },
     // 组件文档（lead 008 §7）：本文件（src/DOC.md）的渲染页。
