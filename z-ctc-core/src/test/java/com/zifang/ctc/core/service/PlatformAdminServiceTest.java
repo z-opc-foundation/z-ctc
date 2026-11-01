@@ -12,8 +12,8 @@ import java.util.List;
 /**
  * 平台管理员判定守卫测试（内存桩，不依赖 DB / JUnit，与 AcDeptTreeServiceTest 同风格）.
  * <p>
- * 口径: 全局公共角色 (tenant_code 空) 且 role_code ∈ {SUPER_ADMIN, PLATFORM_ADMIN},
- * 通过 z_ctc_spc_user_role 绑定 (未过期) ⇒ 平台管理员.
+ * 口径: 持有系统管理员角色 (role_code ∈ {SUPER_ADMIN, PLATFORM_ADMIN}, 角色 status=1),
+ * 通过 z_ctc_spc_user_role 绑定 (未过期) ⇒ 平台管理员. 判定只看编码, 不看角色挂在哪个租户下.
  */
 public class PlatformAdminServiceTest {
 
@@ -21,20 +21,20 @@ public class PlatformAdminServiceTest {
     private static int fail = 0;
 
     public static void main(String[] args) {
-        // ── 1. 持有全局 SUPER_ADMIN ⇒ 平台管理员 ──
-        eq("全局 SUPER_ADMIN", true, svc(
+        // ── 1. 持有 SUPER_ADMIN ⇒ 平台管理员 ──
+        eq("SUPER_ADMIN", true, svc(
                 bindings(1, 10),
                 roles(role(10, "SUPER_ADMIN", null, 1))).isPlatformAdmin(1L));
 
-        // ── 2. 持有全局 PLATFORM_ADMIN ⇒ 平台管理员 ──
-        eq("全局 PLATFORM_ADMIN", true, svc(
+        // ── 2. 持有 PLATFORM_ADMIN ⇒ 平台管理员 ──
+        eq("PLATFORM_ADMIN", true, svc(
                 bindings(2, 11),
                 roles(role(11, "PLATFORM_ADMIN", null, 1))).isPlatformAdmin(2L));
 
-        // ── 3. 同编码角色但绑定在具体租户下 ⇒ 不是 ──
-        eq("租户级 SUPER_ADMIN 不算", false, svc(
+        // ── 3. 角色行挂在具体租户下 ⇒ 仍算 (内置初始化在 default 下的那条 SUPER_ADMIN 必须生效) ──
+        eq("租户下的 SUPER_ADMIN 同样生效", true, svc(
                 bindings(3, 12),
-                roles(role(12, "SUPER_ADMIN", "tenant_a", 1))).isPlatformAdmin(3L));
+                roles(role(12, "SUPER_ADMIN", "default", 1))).isPlatformAdmin(3L));
 
         // ── 4. 全局普通角色 ⇒ 不是 ──
         eq("全局 admin/member 不算", false, svc(
@@ -64,6 +64,11 @@ public class PlatformAdminServiceTest {
                     throw new RuntimeException("db down");
                 });
         eq("异常降级为拒绝", false, new PlatformAdminServiceImpl(broken).isPlatformAdmin(7L));
+
+        // ── 9. 角色编码为空 ⇒ 不是 (不抛 NPE) ──
+        eq("roleCode 空值不崩", false, svc(
+                bindings(8, 16),
+                roles(role(16, null, null, 1))).isPlatformAdmin(8L));
 
         System.out.println("---- PlatformAdminServiceTest ----");
         System.out.println("pass=" + pass + ", fail=" + fail);

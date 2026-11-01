@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -16,21 +17,24 @@ import java.util.stream.Collectors;
 /**
  * 平台管理员判定默认实现.
  * <p>
- * 复用现有 RBAC 表 (z_ctc_spc_role + z_ctc_spc_user_role), 不新造表:
- * <ol>
- *   <li>查全局公共角色 (tenant_code IS NULL, status=1) 中 role_code ∈ {SUPER_ADMIN, PLATFORM_ADMIN} 的角色</li>
- *   <li>再查用户是否持有其中任一角色 (selectUserRoleByUserId 已带 expire_at 过滤)</li>
- * </ol>
- * 每次实时查库 (不缓存到 JWT), 保证回收角色后立即生效.
+ * 口径一条: 持有系统管理员角色 (role_code ∈ {SUPER_ADMIN, PLATFORM_ADMIN} 且角色已启用)
+ * 的未过期绑定 ⇒ 平台管理员.
+ * <p>
+ * 判定只看角色编码, 不看角色的 tenant_code: 这两个是系统内置保留角色, 语义就是
+ * "持有人可跨租户管理", 角色行落在哪个租户下不改变这个语义 (内置初始化脚本给的是
+ * tenant_code = NULL, 历史库里有一条挂在 default 下, 两者都应生效).
+ * 每次实时查库 (不缓存到 JWT), 角色回收后立即失效.
  */
 @Service
 public class PlatformAdminServiceImpl implements PlatformAdminService {
 
     private static final Logger log = LogManager.getLogger(PlatformAdminServiceImpl.class);
 
-    /** 平台管理员角色编码 (公共全局角色). */
+    /** 系统管理员角色编码 (内置保留). */
     private static final Set<String> PLATFORM_ADMIN_ROLE_CODES =
-            new java.util.HashSet<>(Arrays.asList("SUPER_ADMIN", "PLATFORM_ADMIN"));
+            new HashSet<>(Arrays.asList("SUPER_ADMIN", "PLATFORM_ADMIN"));
+
+    private static final Integer ROLE_ENABLED = 1;
 
     private final AuthorizationDbService authzDbService;
 
@@ -44,29 +48,24 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
             return false;
         }
         try {
-            // 1. 用户的全部有效角色绑定 (未过期)
-            List<UserRoleDO> urs = authzDbService.selectUserRoleByUserId(userId);
-            if (urs.isEmpty()) {
+            List<UserRoleDO> bindings = authzDbService.selectUserRoleByUserId(userId);
+            if (bindings.isEmpty()) {
                 return false;
             }
-            // 2. 解析角色, 命中"全局公共平台管理员角色"即判定通过
-            List<Long> roleIds = urs.stream().map(UserRoleDO::getRoleId).collect(Collectors.toList());
-            for (RoleDO role : authzDbService.selectRoleBatchIds(roleIds)) {
-                if (role == null || role.getRoleCode() == null) {
-                    continue;
-                }
-                boolean globalPublicRole = role.getTenantCode() == null || role.getTenantCode().isEmpty();
-                if (globalPublicRole && role.getStatus() != null && role.getStatus() == 1
-                        && PLATFORM_ADMIN_ROLE_CODES.contains(role.getRoleCode())) {
-                    return true;
-                }
-            }
-            return false;
+            List<Long> roleIds = bindings.stream().map(UserRoleDO::getRoleId).collect(Collectors.toList());
+            return authzDbService.selectRoleBatchIds(roleIds).stream().anyMatch(this::isAdminRole);
         } catch (Exception e) {
             // 判定失败按无权限处理 (安全侧倾斜), 不阻断请求
             log.warn("PlatformAdminServiceImpl.isPlatformAdmin 判定异常, 按非平台管理员处理: userId={}, err={}",
                     userId, e.getMessage());
             return false;
         }
+    }
+
+    /** 系统管理员角色 = 编码命中且角色未停用. */
+    private boolean isAdminRole(RoleDO role) {
+        return role != null
+                && ROLE_ENABLED.equals(role.getStatus())
+                && PLATFORM_ADMIN_ROLE_CODES.contains(role.getRoleCode());
     }
 }

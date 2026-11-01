@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
  * 所属模块: z-ctc-ac
  * 鉴权: 由 SsoInterceptor 统一拦截; 平台级写操作 (status/update/delete) 与全量视图
  * (list/page) 要求平台管理员 — 判定口径见 {@link PlatformAdminService}
- * (全局公共角色 SUPER_ADMIN / PLATFORM_ADMIN). create 允许平台管理员或
+ * (持有系统管理员角色 SUPER_ADMIN / PLATFORM_ADMIN). create 允许平台管理员或
  * 游离态用户自助开通 (OrphanGuard 白名单依赖). 修改类操作通过 X-User-Id 头识别操作者
  *
  * <p>主要端点:
