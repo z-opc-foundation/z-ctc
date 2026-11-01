@@ -5,10 +5,12 @@ import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { at } from './routes-base'
 
 /**
- * 登录页（lead 008 §16）—— CTC/SSO 接入前的 mock 登录。
+ * 登录页（lead 008 §16）—— 账号密码登录 z-ctc 后端（/api/ctc/authn/login）。
  *
- * mock 账号不写死在仓里（001_凭证管理规范）：宿主在构建期注入
- * VITE_MOCK_USER / VITE_MOCK_PASSWORD，未注入时页面直接说明「未配置 mock 账号」。
+ * 成功即把真 token 写进 localStorage：@yuku123/z-frontend-common 的请求拦截器
+ * 统一补 Authorization: Bearer，页面这才真正连得上后端。
+ * 构建期若注入了 VITE_MOCK_USER / VITE_MOCK_PASSWORD，那一组账号仍走本地 mock
+ * （离线演示用）；账号本身不写死在仓里（001_凭证管理规范）。
  */
 const MOCK_AUTH = {
     username: import.meta.env.VITE_MOCK_USER || '',
@@ -23,18 +25,41 @@ export default function LoginPage() {
     const handleSubmit = async (values) => {
         setLoading(true)
         try {
-            if (!MOCK_AUTH.username || !MOCK_AUTH.password) {
-                message.error('未配置 mock 账号（VITE_MOCK_USER / VITE_MOCK_PASSWORD）')
-                return
-            }
-            if (values.username === MOCK_AUTH.username && values.password === MOCK_AUTH.password) {
+            // 1) 离线演示兜底：构建期注入的 mock 账号（没起后端时用）。
+            //    账号不写死在仓里（001_凭证管理规范），未注入时这一段自然跳过。
+            if (MOCK_AUTH.username && values.username === MOCK_AUTH.username
+                && values.password === MOCK_AUTH.password) {
                 localStorage.setItem('token', 'mock-' + MOCK_AUTH.username)
                 localStorage.setItem('userInfo', JSON.stringify(MOCK_AUTH.user))
-                message.success('登录成功（mock 模式，待 CTC/SSO 接入）')
+                message.success('登录成功（mock 模式，未连接后端）')
                 navigate(at('/home'), { replace: true })
-            } else {
-                message.error('用户名或密码错误')
+                return
             }
+
+            // 2) 正常路径：后端账号密码登录，拿真 token。
+            //    token 存进 localStorage 后，@yuku123/z-frontend-common 的拦截器
+            //    会给每个请求补 Authorization: Bearer —— 页面能不能真联后端就差这一步。
+            const resp = await fetch('/api/ctc/authn/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier: values.username, password: values.password }),
+            })
+            const body = await resp.json().catch(() => null)
+            const data = body?.data
+            if (!resp.ok || body?.success === false || !data?.token) {
+                message.error(body?.message || '用户名或密码错误')
+                return
+            }
+            localStorage.setItem('token', data.token)
+            const account = data.account || {}
+            localStorage.setItem('userInfo', JSON.stringify({
+                name: account.nickname || account.username || values.username,
+                role: account.isPlatformAdmin ? '平台管理员' : '租户用户',
+            }))
+            message.success('登录成功')
+            navigate(at('/home'), { replace: true })
+        } catch (e) {
+            message.error('登录失败：' + (e?.message || '网络异常'))
         } finally {
             setLoading(false)
         }
@@ -69,7 +94,7 @@ export default function LoginPage() {
                         </Button>
                     </Form.Item>
                     <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
-                        Mock 模式：账号由宿主注入（VITE_MOCK_USER / VITE_MOCK_PASSWORD）
+                        账号密码登录（构建期注入 mock 账号时走离线演示）
                     </div>
                 </Form>
             </Card>

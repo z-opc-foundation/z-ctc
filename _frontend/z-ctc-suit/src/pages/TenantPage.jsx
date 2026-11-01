@@ -1,2 +1,2 @@
-/** 租户管理 —— z-ctc-component 的 TenantManagement（左树右表：租户 + 域）。 */
-export { TenantManagement as default } from '@yuku123/z-ctc-component'
+/** 租户管理 —— 登录者自己所属的租户：租户信息 + 域表格（通常只有一个租户，不画左树）。 */
+export { MyTenantManagement as default } from '@yuku123/z-ctc-component'

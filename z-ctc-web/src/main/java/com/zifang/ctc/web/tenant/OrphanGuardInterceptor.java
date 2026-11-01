@@ -1,10 +1,12 @@
 package com.zifang.ctc.web.tenant;
 
+import com.zifang.ctc.core.service.PlatformAdminService;
 import com.zifang.ctc.core.tenant.TenantContext;
 import com.zifang.util.json.JsonUtil;
 import com.zifang.util.core.meta.Result;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
@@ -78,11 +80,25 @@ public class OrphanGuardInterceptor implements HandlerInterceptor {
      * 失配导致全部 403, 必须用 getPathWithinApplication 保证路径与白名单对齐. */
     private final UrlPathHelper urlPathHelper = new UrlPathHelper();
 
+    /**
+     * 平台管理员判定 (null 安全: 未装配时按非平台管理员处理).
+     */
+    @Autowired(required = false)
+    private PlatformAdminService platformAdminService;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
         // 未登录: 不在游离态守卫范围内, 让 SsoInterceptor 自行处理
         if (!TenantContext.isOrphan()) {
+            return true;
+        }
+        // 平台管理员放行. 本守卫的 {@link TenantContext#isOrphan()} 判据是「没有选中租户」,
+        // 而平台管理员天然跨租户 —— 他的账号可以不挂在任何租户下 (tenant_code 为空),
+        // 若一并挡住, 系统租户面板连域列表都读不到, 这道守卫就把功能本身禁掉了.
+        // 普通游离用户的判据不变: 依然只放行上面那份白名单.
+        Long userId = TenantContext.getUserId();
+        if (userId != null && platformAdminService != null && platformAdminService.isPlatformAdmin(userId)) {
             return true;
         }
         // 用相对应用路径 (去掉 context-path) 与白名单匹配, 避免部署在 /z-team 等非根路径时全部失配

@@ -42,8 +42,17 @@ export const ctcAcTenantApi = {
             params: {tenantCode, status},
         }),
 
-    /** GET /api/ctc/ac/tenants/list — 全量列表 */
+    /** GET /api/ctc/ac/tenants/list — 我登录后能看到的租户 (平台管理员=全量, 其他人=自己的 membership) */
     listAll: () => makeRequest().get('/ctc/ac/tenants/list'),
+
+    /**
+     * GET /api/ctc/ac/tenants/list-all — 全平台租户 (系统租户面板, 仅平台管理员)
+     *
+     * 与 listAll 的区别是「问题」不同而非「参数」不同: listAll 回答我能看哪些,
+     * 这个回答平台上一共有哪些。非平台管理员调用返回 403 —— 前端据此显示无权限,
+     * 而不是把空表当成「全平台没有租户」。
+     */
+    listAllForPlatform: () => makeRequest().get('/ctc/ac/tenants/list-all'),
 }
 
 // ========== Domain (域) ==========
@@ -72,6 +81,20 @@ export const ctcAcDomainApi = {
 export const ctcAcTenantDomainApi = {
     tenant: ctcAcTenantApi,
     domain: ctcAcDomainApi,
+}
+
+/**
+ * 默认域判定 —— 库里同时存在两种历史编码：早期建的叫 `default`，
+ * 后来按租户建的叫 `<tenantCode>-default`。两种都不允许删：
+ * 删掉之后该租户就没有兜底域，按租户取域的链路会空转。
+ *
+ * 放在这里而不是各页面各写一份：此前两处判定都只认 `<tenantCode>-default`，
+ * 于是早期那条 `default` 域看着是默认域，实际能被删掉。
+ */
+export function isDefaultDomain(tenantCode, domain) {
+    const code = domain?.domainCode
+    if (!code) return false
+    return code === 'default' || (!!tenantCode && code === `${tenantCode}-default`)
 }
 
 export default ctcAcTenantDomainApi

@@ -220,6 +220,28 @@ public class TenantController {
     }
 
     /**
+     * 平台管理员专用的全量租户列表 (系统租户面板).
+     * <p>
+     * 与 {@link #listAll()} 是两个问题, 不要合并:
+     * 那个回答「我登录后能看哪些租户」(按 membership 分层, 谁都能调),
+     * 这个回答「平台上一共有哪些租户」(只有平台管理员能问).
+     * 非平台管理员一律 403 而不是静默返回空表 —— 否则前端会把
+     * 「我只有 1 个租户」误当成「全平台只有 1 个租户」, 这类静默降级比报错难查得多.
+     *
+     * @return 平台全部租户; 非平台管理员 403
+     */
+    @GetMapping("/list-all")
+    public Result<List<TenantVO>> listAllForPlatform() {
+        if (!isPlatformAdmin()) {
+            return forbidden();
+        }
+        List<TenantVO> all = tenantService.listAll().stream()
+                .map(TenantVO::from)
+                .collect(Collectors.toList());
+        return Result.success(all);
+    }
+
+    /**
      * 关键字分页查询: 按租户编码/名称做不区分大小写的子串匹配, 然后内存分页.
      *
      * @param keyword  关键字, 可选; 匹配 tenantCode/tenantName, 不区分大小写

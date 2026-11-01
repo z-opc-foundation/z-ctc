@@ -4,6 +4,7 @@ import {
     AppstoreOutlined,
     BankOutlined,
     BookOutlined,
+    ClusterOutlined,
     FileSearchOutlined,
     HomeOutlined,
     KeyOutlined,
@@ -23,6 +24,7 @@ import { at } from './routes-base'
 const AccountsPage = lazy(() => import('./pages/AccountsPage'))
 const OrgPage = lazy(() => import('./pages/OrgPage'))
 const TenantPage = lazy(() => import('./pages/TenantPage'))
+const SystemTenantPage = lazy(() => import('./pages/SystemTenantPage'))
 const ApplicationPage = lazy(() => import('./pages/ApplicationPage'))
 const RolePage = lazy(() => import('./pages/RolePage'))
 const AuthzPage = lazy(() => import('./pages/AuthzPage'))
@@ -45,7 +47,11 @@ export const menuItems = [
     { key: at('/home'), label: '首页', icon: <HomeOutlined /> },
     { key: at('/accounts'), label: '账号管理', icon: <UserOutlined />, desc: '账号列表、启停与分配角色' },
     { key: at('/orgs'), label: '组织管理', icon: <ApartmentOutlined />, desc: '租户 / 域 / 组织-部门-组' },
-    { key: at('/tenants'), label: '租户管理', icon: <BankOutlined />, desc: '租户维护与域管理' },
+    // 两个租户入口是同一件事的两个视角，不是两套功能：
+    //   系统租户 = 平台管理员看全平台（/tenants/list-all，非管理员后端 403，菜单也隐藏）
+    //   租户管理 = 谁登录就看谁自己所属的租户（/tenants/list，通常只有一个，不画左树）
+    { key: at('/system-tenants'), label: '系统租户', icon: <BankOutlined />, platformOnly: true, desc: '全平台租户与域（平台管理员）' },
+    { key: at('/tenants'), label: '租户管理', icon: <ClusterOutlined />, desc: '我的租户与域' },
     { key: at('/applications'), label: '应用管理', icon: <AppstoreOutlined />, desc: '应用与 API 资产 / 菜单 / 按钮' },
     { key: at('/roles'), label: '角色管理', icon: <TeamOutlined />, desc: '角色增删改查' },
     { key: at('/permissions'), label: '权限管理', icon: <SafetyCertificateOutlined />, desc: '资源 × 角色的授权配置' },
@@ -65,6 +71,7 @@ export const routes = [
     { path: at('/home'), Component: HomePage },
     { path: at('/accounts'), Component: AccountsPage },
     { path: at('/orgs'), Component: OrgPage },
+    { path: at('/system-tenants'), Component: SystemTenantPage },
     { path: at('/tenants'), Component: TenantPage },
     { path: at('/applications'), Component: ApplicationPage },
     { path: at('/roles'), Component: RolePage },

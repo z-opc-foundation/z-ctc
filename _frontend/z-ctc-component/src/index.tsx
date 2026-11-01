@@ -42,6 +42,8 @@ export {default as OrgManagement} from './components/OrgManagement'
 //   - 走统一的 ctcRequest / ctcAc / ctcAuthorization / metaApp 后端
 export {default as OrgPage} from './components/OrgPage'
 export {default as TenantManagement} from './components/TenantManagement'
+// 租户管理（登录者自己所属的租户，域为主，无租户树）—— 与 TenantManagement 是两个视角，不是两套组件
+export {default as MyTenantManagement} from './components/MyTenant'
 export {default as AccountManagement} from './components/AccountManagement'
 export {default as ApplicationManagement} from './components/ApplicationManagement'
 export {default as RoleManagement} from './components/RoleManagement'

@@ -17,9 +17,9 @@ import {
 } from 'antd'
 import {DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined,} from '@ant-design/icons'
 import dayjs from 'dayjs'
-import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi} from './api'
+import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi, isDefaultDomain} from './api'
 /**
- * 租户管理 (4A AC 域) — 左树右表布局
+ * 系统租户 (4A AC 域) — 平台管理员视角, 左树右表布局
  *
  * ┌──────────────┬───────────────────────────────────────────┐
  * │ 租户 / 域    │ 选中节点 → 基本信息（Descriptions）       │
@@ -29,6 +29,10 @@ import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi} from './api'
  * │   · 默认域   │                                           │
  * └──────────────┴───────────────────────────────────────────┘
  *
+ * 与「租户管理」的区别只在视角, 不在权限:
+ *   本页 = 全平台所有租户 (走 /tenants/list-all, 非平台管理员 403)
+ *   租户管理 = 登录者自己所属的租户 (走 /tenants/list, 通常只有一个, 无左树)
+ *
  * 后端契约（FEATURE016：所有页面不能使用 localStorage 作为存储）：
  *   - 租户 CRUD：z-ctc-ac / TenantController @ /api/ctc/ac/tenants/*
  *   - 域 CRUD：z-ctc-ac / DomainController @ /api/ctc/ac/domains/*
@@ -36,6 +40,7 @@ import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi} from './api'
  *
  * Props:
  *   - apiBaseURL?: string    后端 baseURL, 默认 '/api'
+ *   - platformView?: boolean 是否平台管理员视角 (决定租户来源是 list-all 还是 list)
  *
  * 修复 (从 z-opc-main-starter-frontend 迁过来时应用):
  *   1. domainMap[t.tenantCode] 加 Array.isArray 防御, 避免后端返回非数组时 .map 报错
@@ -51,7 +56,7 @@ const STATUS_MAP = {
 const nodeKey = (type, tenantCode, domainCode) =>
     type === 'tenant' ? `tenant:${tenantCode}` : `domain:${tenantCode}:${domainCode}`
 
-export default function TenantManagement({apiBaseURL}) {
+export default function TenantManagement({apiBaseURL, platformView = false}) {
     // 配置 baseURL (组件 mount 时生效)
     useEffect(() => {
         if (apiBaseURL) configureApiBaseURL(apiBaseURL)
@@ -86,36 +91,40 @@ export default function TenantManagement({apiBaseURL}) {
     const [editingKv, setEditingKv] = useState(null)
     const [kvForm] = Form.useForm()
 
-    // 拉取所有租户 — 走后端
+    // 拉取租户 — platformView 走全平台接口 (平台管理员专属), 否则走「我能看到的租户」
     const fetchTenants = useCallback(async () => {
         setLoadingTenants(true)
         try {
-            const all = await ctcAcTenantApi.listAll()
+            const all = platformView
+                ? await ctcAcTenantApi.listAllForPlatform()
+                : await ctcAcTenantApi.listAll()
             setTenants(Array.isArray(all) ? all : [])
         } catch (e) {
-            message.error('获取租户列表失败：' + (e?.message || '未知错误'))
+            message.error((platformView ? '获取全平台租户失败（系统租户面板仅平台管理员可访问）：' : '获取租户列表失败：')
+                + (e?.message || '未知错误'))
             setTenants([])
         } finally {
             setLoadingTenants(false)
         }
-    }, [])
+    }, [platformView])
 
     useEffect(() => {
         fetchTenants()
     }, [fetchTenants])
 
     // 拉取每个租户下的域（后端）
+    // 并发而不是 for-await 串行：系统租户页要拉全平台 21 个租户的域，
+    // 串行在真实链路上要等 21 个来回，树会一段一段地长出来。
     const fetchDomainsForTenants = useCallback(async (tenantList) => {
-        const map = {}
-        for (const t of tenantList) {
+        const entries = await Promise.all(tenantList.map(async (t) => {
             try {
                 const list = await ctcAcDomainApi.listByTenant(t.tenantCode)
-                map[t.tenantCode] = Array.isArray(list) ? list : []
+                return [t.tenantCode, Array.isArray(list) ? list : []]
             } catch {
-                map[t.tenantCode] = []
+                return [t.tenantCode, []]
             }
-        }
-        setDomainMap(map)
+        }))
+        setDomainMap(Object.fromEntries(entries))
     }, [])
 
     // 租户加载完成后同步拉域
@@ -156,12 +165,14 @@ export default function TenantManagement({apiBaseURL}) {
             })),
         }))
         setTreeData(tree)
+        // 首次拿到租户就把它们展开：管理者视角要的是「一眼看到域分布」，
+        // 全折叠等于让人一个个点开。用户手动折叠后 prev 非空，不再覆盖。
+        setExpandedKeys(prev => (prev.length > 0 ? prev : tree.map(node => node.key)))
     }, [tenants, domainMap])
 
     // 删除域 — 走后端
     const handleDeleteDomain = async (tenantCode, domain) => {
-        const isDefault = domain.domainCode === `${tenantCode}-default` && domain.domainName === '默认域'
-        if (isDefault) {
+        if (isDefaultDomain(tenantCode, domain)) {
             message.warning('默认域受保护，不可删除')
             return
         }

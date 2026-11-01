@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { AppLayout, ErrorBoundary } from '@yuku123/z-frontend-common'
 import { menuItems, routes } from './pages-manifest'
@@ -28,22 +28,42 @@ function ProtectedShell() {
     const navigate = useNavigate()
     const [user, setUser] = useState(null)
     const [ready, setReady] = useState(false)
+    const [platformAdmin, setPlatformAdmin] = useState(false)
 
     useEffect(() => {
-        if (!localStorage.getItem('token')) {
+        const token = localStorage.getItem('token')
+        if (!token) {
             navigate(at('/login'), { replace: true })
             return
         }
         const raw = localStorage.getItem('userInfo')
         if (raw) { try { setUser(JSON.parse(raw)) } catch { setUser({ name: raw }) } }
         setReady(true)
+
+        // 菜单按身份分层：「系统租户」只对平台管理员出现。
+        // 判定走 whoami 而不是本地 userInfo —— 后者是登录那一刻的快照，
+        // 角色被回收后还会留着入口，点进去才发现 403。
+        // 请求失败按「不是平台管理员」处理：宁可少显示一个入口，也不把全平台租户
+        // 面板露给可能已经降权的人（后端 /tenants/list-all 同样会 403 兜底）。
+        fetch('/api/ctc/authn/whoami', {
+            credentials: 'include',
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then(r => (r.ok ? r.json() : null))
+            .then(d => setPlatformAdmin(!!(d?.data?.isPlatformAdmin)))
+            .catch(() => setPlatformAdmin(false))
     }, [])
+
+    const visibleMenu = useMemo(
+        () => menuItems.filter(it => !it.platformOnly || platformAdmin),
+        [platformAdmin],
+    )
 
     if (!ready) return null
 
     return (
         <AppLayout
-            menuItems={menuItems}
+            menuItems={visibleMenu}
             appTitle="z-ctc 4A 中心"
             appShort="CTC"
             appVersion={appVersion}
