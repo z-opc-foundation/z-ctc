@@ -10,6 +10,7 @@ import com.zifang.z.boot.datasource.starter.ModuleDataSourceTemplate;
 import org.apache.ibatis.plugin.Interceptor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -33,11 +34,13 @@ import java.io.IOException;
  *   <li>@MapperScan z-ctc-core 全部 mapper 包，复用 sqlSessionFactoryCtc</li>
  *   <li>@ComponentScan z-ctc-web/api + z-ctc-core/service/domain + z-ctc-common 下的 Service / Controller / Properties</li>
  *   <li>注册 MyBatis-Plus 分页拦截器（{@link PaginationInnerInterceptor}），否则 {@code BaseMapper.selectPage()} 会抛 {@code BadSqlGrammarException}</li>
+ *   <li>启用 OAuth2 接入方配置表（{@link OAuthClientProperties}，z.ctc.oauth.*）</li>
  * </ul>
  * <p>
  * 使用 {@link FullyQualifiedAnnotationBeanNameGenerator} 避免同名 Bean 冲突。
  */
 @Configuration
+@EnableConfigurationProperties(OAuthClientProperties.class)
 @MapperScan(
         basePackages = "com.zifang.ctc.core.domain.mapper",
         sqlSessionFactoryRef = "sqlSessionFactoryCtc",

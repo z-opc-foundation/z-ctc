@@ -24,7 +24,7 @@
 
 ## 🎯 能力清单
 
-全部能力都能从 `z-ctc-web/src/main/java/com/zifang/ctc/web/api/` 下的 **12 个** Controller 一一对应：
+全部能力都能从 `z-ctc-web/src/main/java/com/zifang/ctc/web/api/` 下的 **13 个** Controller 一一对应：
 
 | 能力 | 入口 | 说明 |
 |------|------|------|
@@ -37,6 +37,7 @@
 | 组织 | `OrgController` | 组织架构 |
 | 邀请 | `InvitationController` | 邀请注册链路 |
 | 应用菜单 | `MenuController` | 按应用下发菜单 |
+| OAuth2 接入 | `OAuthController` | 授权码端点（authorize/token），接入方注册走 `OAuthClientProperties` 配置表 |
 | OSC 部门 | `OscDeptController` | 部门树 / 部门列表；挂在 `/ctc-osc/dept`，**不在 `/api/ctc` 前缀下** |
 | OSC 员工 | `OscStaffController` | 员工简表；挂在 `/ctc-osc/staff`，**不在 `/api/ctc` 前缀下** |
 
@@ -145,6 +146,7 @@ MySQL 8 直连需 `allowPublicKeyRetrieval=true`，通过 `druid.connection-prop
 | `/api/ctc/ac` | 组织 |
 | `/api/ctc/app-menu` | 应用菜单 |
 | `/api/ctc/admin/tenant-init` | 租户初始化 |
+| `/api/ctc/oauth` | OAuth2 授权服务器（家族桌面客户端 SSO 入口，见下节） |
 | `/ctc-osc/dept` | OSC 部门（**不在 `/api/ctc` 前缀下**） |
 | `/ctc-osc/staff` | OSC 员工（**不在 `/api/ctc` 前缀下**） |
 
@@ -172,6 +174,36 @@ MySQL 8 直连需 `allowPublicKeyRetrieval=true`，通过 `druid.connection-prop
 > `SsoProperties` 里没有对应字段，`SsoAutoConfiguration` 仍会无条件注册拦截器。
 
 注意：`whoami` 这类需要 `SsoInterceptor` 注入 `ssoUser` 的端点**不能**放进 `exclude-paths`。
+
+---
+
+## 🔑 OAuth2 授权服务器（2026-11-01 新增，家族桌面客户端 SSO 入口）
+
+三个端点（授权码 + PKCE S256），**HTTP 形状各按协议规定，不套 `Result` 包装**：
+
+| 端点 | 鉴权 | 形状 |
+|------|------|------|
+| `GET /api/ctc/oauth/authorize` | 浏览器登录态（sso_token cookie），未登录跳 `sso.login-url` | 302 回 redirect_uri（带 code / error）；redirect 不合法时渲染 400 错误页**绝不回跳** |
+| `POST /api/ctc/oauth/token` | 凭 code 自证（在 exclude-paths 里豁免） | RFC 6749 §5：200 `{access_token, token_type, expires_in}` / 400 `{"error":"invalid_grant"}` |
+| `GET /api/ctc/oauth/userinfo` | `Authorization: Bearer <access_token>` | OIDC：`{sub, preferred_username}`（家族 `toSsoUser` 认 `sub`） |
+
+安全基线：PKCE 强制 S256（plain/缺失拒）· redirect_uri **精确匹配**白名单（端口位 `*` = loopback 任意端口）·
+code 一次性 + 5 分钟 + 四元组绑定（client/redirect/challenge/user）· 错误码对齐 RFC 6749 §5.2。
+
+接入方注册（`z.ctc.oauth.clients` 配置表，clients 为空 = 三端点全拒）：
+
+```yaml
+z:
+  ctc:
+    oauth:
+      clients:
+        - client-id: z-biz-tool-remote
+          redirect-uris: ["http://127.0.0.1:*/callback"]
+          scope: "openid profile email"
+```
+
+判据单测：`OAuthAuthorizeServiceTest`（17 例，PKCE 金标取 RFC 7636 附录 B 官方向量）。
+客户端侧同一协议的实现对拍用例在 z-biz-tool-shared（30 例 node 单测）。
 
 ---
 

@@ -865,10 +865,15 @@ class ReadmeClaimsTest {
     @DisplayName("尺子的牙口：把 Controller 个数改错必须报红")
     void 尺子的牙口_Controller个数改错必红() {
         String readme = readme();
-        String mutated = readme.replace("**12 个** Controller", "**11 个** Controller");
+        // 个数从源码重算（facts.controllers 就是 web/api 下 *Controller.java 的清单）——
+        // 硬编码 "**12 个**" 的话，每加一个 Controller 这条阴性对照自己先失明
+        // （2026-11-01 加 OAuthController 时就红过一次：不是尺子坏了，
+        //   是变异目标字符串过时了）。
+        int actual = facts().controllers.size();
+        String mutated = readme.replace("**" + actual + " 个** Controller", "**" + (actual - 1) + " 个** Controller");
         assertFalse(mutated.equals(readme), "合成变异没生效：README 里没找到 Controller 个数写法");
         List<String> problems = verify(mutated, facts());
-        assertFalse(problems.isEmpty(), "README Controller 个数改成 11，尺子居然没报红");
+        assertFalse(problems.isEmpty(), "README Controller 个数改错，尺子居然没报红");
     }
 
     @Test

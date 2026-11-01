@@ -150,8 +150,42 @@ sso:
     #   但**仍不要求登录态** ⇒ 是否限制调用来源（限内网 / 服务令牌）仍待人工拍板，
     #   在那之前它就是「匿名可读的最小名录」。
     - /ctc-osc/staff/getStaffSimpleListWithoutLogin
+    # FEATURE-OAUTH (2026-11-01): OAuth2 授权服务器的**程序调用**端点 —— 显式登记为豁免。
+    #   /api/ctc/oauth/token 与 /userinfo 的调用方是家族桌面客户端 / 各产品服务端，
+    #   凭 code / access_token 自证身份，浏览器登录态（sso_token cookie）对它们无意义
+    #   ⇒ 必须豁免，否则 SSO 闸门 302 到登录页，客户端拿到 HTML 当 JSON 解析。
+    #   ⚠ /api/ctc/oauth/authorize **刻意不豁免**：它是浏览器交互端点，
+    #     未登录时要被 SsoInterceptor 带去登录页 —— 这正是我们要的行为。
+    #     （controller 里还有一层「读 cookie 判登录态」的兜底，双保险。）
+    - /api/ctc/oauth/token
+    - /api/ctc/oauth/userinfo
   intercept-paths:
     - /api/**
+
+# FEATURE-OAUTH (2026-11-01): OAuth2 授权服务器 —— 接入方（client）注册表（配置表方案）。
+# 家族桌面客户端（z-biz-tool）从这里拿 4 个 SSO 参数：
+#   authorize = {外部可达地址}/api/ctc/oauth/authorize
+#   token     = {外部可达地址}/api/ctc/oauth/token
+#   userinfo  = {外部可达地址}/api/ctc/oauth/userinfo
+#   client_id = 下表里的某一项
+# redirect_uri 是**精确匹配**；端口位写 `*` 表示 loopback 任意端口（桌面端动态端口形态）。
+# clients 为空 = 没有接入方 = 三个端点全部拒绝 —— 「未配置」是一等状态。
+z:
+  ctc:
+    oauth:
+      clients:
+        - client-id: z-biz-tool-remote
+          redirect-uris:
+            # 桌面客户端回环回调，端口由内核动态分配（loopback 任意端口形态）
+            - "http://127.0.0.1:*/callback"
+            # 固定端口形态（若 ctc 侧将来要求 redirect_uri 精确到端口，启用这条并通知客户端）
+            # - "http://127.0.0.1:17888/callback"
+          scope: "openid profile email"
+        - client-id: z-biz-tool-mind
+          redirect-uris:
+            - "http://127.0.0.1:*/callback"
+          scope: "openid profile email"
+
 
 # knife4j
 knife4j:
