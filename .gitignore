@@ -99,3 +99,8 @@ dist.bak-*/
 # ============ vite 构建旧产物（沙箱删除闸 ⇒ 只移不删，遗留带时间戳的兄弟目录） ============
 dist.stale-*/
 **/dist.stale-*/
+
+# ---- 构建产物治理（2026-11-03）----
+# 编译/打包产物一律不入库：可再生、体积大、多仓重复。
+# Rust target / 前端 node_modules / Python 缓存。
+node_modules/
