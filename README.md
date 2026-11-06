@@ -14,7 +14,7 @@
 | **仓库** | `z-ctc`（Comprehensive-Tissue-Centre 缩写，历史上称 4A 中心） |
 | **Maven 坐标** | `io.github.yuku123:z-ctc:${revision}` |
 | **当前版本** | `1.0.6`（根 POM `<revision>`，CI-friendly versions + flatten-maven-plugin） |
-| **父项目** | `io.github.yuku123:z-boot-parent:1.2.0`（`<relativePath/>` 留空，parent 在 repo1 不在磁盘） |
+| **父项目** | `io.github.yuku123:z-boot-parent:1.2.1`（`<relativePath/>` 留空，parent 在 repo1 不在磁盘） |
 | **Maven Central** | 已发布：`z-ctc:1.0.2` / `z-ctc-web:1.0.2` 均可从 repo1 拉取（1.0.3 / 1.0.4 目前只有本地构建产物，未见 Central 下载记录） |
 | **默认端口** | `8888`（dev profile 下 context-path 为 `/ctc`） |
 | **运行口径** | Java 17 · Spring Boot 3.3.13（2026-10-30 SB3 火车全量迁移，`javax.*` → `jakarta.*`） |
@@ -52,7 +52,7 @@
 
 ```
 z-ctc/
-├── pom.xml                # 根聚合 POM：继承 z-boot-parent:1.2.0，<revision> 统一版本
+├── pom.xml                # 根聚合 POM：继承 z-boot-parent:1.2.1，<revision> 统一版本
 ├── z-ctc-common/          # 常量、DTO、跨模块共享的轻量类型
 ├── z-ctc-core/            # 4A 领域核心：实体、MyBatis-Plus Mapper、服务实现
 ├── z-ctc-sso/             # SSO：拦截器 + 令牌服务 + cookie 域 + JWT 门面
@@ -98,9 +98,9 @@ z-ctc/
 mvn clean install -DskipTests
 ```
 
-第三方版本一律由 `z-boot-parent:1.2.0` 供给（第三方地板与兄弟仓权威表均已并入 parent 自身），
+第三方版本一律由 `z-boot-parent:1.2.1` 供给（第三方地板与兄弟仓权威表均已并入 parent 自身），
 模块 POM 里不应再出现字面版本钉；若构建报找不到版本，先确认本地/镜像能解析到
-`io.github.yuku123:z-boot-parent:1.2.0`。
+`io.github.yuku123:z-boot-parent:1.2.1`。
 
 ### 本地跑起来（无需 MySQL）
 

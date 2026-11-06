@@ -1,8 +1,15 @@
-# 基础镜像：Eclipse Temurin 8 JDK（支持amd64/arm64架构，M系列Mac可用）
+# 基础镜像：Eclipse Temurin 17 JDK（支持amd64/arm64架构，M系列Mac可用）
 # 历史原因：曾用 openjdk:8-jdk-slim，但 Docker Hub 已于 2022-07 停止更新/下架该镜像，
 # 构建期会报 "docker.io/library/openjdk:8-jdk-slim: not found"。
 # 见 FEATURE034 T2 关于 temurin 8-jdk → 8-jre-alpine 的体积优化规划（远期任务）。
-FROM eclipse-temurin:8-jdk
+#
+# ⚠ 2026-11-06 底镜像 Java 8 → 17（Boot3 迁移遗留修）：
+#   z-ctc 已随 Boot3 火车迁到 JDK17（父 pom = z-boot-parent ⇒ class major 61），
+#   而底镜像还停在 8-jdk ⇒ 容器起来即 UnsupportedClassVersionError
+#   (class file version 61.0, this version only recognizes up to 52.0) ⇒ **崩溃循环**，
+#   外部表现为前端登录路由 502（nginx 反代到起不来的 4A）。
+#   ⇒ 运行时底镜像必须与产物 class major 同一档（17）。
+FROM eclipse-temurin:17-jdk
 
 # 维护者信息
 LABEL maintainer="zifang"
