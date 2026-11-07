@@ -78,7 +78,13 @@ public class ZCompanyCtcWebAutoConfiguration extends ModuleDataSourceTemplate im
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(orphanGuardInterceptor())
-                .addPathPatterns("/api/**")
+                // ⚠ 2026-11-07 (4A 内嵌 all-in-one 主壳) 收窄到 /api/ctc/**:
+                //   游离态守卫的职责是「4A 用户先选租户才能进业务」—— 独立部署 z-ctc-admin 时
+                //   /api/** 与 /api/ctc/** 等价（admin 的 controller 全在 /api/ctc 下）;
+                //   内嵌后 /api/** 还包含主壳全部业务模块（个人 agent / 技能市场 / 工单…），
+                //   那些域有自己的权限模型，不该被 4A 租户守卫统一拦（实测把 0-membership
+                //   账号的全部业务接口 403 掉 ⇒ 行为与内嵌前不兼容）。
+                .addPathPatterns("/api/ctc/**")
                 .order(0);  // 高优先级, 在业务 controller 之前
     }
 
