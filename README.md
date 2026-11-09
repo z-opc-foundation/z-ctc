@@ -13,7 +13,7 @@
 |------|-----|
 | **仓库** | `z-ctc`（Comprehensive-Tissue-Centre 缩写，历史上称 4A 中心） |
 | **Maven 坐标** | `io.github.yuku123:z-ctc:${revision}` |
-| **当前版本** | `1.0.6`（根 POM `<revision>`，CI-friendly versions + flatten-maven-plugin） |
+| **当前版本** | `1.0.7`（根 POM `<revision>`，CI-friendly versions + flatten-maven-plugin） |
 | **父项目** | `io.github.yuku123:z-boot-parent:1.2.2`（`<relativePath/>` 留空，parent 在 repo1 不在磁盘） |
 | **Maven Central** | 已发布：`z-ctc:1.0.2` / `z-ctc-web:1.0.2` 均可从 repo1 拉取（1.0.3 / 1.0.4 目前只有本地构建产物，未见 Central 下载记录） |
 | **默认端口** | `8888`（dev profile 下 context-path 为 `/ctc`） |

@@ -7,6 +7,7 @@ import com.zifang.ctc.core.domain.mapper.UserMapper;
 import com.zifang.ctc.core.service.InvitationService;
 import com.zifang.ctc.core.service.MembershipService;
 import com.zifang.ctc.sso.JwtUtil;
+import com.zifang.ctc.sso.config.SsoProperties;
 import com.zifang.ctc.web.api.response.InvitationAcceptResult;
 import com.zifang.ctc.web.api.response.InvitationCreateResult;
 import com.zifang.ctc.web.api.response.InvitationRedeemResult;
@@ -46,6 +47,8 @@ public class InvitationController {
     private UserMapper userMapper;
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private SsoProperties ssoProperties;
     @Autowired
     private com.zifang.ctc.core.domain.mapper.InvitationMapper invitationMapper;
     @Autowired
@@ -288,10 +291,13 @@ public class InvitationController {
 
     // ============== helpers ==============
 
+    /**
+     * 凭证来源: Authorization 头 > SSO Cookie（{@link AuthTokenExtractor}）——
+     * onboarding / 邀请管理页有只带 Cookie 不带头的调用方, 只认头会把 Cookie 会话误判成未登录。
+     */
     private Long extractUserId(HttpServletRequest httpRequest) {
-        String authHeader = httpRequest.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) { return null; }
-        String token = authHeader.substring(7);
+        String token = AuthTokenExtractor.extract(httpRequest, ssoProperties);
+        if (token == null || token.isEmpty()) { return null; }
         JwtUtil.VerificationResult v = jwtUtil.verifyToken(token);
         if (!v.isValid()) { return null; }
         Object userIdObj = v.getClaims().get("userId");

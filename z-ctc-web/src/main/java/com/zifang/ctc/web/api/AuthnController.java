@@ -370,36 +370,14 @@ public class AuthnController {
     }
 
     /**
-     * 从 Authorization / Cookie / Query 参数中解析 token, 验证后构造 UserInfo.
-     * <p>顺序: Authorization Bearer > Cookie (按 sso.token-cookie-names 顺序) > ?token= 参数.
+     * 从 Authorization / Cookie 中解析 token, 验证后构造 UserInfo.
+     * <p>顺序: Authorization Bearer > Cookie (按 sso.token-cookie-names 顺序) > ?token= 参数
+     * （query 通道仅本端点保留 — whoami 在 SsoInterceptor 的 query-token 白名单里, 见闸门注释）.
+     * 头/Cookie 的公共解析在 {@link AuthTokenExtractor}.</p>
      */
     private UserInfo extractUserFromRequest(HttpServletRequest request) {
-        String token = null;
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);
-        } else if (authHeader != null) {
-            token = authHeader;
-        }
-        if (token == null) {
-            jakarta.servlet.http.Cookie[] cookies = request.getCookies();
-            if (cookies != null && ssoProperties != null) {
-                java.util.List<String> candidateNames = ssoProperties.getEffectiveTokenCookieNames();
-                for (String name : candidateNames) {
-                    for (jakarta.servlet.http.Cookie c : cookies) {
-                        if (name.equals(c.getName())) {
-                            String v = c.getValue();
-                            if (v != null && !v.isEmpty()) {
-                                token = v;
-                                break;
-                            }
-                        }
-                    }
-                    if (token != null) { break; }
-                }
-            }
-        }
-        if (token == null) {
+        String token = AuthTokenExtractor.extract(request, ssoProperties);
+        if (token == null || token.isEmpty()) {
             token = request.getParameter("token");
         }
         if (token == null || token.isEmpty()) {
@@ -428,7 +406,7 @@ public class AuthnController {
      * <p>
      * FEATURE012 增量: 之前切换租户只是改了前端 localStorage.z_tenant, 后端 JWT claim 没变.
      * 现在前端右上角切租户/域时调这个接口, 后端:
-     * 1. 从 Authorization 头解析当前 JWT, 拿到 userId
+     * 1. 从 Authorization 头 / SSO Cookie 解析当前 JWT (AuthTokenExtractor), 拿到 userId
      * 2. 校验目标 tenantCode (允许为空字符串 = 清空当前租户)
      * 3. 重新签发 8h JWT, 覆盖 tenantCode + 写入 domainCode claim
      * 4. 返回新 token + 更新后的 account 视图 (含 tenantCode/domainCode)
@@ -444,12 +422,11 @@ public class AuthnController {
             return Result.<LoginResponseVO>fail("请求体为空").code(400);
         }
 
-        // 1. 从 Authorization 头拿旧 token, 校验通过后拿到 userId
-        String authHeader = httpRequest.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return Result.<LoginResponseVO>fail("缺少 Bearer token").code(401);
+        // 1. 从 Authorization 头 / SSO Cookie 拿旧 token, 校验通过后拿到 userId
+        String oldToken = AuthTokenExtractor.extract(httpRequest, ssoProperties);
+        if (oldToken == null || oldToken.isEmpty()) {
+            return Result.<LoginResponseVO>fail("缺少凭证 (Authorization 头或 SSO Cookie)").code(401);
         }
-        String oldToken = authHeader.substring(7);
         JwtUtil.VerificationResult v = jwtUtil.verifyToken(oldToken);
         if (!v.isValid()) {
             return Result.<LoginResponseVO>fail("当前 token 无效: " + v.getErrorMessage()).code(401);
@@ -1162,11 +1139,13 @@ public class AuthnController {
 
     /**
      * 提取 token 中的 userId. 失败返回 null.
+     * <p>凭证来源: Authorization 头 > SSO Cookie（{@link AuthTokenExtractor}）——
+     * my-tenants / select-tenant 的调用方（z-team 顶栏切租户, fetch credentials:include）
+     * 只带 Cookie 不带头, 只认头会把 Cookie 会话误判成未登录。</p>
      */
     private Long extractUserId(HttpServletRequest httpRequest) {
-        String authHeader = httpRequest.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) { return null; }
-        String token = authHeader.substring(7);
+        String token = AuthTokenExtractor.extract(httpRequest, ssoProperties);
+        if (token == null || token.isEmpty()) { return null; }
         JwtUtil.VerificationResult v = jwtUtil.verifyToken(token);
         if (!v.isValid()) { return null; }
         Object userIdObj = v.getClaims().get("userId");
