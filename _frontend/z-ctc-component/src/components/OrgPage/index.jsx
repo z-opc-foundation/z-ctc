@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react'
-import {OrgManagement} from '../OrgManagement'
+import OrgManagement from '../OrgManagement'
 import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi} from '../TenantManagement/api'
 /**
  * 4A 中心 / 组织管理 (4a/org).
