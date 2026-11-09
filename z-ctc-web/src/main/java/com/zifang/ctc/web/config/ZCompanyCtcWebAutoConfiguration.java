@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zifang.ctc.core.tenant.TenantLineHandlerImpl;
 import com.zifang.ctc.web.tenant.OrphanGuardInterceptor;
 import com.zifang.z.boot.datasource.starter.ModuleDataSourceTemplate;
@@ -67,6 +68,16 @@ public class ZCompanyCtcWebAutoConfiguration extends ModuleDataSourceTemplate im
     @Bean("orphanGuardInterceptor")
     public OrphanGuardInterceptor orphanGuardInterceptor() {
         return new OrphanGuardInterceptor();
+    }
+
+    /**
+     * 4A 响应字段命名适配 — 宿主全局 Jackson 若被改成 SNAKE_CASE (all-in-one 主壳的
+     * z-team JacksonConfig 就是), 本 Bean 把 ctc 控制器的响应钉回 camelCase 契约.
+     * 见 {@link CtcResponseNamingAdvice}.
+     */
+    @Bean("ctcResponseNamingAdvice")
+    public CtcResponseNamingAdvice ctcResponseNamingAdvice(ObjectMapper objectMapper) {
+        return new CtcResponseNamingAdvice(objectMapper);
     }
 
     /**
