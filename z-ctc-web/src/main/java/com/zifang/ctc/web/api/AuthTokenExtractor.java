@@ -18,8 +18,11 @@ import java.util.List;
  *
  * <p>刻意<b>不收</b> {@code ?token=} query 通道: 这些路径不在 SsoInterceptor 的
  * query-token 白名单里, token 进 URL 会落浏览器历史与网关 access log。</p>
+ *
+ * <p>2026-11-10 起改为 public: {@code TenantContextFilter}（cookie 鉴权下 TenantContext
+ * 恒为空的同款根因）也走这一份提取逻辑。</p>
  */
-final class AuthTokenExtractor {
+public final class AuthTokenExtractor {
 
     private AuthTokenExtractor() {
     }
@@ -29,7 +32,7 @@ final class AuthTokenExtractor {
      * <p>头优先: 带头的调用方（axios authRequest）语义不变; 只带 Cookie 的调用方
      * （fetch credentials:include）由此获得登录态。</p>
      */
-    static String extract(HttpServletRequest request, SsoProperties ssoProperties) {
+    public static String extract(HttpServletRequest request, SsoProperties ssoProperties) {
         if (request == null) {
             return null;
         }

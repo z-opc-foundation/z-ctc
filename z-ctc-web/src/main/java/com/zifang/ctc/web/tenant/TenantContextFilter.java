@@ -1,7 +1,9 @@
 package com.zifang.ctc.web.tenant;
 
 import com.zifang.ctc.core.tenant.TenantContext;
+import com.zifang.ctc.sso.config.SsoProperties;
 import com.zifang.ctc.sso.model.UserInfo;
+import com.zifang.ctc.web.api.AuthTokenExtractor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.core.Ordered;
@@ -41,9 +43,11 @@ public class TenantContextFilter extends OncePerRequestFilter {
     private static final Logger log = LogManager.getLogger(TenantContextFilter.class);
 
     private final com.zifang.ctc.sso.JwtUtil jwtUtil;
+    private final SsoProperties ssoProperties;
 
-    public TenantContextFilter(com.zifang.ctc.sso.JwtUtil jwtUtil) {
+    public TenantContextFilter(com.zifang.ctc.sso.JwtUtil jwtUtil, SsoProperties ssoProperties) {
         this.jwtUtil = jwtUtil;
+        this.ssoProperties = ssoProperties;
     }
 
     @Override
@@ -62,8 +66,11 @@ public class TenantContextFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 从 Authorization 头解析 token, 拿到租户信息.
+     * 从 Authorization 头或 SSO Cookie 解析 token, 拿到租户信息.
      * 解析失败或无 token 时返回 null (业务层按需降级).
+     * <p>2026-11-10: Cookie 回落走 {@link AuthTokenExtractor}（与 authn 自解析端点同一份）。
+     * 此前只认 Authorization 头, 而 z-team 前端 fetch {@code credentials:include} 只带 Cookie
+     * ⇒ TenantContext 恒为空, DomainController 等按 ctx 判权的端点全部 403/空列表。</p>
      */
     private TenantContext.TenantInfo resolveTenantInfo(HttpServletRequest request) {
         // 兜底: SsoInterceptor 可能已经写入 "ssoUser" (同请求内复用)
@@ -72,13 +79,9 @@ public class TenantContextFilter extends OncePerRequestFilter {
             UserInfo ui = (UserInfo) existing;
             return toTenantInfo(ui);
         }
-        // 主路径: 解析 Authorization 头
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return null;
-        }
-        String token = authHeader.substring(7);
-        if (token.isEmpty()) {
+        // 主路径: Authorization 头 > SSO Cookie (sso.token-cookie-names)
+        String token = AuthTokenExtractor.extract(request, ssoProperties);
+        if (token == null || token.isEmpty()) {
             return null;
         }
 
