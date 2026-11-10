@@ -19,8 +19,6 @@ import {
 } from 'antd'
 import {
     DeleteOutlined,
-    EditOutlined,
-    FileTextOutlined,
     InfoCircleOutlined,
     PlusOutlined,
     ReloadOutlined,

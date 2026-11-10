@@ -2,7 +2,6 @@ import {useCallback, useRef, useState} from 'react'
 import {ProTable} from '@ant-design/pro-components'
 import {Button, Card, Drawer, Form, Input, message, Modal, Popconfirm, Select, Space, Table, Tabs, Tag, Tooltip} from 'antd'
 import {
-    DeleteOutlined,
     EditOutlined,
     PlusOutlined,
     ReloadOutlined,

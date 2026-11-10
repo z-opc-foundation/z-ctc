@@ -17,15 +17,12 @@ import {
     Tooltip
 } from 'antd'
 import {
-    CheckCircleOutlined,
     DeleteOutlined,
     DownloadOutlined,
     FileTextOutlined,
-    KeyOutlined,
     PlusOutlined,
     ReloadOutlined,
     SearchOutlined,
-    StopOutlined,
     UndoOutlined,
     UserOutlined,
 } from '@ant-design/icons'

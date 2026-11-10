@@ -15,7 +15,7 @@ import {
     Tooltip,
     Tree,
 } from 'antd'
-import {DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined,} from '@ant-design/icons'
+import {DeleteOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined,} from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi, isDefaultDomain} from './api'
 /**
