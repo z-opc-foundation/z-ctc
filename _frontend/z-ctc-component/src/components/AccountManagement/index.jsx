@@ -338,7 +338,6 @@ export default function AccountManagement({apiBaseURL}) {
                     <Form.Item name="username" label="用户名">
                         <SearchInput
                             placeholder="请输入用户名"
-                            size="large"
                             onChange={(v) => searchForm.setFieldValue('username', v)}
                         />
                     </Form.Item>

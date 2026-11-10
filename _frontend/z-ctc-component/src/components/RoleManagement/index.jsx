@@ -322,7 +322,6 @@ export default function RoleManagement({apiBaseURL}) {
                     <Form.Item name="roleCode" label="角色编码">
                         <SearchInput
                             placeholder="请输入角色编码"
-                            size="large"
                             onChange={(v) => searchForm.setFieldValue('roleCode', v)}
                         />
                     </Form.Item>

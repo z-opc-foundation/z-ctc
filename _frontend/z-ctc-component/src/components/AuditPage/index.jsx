@@ -199,14 +199,12 @@ function LoginLogTab() {
                         value={filter.identifier}
                         onChange={(v) => setFilter({...filter, identifier: v})}
                         onSearch={onSearch}
-                        size="large"
                     />
                     <SearchInput
                         placeholder="租户编码"
                         value={filter.tenantCode}
                         onChange={(v) => setFilter({...filter, tenantCode: v})}
                         onSearch={onSearch}
-                        size="large"
                     />
                     <Select placeholder="结果" allowClear style={{width: 110}}
                             value={filter.loginStatus}
