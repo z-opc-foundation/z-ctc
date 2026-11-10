@@ -305,26 +305,18 @@ export default function AccountManagement({apiBaseURL}) {
         },
         {title: '创建时间', dataIndex: 'createdAt', width: 170, valueType: 'dateTime', search: false},
         {
-            title: '操作', valueType: 'option', width: 220, fixed: 'right', search: false,
+            title: '操作', valueType: 'option', width: 160, fixed: 'right', search: false,
             render: (_, record) => [
-                <Tooltip key="status" title={record.status === 1 ? '停用' : '启用'}>
-                    <Button type="text" size="small" danger={record.status === 1}
-                            icon={record.status === 1 ? <StopOutlined/> : <CheckCircleOutlined/>}
-                            onClick={() => handleStatus(record.id, record.status ?? 1)}>
-                        {record.status === 1 ? '停用' : '启用'}
-                    </Button>
-                </Tooltip>,
-                <Tooltip key="reset" title="重置密码">
-                    <Button type="text" size="small" icon={<KeyOutlined/>} onClick={() => openReset(record)}>
-                        重置密码
-                    </Button>
-                </Tooltip>,
-                <Tooltip key="detail" title="账号详情 / 登录日志">
-                    <Button type="text" size="small" icon={<FileTextOutlined/>}
-                            onClick={() => openDetail(record)}>
-                        详情
-                    </Button>
-                </Tooltip>,
+                <Button key="status" type="link" size="small" danger={record.status === 1}
+                        onClick={() => handleStatus(record.id, record.status ?? 1)}>
+                    {record.status === 1 ? '停用' : '启用'}
+                </Button>,
+                <Button key="reset" type="link" size="small" onClick={() => openReset(record)}>
+                    重置密码
+                </Button>,
+                <Button key="detail" type="link" size="small" onClick={() => openDetail(record)}>
+                    详情
+                </Button>,
             ],
         },
     ]

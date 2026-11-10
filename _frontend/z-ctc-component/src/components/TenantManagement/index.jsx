@@ -338,10 +338,10 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
         {title: 'Key', dataIndex: 'key', key: 'key', width: 200},
         {title: 'Value', dataIndex: 'value', key: 'value', ellipsis: true},
         {
-            title: '操作', key: 'action', width: 160,
+            title: '操作', key: 'action', width: 120,
             render: (_, record) => (
                 <Space>
-                    <Button type="link" size="small" icon={<EditOutlined/>}
+                    <Button type="link" size="small"
                             onClick={() => {
                                 setEditingKv(record)
                                 kvForm.setFieldsValue({dataId: record.key, content: record.value})
@@ -350,7 +350,7 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
                         编辑
                     </Button>
                     <Popconfirm title="确认删除该配置？" onConfirm={() => handleDeleteKv(record)}>
-                        <Button type="link" danger size="small" icon={<DeleteOutlined/>}>
+                        <Button type="link" danger size="small">
                             删除
                         </Button>
                     </Popconfirm>

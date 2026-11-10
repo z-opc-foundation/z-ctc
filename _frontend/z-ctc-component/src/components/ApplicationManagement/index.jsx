@@ -255,18 +255,16 @@ export default function ApplicationManagement({apiBaseURL}) {
             },
         },
         {
-            title: '操作', valueType: 'option', width: 200, fixed: 'right', search: false,
+            title: '操作', valueType: 'option', width: 160, fixed: 'right', search: false,
             render: (_, record) => [
-                <Button key="edit" type="link" size="small" icon={<EditOutlined/>}
+                <Button key="edit" type="link" size="small"
                         onClick={() => openAppDetail(record)}>
                     编辑
                 </Button>,
-                <Tooltip key="toggle" title={record.status === 1 ? '停用' : '启用'}>
-                    <Button type="text" size="small" danger={record.status === 1} icon={<StopOutlined/>}
-                            onClick={() => handleToggleStatus(record)}>
-                        {record.status === 1 ? '停用' : '启用'}
-                    </Button>
-                </Tooltip>,
+                <Button key="toggle" type="link" size="small" danger={record.status === 1}
+                        onClick={() => handleToggleStatus(record)}>
+                    {record.status === 1 ? '停用' : '启用'}
+                </Button>,
                 <Popconfirm
                     key="del"
                     title={`确认删除应用 ${record.appName}？`}
@@ -276,7 +274,7 @@ export default function ApplicationManagement({apiBaseURL}) {
                     cancelText="取消"
                     onConfirm={() => handleDeleteApp(record)}
                 >
-                    <Button type="text" danger size="small" icon={<DeleteOutlined/>}>删除</Button>
+                    <Button type="link" danger size="small">删除</Button>
                 </Popconfirm>,
             ],
         },

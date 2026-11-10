@@ -6,6 +6,7 @@ package com.zifang.ctc.web.api.request;
  * FEATURE012 增量: 切租户后重新签发 JWT, 携带新的 tenantCode/domainCode claim.
  * 与 LoginRequest 分离 — 切换不需要传 identifier/password, 身份从当前 JWT 中取.
  */
+@com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class SwitchTenantRequest {
 
     private String tenantCode;

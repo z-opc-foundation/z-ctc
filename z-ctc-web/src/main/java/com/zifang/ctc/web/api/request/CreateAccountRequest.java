@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 /**
  * 创建账号请求.
  */
+@com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class CreateAccountRequest {
     private String accountNo;
     private String username;

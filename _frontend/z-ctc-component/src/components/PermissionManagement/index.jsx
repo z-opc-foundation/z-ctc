@@ -261,30 +261,26 @@ export default function PermissionManagement({apiBaseURL}) {
         },
         {title: '创建时间', dataIndex: 'createdAt', width: 170, valueType: 'dateTime', search: false},
         {
-            title: '操作', valueType: 'option', width: 200, fixed: 'right', search: false,
+            title: '操作', valueType: 'option', width: 160, fixed: 'right', search: false,
             render: (_, record) => [
-                <Tooltip key="edit" title="编辑">
-                    <Button type="text" size="small" icon={<EditOutlined/>} onClick={(e) => {
-                        e.stopPropagation()
-                        openEdit(record)
-                    }}>编辑</Button>
-                </Tooltip>,
+                <Button key="edit" type="link" size="small" onClick={(e) => {
+                    e.stopPropagation()
+                    openEdit(record)
+                }}>编辑</Button>,
                 <Popconfirm key="delete" title="确认删除该权限点？"
                             okText="删除" cancelText="取消" okButtonProps={{danger: true}}
                             onConfirm={(e) => {
                                 e?.stopPropagation?.();
                                 handleDelete(record.id)
                             }}>
-                    <Button type="text" size="small" danger icon={<DeleteOutlined/>}
+                    <Button type="link" size="small" danger
                             onClick={(e) => e.stopPropagation()}>删除</Button>
                 </Popconfirm>,
-                <Tooltip key="detail" title="详情 / 关联角色">
-                    <Button type="text" size="small" icon={<FileTextOutlined/>}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                openDetail(record)
-                            }}>详情</Button>
-                </Tooltip>,
+                <Button key="detail" type="link" size="small"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            openDetail(record)
+                        }}>详情</Button>,
             ],
         },
     ]

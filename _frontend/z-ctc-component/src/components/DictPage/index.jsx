@@ -190,14 +190,14 @@ export default function DictPage() {
             render: v => <Tag color={v === 1 ? 'success' : 'default'}>{v === 1 ? '启用' : '禁用'}</Tag>,
         },
         {
-            title: '操作', width: 160,
+            title: '操作', width: 120,
             render: (_, r) => (
                 <Space>
-                    <Button type="text" size="small" icon={<EditOutlined/>}
+                    <Button type="link" size="small"
                             onClick={() => openEditItem(r)}>编辑</Button>
                     <Popconfirm title="删除该字典项?" okText="删除" cancelText="取消" okButtonProps={{danger: true}}
                                 onConfirm={() => handleDeleteItem(r.id)}>
-                        <Button type="text" size="small" danger icon={<DeleteOutlined/>}>删除</Button>
+                        <Button type="link" size="small" danger>删除</Button>
                     </Popconfirm>
                 </Space>
             ),

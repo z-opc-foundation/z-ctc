@@ -1,5 +1,6 @@
 package com.zifang.ctc.web.api.request;
 
+@com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class ChangePasswordRequest {
     private String oldPassword;
     private String newPassword;

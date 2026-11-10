@@ -24,6 +24,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -120,15 +122,19 @@ class AuthnControllerTenantCookieSessionTest {
         when(membershipMapper.selectByUserAndTenant(7L, "acme")).thenReturn(activeMembership(7L, "acme"));
         when(accountMapper.selectById(7L)).thenReturn(account(7L));
         when(jwtUtil.generateToken(anyMap(), anyLong())).thenReturn("new-token");
+        when(ssoProperties.getTokenCookieName()).thenReturn(COOKIE_NAME);
 
         SwitchTenantRequest req = new SwitchTenantRequest();
         req.setTenantCode("acme");
 
-        Result<com.zifang.ctc.core.vo.LoginResponseVO> r = controller.selectTenant(req, cookieOnlyRequest());
+        HttpServletResponse resp = mock(HttpServletResponse.class);
+        Result<com.zifang.ctc.core.vo.LoginResponseVO> r = controller.selectTenant(req, cookieOnlyRequest(), resp);
 
         assertTrue(r.isSuccess(), "Cookie 会话切租户应成功, 实际: " + r.getMessage());
         assertEquals("new-token", r.getData().getToken());
         verify(jwtUtil).generateToken(anyMap(), eq(8 * 60 * 60L));
+        // 切换必须同步刷新 SSO cookie (否则浏览器 cookie 还是旧 claim, whoami 会把 domainCode 抹回 null)
+        verify(resp).addHeader(eq("Set-Cookie"), startsWith("sso_token=new-token"));
     }
 
     @Test

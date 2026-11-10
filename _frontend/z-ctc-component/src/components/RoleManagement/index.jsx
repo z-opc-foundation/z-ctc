@@ -296,14 +296,14 @@ export default function RoleManagement({apiBaseURL}) {
         {title: '租户', dataIndex: 'tenantCode', width: 100, search: false},
         {title: '创建时间', dataIndex: 'createdAt', width: 170, valueType: 'dateTime', search: false},
         {
-            title: '操作', valueType: 'option', width: 240, fixed: 'right', search: false,
+            title: '操作', valueType: 'option', width: 150, fixed: 'right', search: false,
             render: (_, record) => [
-                <Button key="edit" type="text" size="small" icon={<EditOutlined/>}
+                <Button key="edit" type="link" size="small"
                         onClick={() => openEdit(record)}>编辑</Button>,
-                <Button key="grant" type="text" size="small" icon={<SafetyOutlined/>}
+                <Button key="grant" type="link" size="small"
                         onClick={() => openGrant(record)}>授权</Button>,
                 <Popconfirm key="delete" title={`删除角色 ${record.roleName}？`} onConfirm={() => handleDelete(record)}>
-                    <Button type="text" danger size="small" icon={<DeleteOutlined/>}>删除</Button>
+                    <Button type="link" danger size="small">删除</Button>
                 </Popconfirm>,
             ],
         },

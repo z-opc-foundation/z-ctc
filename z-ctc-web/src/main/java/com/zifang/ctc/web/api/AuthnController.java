@@ -417,7 +417,8 @@ public class AuthnController {
     @Operation(summary = "切换租户/域")
     @PostMapping("/switch-tenant")
     public Result<LoginResponseVO> switchTenant(@RequestBody SwitchTenantRequest request,
-                                                HttpServletRequest httpRequest) {
+                                                HttpServletRequest httpRequest,
+                                                HttpServletResponse httpResponse) {
         if (request == null) {
             return Result.<LoginResponseVO>fail("请求体为空").code(400);
         }
@@ -461,8 +462,10 @@ public class AuthnController {
         if (newDomain == null) { newDomain = ""; }
 
 
-        // 4. 重新签发 JWT
+        // 4. 重新签发 JWT, 并同步刷新 SSO cookie (否则浏览器 cookie 还是旧 claim,
+        //    whoami/sync 会把前端刚落的 domainCode 又抹回去)
         String newToken = issueToken(account, newTenant, newDomain);
+        writeSsoCookie(httpResponse, newToken);
 
         AccountVO accountVO = AccountVO.from(account);
         accountVO.setTenantCode(newTenant);
@@ -512,7 +515,8 @@ public class AuthnController {
     @Operation(summary = "选择租户 (阶段二, FEATURE049)")
     @PostMapping("/select-tenant")
     public Result<LoginResponseVO> selectTenant(@RequestBody SwitchTenantRequest request,
-                                                HttpServletRequest httpRequest) {
+                                                HttpServletRequest httpRequest,
+                                                HttpServletResponse httpResponse) {
         if (request == null || request.getTenantCode() == null) {
             return Result.<LoginResponseVO>fail("tenantCode 必填").code(400);
         }
@@ -542,8 +546,10 @@ public class AuthnController {
             return Result.<LoginResponseVO>fail("账号不存在或已被删除").code(401);
         }
 
-        // 签发带 tenantCode 的正式 token
+        // 签发带 tenantCode 的正式 token, 并同步刷新 SSO cookie —— cookie 里的旧 token
+        // 没有 domainCode claim, reload 后 whoami/sync 会把前端落的 domainCode 抹回 null
         String newToken = issueToken(account, request.getTenantCode(), request.getDomainCode());
+        writeSsoCookie(httpResponse, newToken);
         AccountVO accountVO = AccountVO.from(account);
         accountVO.setTenantCode(request.getTenantCode());
         LoginResponseVO body = new LoginResponseVO(newToken, fillPlatformAdminFlag(accountVO));
@@ -1314,6 +1320,7 @@ public class AuthnController {
      * （channel=EMAIL, scene=REGISTER）下发，一次性消费。
      * </p>
      */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class RegisterRequest {
         private String email;
         private String password;
@@ -1366,6 +1373,7 @@ public class AuthnController {
     /**
      * 发送验证码请求体
      */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class SendCodeRequest {
         private String receiver;
         private String channel;
@@ -1399,6 +1407,7 @@ public class AuthnController {
     /**
      * 手机验证码登录请求体
      */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class PhoneLoginRequest {
         private String phone;
         private String code;
@@ -1453,6 +1462,7 @@ public class AuthnController {
     /**
      * 手机号注册请求体
      */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class PhoneRegisterRequest {
         private String phone;
         private String code;
@@ -1504,6 +1514,7 @@ public class AuthnController {
     /**
      * 找回密码请求体 (验证码 + 新密码)
      */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class ResetPasswordByCodeRequest {
         private String receiver;
         private String channel;

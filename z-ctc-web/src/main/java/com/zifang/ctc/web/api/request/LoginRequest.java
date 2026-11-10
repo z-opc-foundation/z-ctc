@@ -11,6 +11,7 @@ package com.zifang.ctc.web.api.request;
  * - domainCode:  登录到指定域 (写到 JWT claim, 不在账号主表里)
  * - source:      登录来源 (opc / ppt / 自定义) — 用于审计, 不影响逻辑
  */
+@com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class LoginRequest {
 
     private String identifier;
