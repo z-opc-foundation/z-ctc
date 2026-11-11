@@ -18,6 +18,7 @@ import {
 import {DeleteOutlined, PlusOutlined, ReloadOutlined,} from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi, isDefaultDomain} from './api'
+import './index.css'
 /**
  * 系统租户 (4A AC 域) — 平台管理员视角, 左树右表布局
  *
@@ -487,6 +488,7 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
                             onExpand={setExpandedKeys}
                             defaultExpandAll
                             showLine
+                            className="ctc-tenant-tree"
                             blockNode
                         />
                     ) : (

@@ -1,0 +1,5 @@
+/* 父子缩进收窄: antd v6 Tree 没有缩进 prop, 宽度由 .ant-tree-indent-unit 的
+   CSS 决定, 默认 24px/级 + showLine 连线后视觉错位过大 (CEO 2026-11-11), 减半。 */
+.ctc-tenant-tree .ant-tree-indent-unit {
+    width: 12px;
+}
