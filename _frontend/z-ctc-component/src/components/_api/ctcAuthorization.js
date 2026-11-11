@@ -38,7 +38,12 @@ export const ctcAuthorizationApi = {
     listResourceRoles: (resourceId) => makeRequest().get('/ctc/authz/resources/roles', {params: {resourceId}}),
     grantRoleResource: (roleId, resourceId, dataFilter) => {
         // POST /api/ctc/authz/roles/grant-resource?roleId=&resourceId= — body 可选 {dataFilter} (行级过滤)
-        const body = dataFilter == null ? null : {dataFilter}
+        //
+        // ⚠ body 不能传 null：axios 对「data 为 null 的 POST」会把 Content-Type 设成
+        // application/x-www-form-urlencoded，而控制器的 @RequestBody 只吃 JSON
+        // ⇒ HttpMediaTypeNotSupportedException（415，被全局兜底成 500）。
+        // 空对象 {} 同样表示「无行级过滤」，但 Content-Type 是 application/json，服务端正常收。
+        const body = dataFilter == null ? {} : {dataFilter}
         return makeRequest().post('/ctc/authz/roles/grant-resource', body, {params: {roleId, resourceId}})
     },
     revokeRoleResource: (roleId, resourceId) => makeRequest().delete('/ctc/authz/roles/revoke-resource', {
