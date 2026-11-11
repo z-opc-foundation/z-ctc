@@ -1,5 +1,24 @@
-/* 父子缩进收窄: antd v6 Tree 没有缩进 prop, 宽度由 .ant-tree-indent-unit 的
-   CSS 决定, 默认 24px/级 + showLine 连线后视觉错位过大 (CEO 2026-11-11), 减半。 */
+/* 父子缩进收窄 + 连线对齐: antd v6 Tree 的 showLine 连线三件套
+   (unit 竖线 / leaf 转角竖stub / 肘横线) 全按 unit 宽=switcher 宽=24px 推导,
+   把 .ant-tree-indent-unit 改窄后三者脱节 —— 竖线掉到最左缘、转角悬在半空
+   (CEO 2026-11-11 「最左边有错位, 父子岔开空格太大」)。
+   这里钉死: unit 宽 12, 三件套统一对准父图标中心 (unit 左缘 +12px)。 */
 .ctc-tenant-tree .ant-tree-indent-unit {
     width: 12px;
+}
+
+/* unit 竖线: 从「右缘内收 12px」改为「左缘外扩 12px」= 父图标中心 */
+.ctc-tenant-tree .ant-tree-indent-unit::before {
+    inset-inline-start: 12px;
+    inset-inline-end: -1px;
+}
+
+/* leaf 转角竖 stub: 从 switcher 右缘内收 12px 改为贴左缘 (与 unit 竖线同一 x) */
+.ctc-tenant-tree .ant-tree-switcher-leaf-line::before {
+    inset-inline-end: calc(100% - 2px);
+}
+
+/* 肘横线: 从 stub 处向右画到标题前 */
+.ctc-tenant-tree .ant-tree-switcher-leaf-line::after {
+    inset-inline-start: 1px;
 }
