@@ -3,6 +3,7 @@ import {ProTable} from '@ant-design/pro-components'
 import {
     Button,
     Card,
+    Checkbox,
     Descriptions,
     Dropdown,
     Drawer,
@@ -29,11 +30,12 @@ import {
     PlusOutlined,
     ReloadOutlined,
     SearchOutlined,
+    SolutionOutlined,
     TeamOutlined,
     UndoOutlined,
 } from '@ant-design/icons'
 import {useSearchParams} from 'react-router-dom'
-import {ctcAuthorizationApi} from './api'
+import {ctcAuthorizationApi, ctcAcAccountApi} from './api'
 
 /**
  * 权限管理（4A AUTHZ 域）— 角色 / 权限点 / 权限树 三视图合一
@@ -82,6 +84,7 @@ const VIEW_MENU = [
     {key: 'roles', label: '角色', icon: <TeamOutlined/>},
     {key: 'points', label: '权限点', icon: <AuditOutlined/>},
     {key: 'tree', label: '权限树', icon: <ApartmentOutlined/>},
+    {key: 'auth', label: '授权', icon: <SolutionOutlined/>},
 ]
 
 /** 类型徽标 —— 旧表把 type=0 渲染成裸「0」（枚举里没有 0 的文案） */
@@ -176,7 +179,7 @@ function collectResourceIds(tree) {
 
 export default function PermissionManagement({apiBaseURL}) {
     const [searchParams, setSearchParams] = useSearchParams()
-    const view = ['roles', 'points', 'tree'].includes(searchParams.get('view'))
+    const view = ['roles', 'points', 'tree', 'auth'].includes(searchParams.get('view'))
         ? searchParams.get('view')
         : 'roles'
     const setView = useCallback(
@@ -210,6 +213,17 @@ export default function PermissionManagement({apiBaseURL}) {
     const [treeSearch, setTreeSearch] = useState('')
     // 权限树 tab：左树点条目 → 右侧详情（CEO 2026-11-12 定版）
     const [treeDetailId, setTreeDetailId] = useState(null)
+
+    // ── 授权 tab：左人 → 中角色勾选 → 右有效权限树 ──
+    const [authUsers, setAuthUsers] = useState([])
+    const [authUsersLoading, setAuthUsersLoading] = useState(false)
+    const [authUserId, setAuthUserId] = useState(null)
+    const [authUserKeyword, setAuthUserKeyword] = useState('')
+    const [authUserRoleIds, setAuthUserRoleIds] = useState([])
+    const [authRolesLoading, setAuthRolesLoading] = useState(false)
+    const [authSavingRoleId, setAuthSavingRoleId] = useState(null)
+    const [authPermIds, setAuthPermIds] = useState([])
+    const [authPermsLoading, setAuthPermsLoading] = useState(false)
     const [granting, setGranting] = useState(false)
     const [treeLoading, setTreeLoading] = useState(false)
     const [treeExpandedKeys, setTreeExpandedKeys] = useState([])
@@ -868,6 +882,242 @@ export default function PermissionManagement({apiBaseURL}) {
         </div>
     )
 
+    // ── 授权 tab 数据 ──
+    const loadAuthUsers = useCallback(async () => {
+        setAuthUsersLoading(true)
+        try {
+            const res = await ctcAcAccountApi.listByTenant({pageNum: 1, pageSize: 200})
+            const list = Array.isArray(res) ? res : (res?.records || res?.data || [])
+            setAuthUsers(list)
+        } catch (e) {
+            message.error('加载用户失败：' + (e?.message || '未知错误'))
+        } finally {
+            setAuthUsersLoading(false)
+        }
+    }, [])
+
+    const loadAuthPerms = useCallback(async (userId) => {
+        setAuthPermsLoading(true)
+        try {
+            const res = await ctcAuthorizationApi.listUserPermissions(userId)
+            const list = Array.isArray(res) ? res : []
+            // 兼容两种返回形状：资源对象 / 裸编码；统一转成「能对上资源表」的键
+            setAuthPermIds(list.map((p) => {
+                if (p == null) return null
+                if (typeof p === 'object') return p.id != null ? p.id : (p.resourceCode || p.code)
+                return p
+            }).filter((v) => v != null))
+        } catch (e) {
+            message.error('加载用户权限失败：' + (e?.message || '未知错误'))
+        } finally {
+            setAuthPermsLoading(false)
+        }
+    }, [])
+
+    const openAuthUser = useCallback(async (user) => {
+        setAuthUserId(user.id)
+        setAuthUserRoleIds([])
+        setAuthPermIds([])
+        setAuthRolesLoading(true)
+        setAuthPermsLoading(true)
+        try {
+            const res = await ctcAuthorizationApi.listUserRoles(user.id)
+            setAuthUserRoleIds((Array.isArray(res) ? res : []).map((r) => r.id))
+        } catch (e) {
+            message.error('加载用户角色失败：' + (e?.message || '未知错误'))
+        } finally {
+            setAuthRolesLoading(false)
+        }
+        loadAuthPerms(user.id)
+    }, [loadAuthPerms])
+
+    useEffect(() => {
+        loadAuthUsers()
+    }, [loadAuthUsers])
+
+    // 用户列表首次到位后默认选中第一个，右边立刻有内容
+    useEffect(() => {
+        if (authUserId == null && authUsers.length > 0) {
+            openAuthUser(authUsers[0])
+        }
+    }, [authUsers, authUserId, openAuthUser])
+
+    const toggleAuthRole = async (role, checked) => {
+        if (!authUserId) return
+        setAuthSavingRoleId(role.id)
+        try {
+            if (checked) {
+                await ctcAuthorizationApi.grantUserRole(authUserId, role.id)
+            } else {
+                await ctcAuthorizationApi.revokeUserRole(authUserId, role.id)
+            }
+            setAuthUserRoleIds((prev) => checked ? [...prev, role.id] : prev.filter((x) => x !== role.id))
+            message.success(`已${checked ? '授予' : '收回'}角色 ${role.roleName || role.roleCode}`)
+            // 角色变了 ⇒ 有效权限随之变，重拉
+            loadAuthPerms(authUserId)
+        } catch (e) {
+            message.error((checked ? '授予' : '收回') + '失败：' + (e?.message || '未知错误'))
+        } finally {
+            setAuthSavingRoleId(null)
+        }
+    }
+
+    // 授权树勾选态：listUserPermissions 可能给 id 也可能给编码，两边都对一下
+    const authPermKeySet = useMemo(() => {
+        const byId = new Map(resources.map((r) => [r.id, r]))
+        const keys = new Set()
+        authPermIds.forEach((v) => {
+            if (typeof v === 'number' || /^\d+$/.test(String(v))) {
+                keys.add(Number(v))
+                const r = byId.get(Number(v))
+                if (r) keys.add(r.resourceCode)
+            } else {
+                keys.add(v)
+                const r = resources.find((x) => x.resourceCode === v)
+                if (r) keys.add(r.id)
+            }
+        })
+        return keys
+    }, [authPermIds, resources])
+
+    // 授权 tab 的树不带搜索过滤（树搜索是权限树 tab 自己的）
+    const authTree = useMemo(() => buildPermissionTree(resources), [resources])
+    const authCheckedKeys = useMemo(
+        () => authTree.flatMap((g) => (g.children || []).map((n) => n.key)).filter((k) => authPermKeySet.has(k)),
+        [authTree, authPermKeySet],
+    )
+
+    const authUserRows = useMemo(() => {
+        const kw = authUserKeyword.trim().toLowerCase()
+        if (!kw) return authUsers
+        return authUsers.filter((u) =>
+            `${u.username || ''} ${u.nickname || ''} ${u.tenantCode || ''}`.toLowerCase().includes(kw))
+    }, [authUsers, authUserKeyword])
+
+    const renderAuth = () => (
+        <div style={{display: 'flex', gap: 16, alignItems: 'stretch', height: '100%', minHeight: 0}}>
+            {/* 左：人 */}
+            <div style={{width: 300, flexShrink: 0, display: 'flex'}}>
+                <Card size="small"
+                      style={{width: '100%', display: 'flex', flexDirection: 'column'}}
+                      styles={{body: {padding: 12, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden'}}}>
+                    <Input.Search
+                        allowClear
+                        placeholder="搜索用户名 / 昵称 / 租户"
+                        onSearch={setAuthUserKeyword}
+                        onChange={(e) => !e.target.value && setAuthUserKeyword('')}
+                    />
+                    <div style={{overflowY: 'auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 4}}>
+                        {authUserRows.map((u) => {
+                            const selected = authUserId === u.id
+                            return (
+                                <div
+                                    key={u.id}
+                                    onClick={() => openAuthUser(u)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 8,
+                                        padding: '8px 10px',
+                                        borderRadius: 8,
+                                        cursor: 'pointer',
+                                        background: selected ? '#e6f4ff' : 'transparent',
+                                        border: selected ? '1px solid #91caff' : '1px solid transparent',
+                                    }}
+                                >
+                                    <div style={{flex: 1, minWidth: 0}}>
+                                        <div style={{fontSize: 13, fontWeight: selected ? 600 : 400, color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                                            {u.nickname || u.username || u.id}
+                                            {u.status === 0 ? <Tag color="default" style={{margin: '0 0 0 6px', fontSize: 11}}>停用</Tag> : null}
+                                        </div>
+                                        <div style={{fontSize: 11, color: '#8c8c8c', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                                            {u.username}{u.tenantCode ? ` · ${u.tenantCode}` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                        {authUserRows.length === 0 && !authUsersLoading ? (
+                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="没有用户"
+                                   style={{margin: '24px 0'}}/>
+                        ) : null}
+                    </div>
+                </Card>
+            </div>
+
+            {/* 中：角色勾选 —— 真调 grant/revoke */}
+            <div style={{width: 300, flexShrink: 0, display: 'flex'}}>
+                <Card size="small"
+                      title={`角色 (${authUserRoleIds.length})`}
+                      loading={authRolesLoading && authUserId != null}
+                      style={{width: '100%', display: 'flex', flexDirection: 'column'}}
+                      styles={{body: {padding: '8px 12px', flex: 1, minHeight: 0, overflowY: 'auto'}}}>
+                    {!authUserId ? (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="先在左侧选人"
+                               style={{margin: '24px 0'}}/>
+                    ) : (
+                        <div style={{display: 'flex', flexDirection: 'column', gap: 2}}>
+                            {roles.map((r) => {
+                                const checked = authUserRoleIds.includes(r.id)
+                                const busy = authSavingRoleId === r.id
+                                return (
+                                    <label key={r.id} style={{
+                                        display: 'flex', alignItems: 'center', gap: 8,
+                                        padding: '7px 8px', borderRadius: 6, cursor: busy ? 'wait' : 'pointer',
+                                    }}>
+                                        <Checkbox
+                                            checked={checked}
+                                            disabled={busy || rolesLoading}
+                                            onChange={(e) => toggleAuthRole(r, e.target.checked)}
+                                        />
+                                        <span style={{fontSize: 13, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                                            {r.roleName || r.roleCode}
+                                            {r.status === 0 ? <Tag color="default" style={{margin: '0 0 0 6px', fontSize: 11}}>停用</Tag> : null}
+                                        </span>
+                                        <span style={{fontFamily: 'monospace', fontSize: 11, color: '#999'}}>{r.roleCode}</span>
+                                    </label>
+                                )
+                            })}
+                        </div>
+                    )}
+                </Card>
+            </div>
+
+            {/* 右：该人的有效权限树 —— 权限点随角色叠加，勾选态只读；
+                改勾选请去「角色」tab（后端只支持 角色↔资源 挂载，人通过角色拿权限） */}
+            <div style={{flex: 1, minWidth: 0, display: 'flex'}}>
+                <Card
+                    size="small"
+                    style={{width: '100%', display: 'flex', flexDirection: 'column'}}
+                    styles={{body: {padding: 12, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden'}}}
+                    title={authUserId ? `有效权限点 (${authPermKeySet.size})` : '有效权限点'}
+                    extra={authUserId ? <Button size="small" icon={<ReloadOutlined/>} onClick={() => loadAuthPerms(authUserId)}>刷新</Button> : null}
+                >
+                    {!authUserId ? (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="先在左侧选人"
+                               style={{margin: '24px 0'}}/>
+                    ) : (
+                        <>
+                            <div style={{fontSize: 12, color: '#999'}}>
+                                该人经角色叠加到手的权限点全貌；勾选状态只读，要改去「角色」tab 调整角色挂载，或在中栏勾选/取消角色。
+                            </div>
+                            <div style={{flex: 1, minHeight: 0, overflowY: 'auto'}}>
+                                <Tree
+                                    checkable
+                                    blockNode
+                                    treeData={authTree}
+                                    checkedKeys={authCheckedKeys}
+                                    loading={authPermsLoading}
+                                    defaultExpandAll
+                                />
+                            </div>
+                        </>
+                    )}
+                </Card>
+            </div>
+        </div>
+    )
+
     return (
         <div ref={pageRef} className="perm-mgmt-fullheight"
              style={{display: 'flex', flexDirection: 'column', minHeight: 420, height: pageHeight}}>
@@ -890,7 +1140,7 @@ export default function PermissionManagement({apiBaseURL}) {
                             {m.label}
                         </span>
                     ),
-                    children: m.key === 'roles' ? renderRoles() : m.key === 'points' ? renderPoints() : renderTree(),
+                    children: m.key === 'roles' ? renderRoles() : m.key === 'points' ? renderPoints() : m.key === 'auth' ? renderAuth() : renderTree(),
                 }))}
                 destroyInactiveTabPane
             />
