@@ -21,6 +21,11 @@ public interface DeptService {
     Optional<DeptDO> findByCode(String tenantCode, String domainCode, String deptCode);
 
     /**
+     * 按 (tenant, deptCode) 查询 — membership 不带 domain 维度, 账户归属反查用
+     */
+    Optional<DeptDO> findByTenantAndCode(String tenantCode, String deptCode);
+
+    /**
      * 按组织列出全部部门
      */
     List<DeptDO> listByOrg(String tenantCode, String domainCode, String orgCode);

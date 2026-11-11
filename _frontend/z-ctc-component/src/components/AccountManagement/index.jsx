@@ -116,6 +116,9 @@ export default function AccountManagement({apiBaseURL}) {
     const [accountPerms, setAccountPerms] = useState([])
     const [rolesLoading, setRolesLoading] = useState(false)
     const [permsLoading, setPermsLoading] = useState(false)
+    // 组织归属页签（懒加载：切到该页签才取）
+    const [affiliations, setAffiliations] = useState([])
+    const [affiliationsLoading, setAffiliationsLoading] = useState(false)
 
     const fetchLoginLogs = async (accountId) => {
         if (!accountId) {
@@ -158,6 +161,23 @@ export default function AccountManagement({apiBaseURL}) {
         }
     }
 
+    /** 该账号挂在哪里（租户/组织/部门，页签懒加载，切进来才发请求） */
+    const fetchAffiliations = async (accountId) => {
+        if (!accountId) {
+            setAffiliations([])
+            return
+        }
+        setAffiliationsLoading(true)
+        try {
+            const res = await ctcAcAccountApi.listAffiliations(Number(accountId))
+            setAffiliations(Array.isArray(res) ? res : [])
+        } catch {
+            setAffiliations([])
+        } finally {
+            setAffiliationsLoading(false)
+        }
+    }
+
     const openDetail = (r) => {
         setDetailAccount(r)
         setDetailTab('info')
@@ -171,6 +191,7 @@ export default function AccountManagement({apiBaseURL}) {
         setLoginLogs([])
         setAccountRoles([])
         setAccountPerms([])
+        setAffiliations([])
     }
 
     const handleTabChange = (key) => {
@@ -180,6 +201,9 @@ export default function AccountManagement({apiBaseURL}) {
         }
         if (key === 'roles' && detailAccount?.id) {
             fetchAccountAuth(detailAccount.id)
+        }
+        if (key === 'affiliations' && detailAccount?.id) {
+            fetchAffiliations(detailAccount.id)
         }
     }
 
@@ -340,6 +364,25 @@ export default function AccountManagement({apiBaseURL}) {
             width: 170,
             render: (v) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-'
         },
+    ]
+
+    const affiliationColumns = [
+        {title: '租户', dataIndex: 'tenantCode', width: 110, render: (_, r) => <EllipsisCell value={r.tenantCode}/>},
+        {title: '组织', width: 180, ellipsis: true,
+            render: (_, r) => r.orgCode ? <EllipsisCell value={r.orgName ? `${r.orgName} (${r.orgCode})` : r.orgCode}/> : '-'},
+        {title: '部门', width: 180, ellipsis: true,
+            render: (_, r) => r.deptCode ? <EllipsisCell value={r.deptName ? `${r.deptName} (${r.deptCode})` : r.deptCode}/> : '-'},
+        {title: '角色', dataIndex: 'roleCode', width: 100,
+            render: v => <Tag style={{margin: 0}}>{v || '-'}</Tag>},
+        {title: '状态', dataIndex: 'memberStatus', width: 90,
+            render: v => {
+                const m = {0: {text: '待接受', color: 'processing'}, 1: {text: '正常', color: 'success'},
+                    2: {text: '已禁用', color: 'error'}, 3: {text: '已退出', color: 'default'}}[v]
+                    || {text: String(v), color: 'default'}
+                return <Tag color={m.color} style={{margin: 0}}>{m.text}</Tag>
+            }},
+        {title: '加入时间', dataIndex: 'joinedAt', width: 160,
+            render: v => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-'},
     ]
 
     const columns = [
@@ -644,6 +687,22 @@ export default function AccountManagement({apiBaseURL}) {
                                             ]}
                                         />
                                     </div>
+                                ),
+                            },
+                            {
+                                key: 'affiliations',
+                                label: `组织归属${affiliations.length ? `（${affiliations.length}）` : ''}`,
+                                children: (
+                                    <ListTable
+                                        cardTitle="挂在哪些租户 / 组织 / 部门"
+                                        rows={affiliations}
+                                        rowKey={(r, i) => `${r.tenantCode}-${r.deptCode || 'root'}-${i}`}
+                                        loading={affiliationsLoading}
+                                        searchKeys={['tenantCode', 'orgName', 'orgCode', 'deptName', 'deptCode']}
+                                        searchPlaceholder="按租户 / 组织 / 部门过滤"
+                                        emptyTitle="该账号未挂在任何组织节点下"
+                                        columns={affiliationColumns}
+                                    />
                                 ),
                             },
                             {

@@ -56,6 +56,9 @@ export const ctcAcAccountApi = {
     assignRole: (userId, roleId) => makeRequest().post('/ctc/ac/accounts/assign-role', null, {
         params: {userId, roleId},
     }),
+
+    /** GET /api/ctc/ac/accounts/affiliations?userId= — 账号的组织归属反查 (租户/组织/部门) */
+    listAffiliations: (userId) => makeRequest().get('/ctc/ac/accounts/affiliations', {params: {userId}}),
 }
 
 export const ctcAcLoginLogApi = {

@@ -2,8 +2,14 @@ package com.zifang.ctc.web.api;
 
 import com.zifang.ctc.common.vo.PageResponseVO;
 import com.zifang.ctc.core.domain.entity.AccountDO;
+import com.zifang.ctc.core.domain.entity.DeptDO;
+import com.zifang.ctc.core.domain.entity.OrgDO;
 import com.zifang.ctc.core.service.AccountService;
+import com.zifang.ctc.core.service.DeptService;
+import com.zifang.ctc.core.service.MembershipService;
+import com.zifang.ctc.core.service.OrgService;
 import com.zifang.ctc.core.tenant.TenantContext;
+import com.zifang.ctc.core.vo.AccountAffiliationVO;
 import com.zifang.ctc.core.vo.AccountVO;
 import com.zifang.ctc.web.api.request.ChangePasswordRequest;
 import com.zifang.ctc.web.api.request.CreateAccountRequest;
@@ -35,6 +41,7 @@ import java.util.stream.Collectors;
  *   <li>PUT /api/ctc/ac/accounts?id=xxx — 按主键更新账号字段 (请求参数)</li>
  *   <li>DELETE /api/ctc/ac/accounts?id=xxx — 按主键删除账号 (请求参数)</li>
  *   <li>POST /api/ctc/ac/accounts/assign-role?userId=&roleId= — 为账号分配角色 (请求参数)</li>
+ *   <li>GET /api/ctc/ac/accounts/affiliations?userId= — 账号的组织归属反查 (租户/组织/部门)</li>
  * </ul>
  *
  * <p>设计说明/关键约束:
@@ -49,9 +56,16 @@ import java.util.stream.Collectors;
 public class AccountController {
 
     private final AccountService accountService;
+    private final MembershipService membershipService;
+    private final DeptService deptService;
+    private final OrgService orgService;
 
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, MembershipService membershipService,
+                             DeptService deptService, OrgService orgService) {
         this.accountService = accountService;
+        this.membershipService = membershipService;
+        this.deptService = deptService;
+        this.orgService = orgService;
     }
 
     /**
@@ -272,5 +286,34 @@ public class AccountController {
             @RequestHeader(value = "X-User-Id", required = false) String grantedBy) {
         boolean ok = accountService.assignRole(userId, roleId, grantedBy);
         return ok ? Result.<Void>success() : Result.<Void>fail("参数错误").code(ResultCode.PARAM_VALID_ERROR.getCode());
+    }
+
+    /**
+     * 账号的组织归属反查 — 该账号挂在哪些租户/组织/部门上.
+     * <p>
+     * membership 模型只有 dept 维度 (z_ctc_ac_membership.dept_code):
+     * dept_code → dept (deptName/orgCode/domainCode) → org (orgName).
+     * 无 dept_code 的成员关系 (如 owner 创建租户) 只落到租户一级.
+     *
+     * @param userId 账号主键 id (z_ctc_ac_user.id), 必填
+     * @return 归属 VO 列表, userId 为空时返回 400
+     */
+    @GetMapping("/affiliations")
+    public Result<List<AccountAffiliationVO>> listAffiliations(@RequestParam("userId") Long userId) {
+        if (userId == null) {
+            return Result.<List<AccountAffiliationVO>>fail("userId 必填").code(ResultCode.PARAM_VALID_ERROR.getCode());
+        }
+
+        return Result.success(membershipService.listAllByUserId(userId).stream()
+                .map(m -> {
+                    DeptDO dept = m.getDeptCode() != null
+                            ? deptService.findByTenantAndCode(m.getTenantCode(), m.getDeptCode()).orElse(null)
+                            : null;
+                    OrgDO org = dept != null && dept.getOrgCode() != null
+                            ? orgService.findByCode(m.getTenantCode(), dept.getDomainCode(), dept.getOrgCode()).orElse(null)
+                            : null;
+                    return AccountAffiliationVO.from(m, dept, org);
+                })
+                .collect(Collectors.toList()));
     }
 }

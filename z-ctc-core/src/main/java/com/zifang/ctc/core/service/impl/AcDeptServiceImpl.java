@@ -90,6 +90,22 @@ public class AcDeptServiceImpl implements DeptService {
     }
 
     /**
+     * 按 (tenant, deptCode) 查询 — membership 不带 domain 维度, 账户归属反查用.
+     */
+    @Override
+    public Optional<DeptDO> findByTenantAndCode(String tenantCode, String deptCode) {
+        if (tenantCode == null || deptCode == null || deptCode.isEmpty()) {
+            return Optional.empty();
+        }
+        return deptDbService.selectByQuery(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<DeptDO>()
+                        .eq("tenant_code", tenantCode)
+                        .eq("dept_code", deptCode)
+                        .last("LIMIT 1"))
+                .stream()
+                .findFirst();
+    }
+
+    /**
      * 查询组织下的所有部门.
      *
      * @param tenantCode 租户编码
