@@ -3,8 +3,8 @@ import {ProTable} from '@ant-design/pro-components'
 import {
     Button,
     Card,
-    DatePicker,
     Descriptions,
+    Dropdown,
     Drawer,
     Empty,
     Form,
@@ -25,17 +25,15 @@ import {
     ApartmentOutlined,
     AuditOutlined,
     DeleteOutlined,
-    DownloadOutlined,
+    EllipsisOutlined,
     PlusOutlined,
     ReloadOutlined,
     SearchOutlined,
     TeamOutlined,
     UndoOutlined,
 } from '@ant-design/icons'
-import dayjs from 'dayjs'
 import {useSearchParams} from 'react-router-dom'
 import {ctcAuthorizationApi} from './api'
-import {ListTable} from '@yuku123/z-frontend-common/ui'
 
 /**
  * 权限管理（4A AUTHZ 域）— 角色 / 权限点 / 权限树 三视图合一
@@ -198,8 +196,7 @@ export default function PermissionManagement({apiBaseURL}) {
     // ── 角色 ──
     const [roles, setRoles] = useState([])
     const [rolesLoading, setRolesLoading] = useState(false)
-    const [roleSearchForm] = Form.useForm()
-    const [roleSearchParams, setRoleSearchParams] = useState({})
+    const [roleKeyword, setRoleKeyword] = useState('')
 
     // ── 角色表单（新增/编辑） ──
     const [roleFormOpen, setRoleFormOpen] = useState(false)
@@ -389,103 +386,16 @@ export default function PermissionManagement({apiBaseURL}) {
         }
     }, [activeRole, loadRoles])
 
-    const handleRoleExport = useCallback(() => {
-        const rows = roles
-        if (!rows.length) {
-            message.warning('暂无数据可导出')
-            return
-        }
-        const header = '角色编码,角色名称,描述,状态,租户,创建时间\n'
-        const csv =
-            header +
-            rows
-                .map((r) =>
-                    [
-                        r.roleCode,
-                        r.roleName,
-                        r.description,
-                        (ROLE_STATUS_MAP[r.status ?? 1] || {text: String(r.status)}).text,
-                        r.tenantCode,
-                        r.createdAt,
-                    ].join(','),
-                )
-                .join('\n')
-        const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8'})
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `roles_${dayjs().format('YYYYMMDD_HHmmss')}.csv`
-        a.click()
-        URL.revokeObjectURL(url)
-        message.success(`已导出 ${rows.length} 条数据`)
-    }, [roles])
-
-    // ── 角色列表（端侧筛选，量级只有几十条） ──
+    // ── 角色列表（端侧关键字过滤；量级几十条，不需要服务端分页/多条件筛选） ──
     const roleRows = useMemo(() => {
-        const {roleCode, status, startDate, endDate} = roleSearchParams
-        return roles.filter((r) => {
-            if (roleCode && !(r.roleCode || '').includes(roleCode)) return false
-            if (status !== undefined && status !== null && r.status !== status) return false
-            if (startDate && r.createdAt && dayjs(r.createdAt).isBefore(startDate, 'day')) return false
-            if (endDate && r.createdAt && dayjs(r.createdAt).isAfter(endDate, 'day')) return false
-            return true
-        })
-    }, [roles, roleSearchParams])
-
-    const roleColumns = [
-        {title: '角色编码', dataIndex: 'roleCode', width: 150},
-        {title: '角色名称', dataIndex: 'roleName', width: 140},
-        {title: '描述', dataIndex: 'description', ellipsis: true},
-        {
-            title: '启用', dataIndex: 'status', width: 100,
-            render: (_, r) => (
-                <Switch
-                    size="small"
-                    checked={r.status === 1}
-                    checkedChildren="启用"
-                    unCheckedChildren="停用"
-                    onChange={(checked) => toggleRoleStatus(r, checked)}
-                />
-            ),
-        },
-        {
-            title: '状态', dataIndex: 'status', width: 80,
-            render: (_, r) => {
-                const s = ROLE_STATUS_MAP[r.status ?? 1] || {text: String(r.status ?? '未知'), color: 'default'}
-                return <Tag color={s.color}>{s.text}</Tag>
-            },
-        },
-        {title: '租户', dataIndex: 'tenantCode', width: 100, render: (v) => v || '-'},
-        {title: '创建时间', dataIndex: 'createdAt', width: 170, render: (v) => v || '-'},
-        {
-            title: '操作', width: 180,
-            render: (_, record) => [
-                <Button key="edit" type="link" size="small" onClick={(e) => {
-                    e.stopPropagation()
-                    setEditingRole(record)
-                    roleForm.setFieldsValue({
-                        roleCode: record.roleCode,
-                        roleName: record.roleName,
-                        description: record.description,
-                        enabled: record.status !== 0,
-                    })
-                    setRoleFormOpen(true)
-                }}>编辑</Button>,
-                <Button key="tree" type="link" size="small" onClick={(e) => {
-                    e.stopPropagation()
-                    openRoleTree(record)
-                }}>权限点</Button>,
-                <Popconfirm key="delete" title={`删除角色 ${record.roleName}？`} okText="删除" cancelText="取消"
-                            okButtonProps={{danger: true}}
-                            onConfirm={(e) => {
-                                e?.stopPropagation?.()
-                                handleRoleDelete(record)
-                            }}>
-                    <Button type="link" danger size="small" onClick={(e) => e.stopPropagation()}>删除</Button>
-                </Popconfirm>,
-            ],
-        },
-    ]
+        const kw = roleKeyword.trim().toLowerCase()
+        if (!kw) return roles
+        return roles.filter(
+            (r) =>
+                (r.roleCode || '').toLowerCase().includes(kw) ||
+                (r.roleName || '').toLowerCase().includes(kw),
+        )
+    }, [roles, roleKeyword])
 
     // ── 权限点表格 ──
     const pointRequest = useCallback(async (params) => {
@@ -574,74 +484,134 @@ export default function PermissionManagement({apiBaseURL}) {
         setTreeExpandedKeys(collectAllKeys(permissionTree))
     }, [permissionTree])
 
+    // 视口自适应高度：容器顶边到视口底部全部交给内容，列表/树向下占满（CEO 2026-11-11 定版）。
+    // 不用 100vh 减固定 chrome 高度 —— 主壳头部高度变了这里自动跟着对。
+    const pageRef = useRef(null)
+    const [pageHeight, setPageHeight] = useState(undefined)
+    useEffect(() => {
+        const measure = () => {
+            const el = pageRef.current
+            if (!el) return
+            const top = el.getBoundingClientRect().top
+            setPageHeight(Math.max(420, window.innerHeight - top - 24))
+        }
+        measure()
+        const t = setTimeout(measure, 300)
+        window.addEventListener('resize', measure)
+        return () => {
+            clearTimeout(t)
+            window.removeEventListener('resize', measure)
+        }
+    }, [])
+
     const renderRoles = () => (
-        <div style={{display: 'flex', gap: 16, alignItems: 'flex-start', minHeight: 0}}>
-            <div style={{flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12}}>
-                <Card size="small" styles={{body: {padding: '12px 16px'}}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12}}>
-                        <Form form={roleSearchForm} layout="inline">
-                            <Form.Item name="roleCode" label="角色编码">
-                                <Input placeholder="请输入角色编码" allowClear style={{width: 180}}/>
-                            </Form.Item>
-                            <Form.Item name="status" label="状态">
-                                <Select placeholder="全部" allowClear style={{width: 110}}
-                                        options={[{value: 1, label: '正常'}, {value: 0, label: '停用'}]}/>
-                            </Form.Item>
-                            <Form.Item name="dateRange" label="创建时间">
-                                <DatePicker.RangePicker style={{width: 240}}/>
-                            </Form.Item>
-                            <Form.Item>
-                                <Space>
-                                    <Button type="primary" icon={<SearchOutlined/>} onClick={() => {
-                                        const v = roleSearchForm.getFieldsValue()
-                                        const p = {}
-                                        if (v.roleCode) p.roleCode = v.roleCode
-                                        if (v.status !== undefined && v.status !== null) p.status = v.status
-                                        if (v.dateRange) {
-                                            p.startDate = v.dateRange[0].format('YYYY-MM-DD')
-                                            p.endDate = v.dateRange[1].format('YYYY-MM-DD')
-                                        }
-                                        setRoleSearchParams(p)
-                                    }}>查询</Button>
-                                    <Button icon={<UndoOutlined/>} onClick={() => {
-                                        roleSearchForm.resetFields()
-                                        setRoleSearchParams({})
-                                    }}>重置</Button>
-                                </Space>
-                            </Form.Item>
-                        </Form>
-                        <Space style={{flexShrink: 0}}>
-                            <Button type="primary" icon={<PlusOutlined/>} onClick={() => {
-                                setEditingRole(null)
-                                roleForm.setFieldsValue({enabled: true})
-                                setRoleFormOpen(true)
-                            }}>新增角色</Button>
-                            <Button icon={<DownloadOutlined/>} onClick={handleRoleExport}>导出</Button>
-                            <Button icon={<ReloadOutlined/>} onClick={loadRoles}>刷新</Button>
-                        </Space>
+        <div style={{display: 'flex', gap: 16, alignItems: 'stretch', height: '100%', minHeight: 0}}>
+            {/* 左：角色列表 —— 顶部搜索 + 新增，下面就是角色条目（CEO 2026-11-11 定版，
+                不再上表格/多条件筛选：角色量级几十条，一张清单扫一眼就够了） */}
+            <div style={{width: 320, flexShrink: 0, display: 'flex'}}>
+                <Card size="small"
+                      style={{width: '100%', display: 'flex', flexDirection: 'column'}}
+                      styles={{body: {padding: 12, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden'}}}>
+                    <div style={{display: 'flex', gap: 8}}>
+                        <Input.Search
+                            allowClear
+                            placeholder="搜索角色编码 / 名称"
+                            onSearch={setRoleKeyword}
+                            onChange={(e) => !e.target.value && setRoleKeyword('')}
+                            style={{flex: 1}}
+                        />
+                        <Button type="primary" icon={<PlusOutlined/>} onClick={() => {
+                            setEditingRole(null)
+                            roleForm.setFieldsValue({enabled: true})
+                            setRoleFormOpen(true)
+                        }}>新增</Button>
+                    </div>
+                    <div style={{overflowY: 'auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 4}}>
+                        {roleRows.map((r) => {
+                            const selected = activeRole?.id === r.id
+                            return (
+                                <div
+                                    key={r.id}
+                                    onClick={() => openRoleTree(r)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 8,
+                                        padding: '8px 10px',
+                                        borderRadius: 8,
+                                        cursor: 'pointer',
+                                        background: selected ? '#e6f4ff' : 'transparent',
+                                        border: selected ? '1px solid #91caff' : '1px solid transparent',
+                                    }}
+                                >
+                                    <div style={{flex: 1, minWidth: 0}}>
+                                        <div style={{fontSize: 13, fontWeight: selected ? 600 : 400, color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                                            {r.roleName || r.roleCode}
+                                            {r.status === 0 ? <Tag color="default" style={{margin: '0 0 0 6px', fontSize: 11}}>停用</Tag> : null}
+                                        </div>
+                                        <div style={{fontSize: 11, color: '#8c8c8c', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                                            {r.roleCode}{r.tenantCode ? ` · ${r.tenantCode}` : ''}
+                                        </div>
+                                    </div>
+                                    {/* 滑块 = 启用/停用（真调 PUT /roles） */}
+                                    <span onClick={(e) => e.stopPropagation()}>
+                                        <Switch
+                                            size="small"
+                                            checked={r.status === 1}
+                                            onChange={(checked) => toggleRoleStatus(r, checked)}
+                                        />
+                                    </span>
+                                    <span onClick={(e) => e.stopPropagation()}>
+                                        <Dropdown
+                                            trigger={['click']}
+                                            menu={{
+                                                items: [
+                                                    {key: 'edit', icon: <AuditOutlined/>, label: '编辑'},
+                                                    {type: 'divider'},
+                                                    {key: 'delete', icon: <DeleteOutlined/>, label: '删除', danger: true},
+                                                ],
+                                                onClick: ({key}) => {
+                                                    if (key === 'edit') {
+                                                        setEditingRole(r)
+                                                        roleForm.setFieldsValue({
+                                                            roleCode: r.roleCode,
+                                                            roleName: r.roleName,
+                                                            description: r.description,
+                                                            enabled: r.status !== 0,
+                                                        })
+                                                        setRoleFormOpen(true)
+                                                    } else if (key === 'delete') {
+                                                        Modal.confirm({
+                                                            title: `删除角色 ${r.roleName}？`,
+                                                            okText: '删除',
+                                                            okButtonProps: {danger: true},
+                                                            cancelText: '取消',
+                                                            onOk: () => handleRoleDelete(r),
+                                                        })
+                                                    }
+                                                },
+                                            }}
+                                        >
+                                            <Button type="text" size="small" icon={<EllipsisOutlined/>}/>
+                                        </Dropdown>
+                                    </span>
+                                </div>
+                            )
+                        })}
+                        {roleRows.length === 0 ? (
+                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                   description={roleKeyword ? '没有匹配的角色' : '还没有角色，点「新增」创建'}
+                                   style={{margin: '24px 0'}}/>
+                        ) : null}
                     </div>
                 </Card>
-
-                <ListTable
-                    rows={roleRows}
-                    rowKey="id"
-                    loading={rolesLoading}
-                    columns={roleColumns}
-                    scroll={{x: 1000}}
-                    onRow={(r) => ({
-                        onClick: () => openRoleTree(r),
-                        style: {
-                            cursor: 'pointer',
-                            background: activeRole?.id === r.id ? '#e6f4ff' : undefined,
-                        },
-                    })}
-                />
             </div>
 
-            {/* 选中角色 → 右侧展开权限点树 */}
-            <div style={{width: 460, flexShrink: 0, position: 'sticky', top: 0}}>
+            {/* 右：选中角色的权限点树 */}
+            <div style={{flex: 1, minWidth: 0, display: 'flex'}}>
                 <Card
                     size="small"
+                    style={{width: '100%', display: 'flex', flexDirection: 'column'}}
                     title={activeRole ? `权限点 — ${activeRole.roleName}` : '权限点'}
                     extra={activeRole ? (
                         <Space>
@@ -650,7 +620,7 @@ export default function PermissionManagement({apiBaseURL}) {
                             <Button size="small" type="primary" loading={granting} onClick={handleSaveTree}>保存</Button>
                         </Space>
                     ) : null}
-                    styles={{body: {padding: '12px 8px 12px 12px'}}}
+                    styles={{body: {padding: '12px 8px 12px 12px', flex: 1, minHeight: 0, overflowY: 'auto'}}}
                 >
                     {!activeRole ? (
                         <Empty
@@ -675,7 +645,6 @@ export default function PermissionManagement({apiBaseURL}) {
                             <Tree
                                 checkable
                                 blockNode
-                                height={460}
                                 treeData={permissionTree}
                                 checkedKeys={checkedKeys}
                                 onCheck={(keys) => setCheckedKeys(Array.isArray(keys) ? keys : keys.checked)}
@@ -812,9 +781,17 @@ export default function PermissionManagement({apiBaseURL}) {
     )
 
     return (
-        <div style={{display: 'flex', flexDirection: 'column', minHeight: 0}}>
+        <div ref={pageRef} className="perm-mgmt-fullheight"
+             style={{display: 'flex', flexDirection: 'column', minHeight: 420, height: pageHeight}}>
+            <style>{`
+                .perm-mgmt-fullheight .ant-tabs { display: flex; flex-direction: column; height: 100%; }
+                .perm-mgmt-fullheight .ant-tabs-content-holder { flex: 1; min-height: 0; }
+                .perm-mgmt-fullheight .ant-tabs-content,
+                .perm-mgmt-fullheight .ant-tabs-tabpane { height: 100%; }
+            `}</style>
             {/* 顶部横排三个 tab：角色 / 权限点 / 权限树（CEO 2026-11-11 定版） */}
             <Tabs
+                style={{flex: 1, minHeight: 0}}
                 activeKey={view}
                 onChange={setView}
                 items={VIEW_MENU.map((m) => ({
