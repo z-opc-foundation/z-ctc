@@ -346,7 +346,14 @@ export default function AccountManagement({apiBaseURL}) {
                 return <Tag color={s.color}>{s.text}</Tag>
             },
         },
-        {title: '创建时间', dataIndex: 'createdAt', width: 160, valueType: 'dateTime', search: false},
+        {
+            // 显式格式化 + 单行省略：valueType dateTime 的默认渲染在部分行会把
+            // 时间文本拆成两行（实测 testadmin / admin 两行高 61px vs 其余 41px），
+            // 行高不齐整表就散了。这里自己格式化，单元格只有一段文本。
+            title: '创建时间', dataIndex: 'createdAt', width: 160, search: false,
+            ellipsis: {showTitle: false},
+            render: (_, r) => <EllipsisCell value={r.createdAt ? dayjs(r.createdAt).format('YYYY-MM-DD HH:mm:ss') : null}/>,
+        },
         {
             title: '操作', valueType: 'option', width: 150, fixed: 'right', search: false,
             render: (_, record) => [
