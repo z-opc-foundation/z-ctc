@@ -188,39 +188,60 @@ export default function OrgManagement({
         setTreeData(tree)
     }, [selectedTenant, selectedDomain, orgMap, loadOrgsForDomain])
 
+    const buildDeptNodes = (depts) => depts.map(d => ({
+        key: nodeKey('dept', d.deptCode),
+        title: (
+            <span style={{display: 'inline-flex', alignItems: 'center', gap: 6}}>
+                <Tag color={TYPE_LABEL.dept.color} style={{margin: 0}}>部门</Tag>
+                {d.deptName || d.deptCode}
+                {d.status === 0 && <Tag color="default" style={{margin: 0, fontSize: 10}}>停用</Tag>}
+            </span>
+        ),
+        data: {type: 'dept', data: d},
+        isLeaf: false,
+    }))
+
+    const buildGroupNodes = (groups) => groups.map(g => ({
+        key: nodeKey('group', g.groupCode),
+        title: (
+            <span style={{display: 'inline-flex', alignItems: 'center', gap: 6}}>
+                <Tag color={TYPE_LABEL.group.color} style={{margin: 0}}>组</Tag>
+                {g.groupName || g.groupCode}
+                {g.status === 0 && <Tag color="default" style={{margin: 0, fontSize: 10}}>停用</Tag>}
+            </span>
+        ),
+        data: {type: 'group', data: g},
+        isLeaf: true,
+    }))
+
     const onLoadData = async (treeNode) => {
-        const {key, data, type} = treeNode
+        // rc-tree 传进来的 treeNode 顶层只有 {key,title,data,isLeaf,...} 内部字段；
+        // 业务形状 (type + 实体记录) 藏在 data 包装里 —— 直接解构顶层 type 恒为 undefined，
+        // 展开组织永远拉不到部门 (2026-11-12 实测树只挂 org 一层)。
+        const meta = treeNode?.data?.type ? treeNode.data : treeNode
+        const {key} = treeNode
+        const type = meta?.type
+        const data = meta?.data || {}
         let children = []
         if (type === 'org') {
-            const depts = await loadDeptsForOrg(selectedTenant, selectedDomain, data.orgCode)
-            children = depts.map(d => ({
-                key: nodeKey('dept', d.deptCode),
-                title: (
-                    <span style={{display: 'inline-flex', alignItems: 'center', gap: 6}}>
-                        <Tag color={TYPE_LABEL.dept.color} style={{margin: 0}}>部门</Tag>
-                        {d.deptName || d.deptCode}
-                        {d.status === 0 && <Tag color="default" style={{margin: 0, fontSize: 10}}>停用</Tag>}
-                    </span>
-                ),
-                data: {type: 'dept', data: d},
-                isLeaf: false,
-            }))
+            children = buildDeptNodes(await loadDeptsForOrg(selectedTenant, selectedDomain, data.orgCode))
         } else if (type === 'dept') {
-            const groups = await loadGroupsForDept(selectedTenant, selectedDomain, data.deptCode)
-            children = groups.map(g => ({
-                key: nodeKey('group', g.groupCode),
-                title: (
-                    <span style={{display: 'inline-flex', alignItems: 'center', gap: 6}}>
-                        <Tag color={TYPE_LABEL.group.color} style={{margin: 0}}>组</Tag>
-                        {g.groupName || g.groupCode}
-                        {g.status === 0 && <Tag color="default" style={{margin: 0, fontSize: 10}}>停用</Tag>}
-                    </span>
-                ),
-                data: {type: 'group', data: g},
-                isLeaf: true,
-            }))
+            children = buildGroupNodes(await loadGroupsForDept(selectedTenant, selectedDomain, data.deptCode))
         }
         setTreeData(prev => updateTreeData(prev, key, children))
+    }
+
+    // 建/删只更新 deptMap/groupMap，树里已渲染的子节点不会自己变 —— 这里按父节点 key 重拉并回填。
+    const refreshTreeChildren = async (parentType, parentCode) => {
+        let children = []
+        if (parentType === 'org') {
+            children = buildDeptNodes(await loadDeptsForOrg(selectedTenant, selectedDomain, parentCode))
+        } else if (parentType === 'dept') {
+            children = buildGroupNodes(await loadGroupsForDept(selectedTenant, selectedDomain, parentCode))
+        } else {
+            return
+        }
+        setTreeData(prev => updateTreeData(prev, nodeKey(parentType, parentCode), children))
     }
 
     const updateTreeData = (list, key, children) =>
@@ -306,10 +327,10 @@ export default function OrgManagement({
                 await loadOrgsForDomain(tenantCode, domainCode)
             } else if (type === 'dept') {
                 await ctcAcDeptApi.delete(tenantCode, domainCode, data.deptCode, data.orgCode)
-                if (data.orgCode) await loadDeptsForOrg(tenantCode, domainCode, data.orgCode)
+                if (data.orgCode) await refreshTreeChildren('org', data.orgCode)
             } else if (type === 'group') {
                 await ctcAcGroupApi.delete(tenantCode, domainCode, data.deptCode, data.groupCode)
-                if (data.deptCode) await loadGroupsForDept(tenantCode, domainCode, data.deptCode)
+                if (data.deptCode) await refreshTreeChildren('dept', data.deptCode)
             }
             message.success('删除成功')
             if (selectedNode && codeOf(selectedNode.data, selectedNode.type) === codeOf(data, type)) {
@@ -334,16 +355,18 @@ export default function OrgManagement({
         setEntityModalOpen(true)
     }
 
-    // 新节点的归属上下文：优先取父节点自身的归属，其次取当前过滤的租户/域
+    // 新节点的归属上下文：优先取父节点自身的归属，其次取当前过滤的租户/域。
+    // parent 有两种形状：树节点 dropdown 传 {type, data:{…记录}}，卡片头 + 传平铺记录 ⇒ 统一拆包。
     const entityContext = useMemo(() => {
+        const p = entityParent?.data || entityParent || {}
         const ctx = {
-            tenantCode: entityParent?.tenantCode || selectedTenant,
-            domainCode: entityParent?.domainCode || selectedDomain,
+            tenantCode: p.tenantCode || selectedTenant,
+            domainCode: p.domainCode || selectedDomain,
         }
-        if (entityType === 'dept') ctx.orgCode = entityParent?.orgCode
+        if (entityType === 'dept') ctx.orgCode = p.orgCode
         if (entityType === 'group') {
-            ctx.deptCode = entityParent?.deptCode
-            if (entityParent?.orgCode) ctx.orgCode = entityParent.orgCode
+            ctx.deptCode = p.deptCode
+            if (p.orgCode) ctx.orgCode = p.orgCode
         }
         return ctx
     }, [entityType, entityParent, selectedTenant, selectedDomain])
@@ -366,7 +389,7 @@ export default function OrgManagement({
             } else if (entityType === 'dept') {
                 await ctcAcDeptApi.create(newNode)
                 const orgCode = newNode.orgCode
-                if (orgCode) await loadDeptsForOrg(newNode.tenantCode, newNode.domainCode, orgCode)
+                if (orgCode) await refreshTreeChildren('org', orgCode)
                 if (selectedNode?.type === 'org' && selectedNode.data.orgCode === orgCode) {
                     const list = await ctcAcDeptApi.listByOrg(newNode.tenantCode, newNode.domainCode, orgCode)
                     setChildList(list)
@@ -374,7 +397,7 @@ export default function OrgManagement({
             } else if (entityType === 'group') {
                 await ctcAcGroupApi.create(newNode)
                 const deptCode = newNode.deptCode
-                if (deptCode) await loadGroupsForDept(newNode.tenantCode, newNode.domainCode, deptCode)
+                if (deptCode) await refreshTreeChildren('dept', deptCode)
             }
             message.success('创建成功')
             setEntityModalOpen(false)
