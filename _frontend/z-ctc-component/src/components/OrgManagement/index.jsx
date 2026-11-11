@@ -125,6 +125,32 @@ export default function OrgManagement({
     const [selectedNode, setSelectedNode] = useState(null)
     const [configData, setConfigData] = useState([])
     const [childList, setChildList] = useState([])
+    const [nodeMembers, setNodeMembers] = useState([])
+    const [nodeMembersLoading, setNodeMembersLoading] = useState(false)
+
+    // ── 节点成员 (membership 模型只有 dept 维度: dept 节点查本部门, org 节点查其下全部部门并集, group 无成员模型) ──
+    useEffect(() => {
+        if (!selectedNode || !selectedTenant || !selectedDomain || selectedNode.type === 'group') {
+            setNodeMembers([])
+            return
+        }
+        let cancelled = false
+        setNodeMembersLoading(true)
+        const {type, data} = selectedNode
+        ctcAcDeptApi.listMembers(selectedTenant, selectedDomain, {
+            deptCode: type === 'dept' ? data.deptCode : undefined,
+            orgCode: type === 'org' ? data.orgCode : undefined,
+        }).then(list => {
+            if (!cancelled) setNodeMembers(Array.isArray(list) ? list : [])
+        }).catch(() => {
+            if (!cancelled) setNodeMembers([])
+        }).finally(() => {
+            if (!cancelled) setNodeMembersLoading(false)
+        })
+        return () => {
+            cancelled = true
+        }
+    }, [selectedNode, selectedTenant, selectedDomain])
 
     // ── 弹窗：K-V ──
     const [kvModalOpen, setKvModalOpen] = useState(false)
@@ -514,6 +540,27 @@ export default function OrgManagement({
         },
     ]
 
+    // membership: 0=待接受 1=正常 2=已禁用 3=已退出
+    const MEMBER_STATUS_MAP = {
+        0: {text: '待接受', color: 'processing'},
+        1: {text: '正常', color: 'success'},
+        2: {text: '已禁用', color: 'error'},
+        3: {text: '已退出', color: 'default'},
+    }
+    const memberColumns = [
+        {title: '成员', dataIndex: 'nickname', ellipsis: true,
+            render: (_, r) => r.nickname || r.username || `#${r.userId}`},
+        {title: '账号', dataIndex: 'username', ellipsis: true, render: v => v || '-'},
+        {title: '角色', dataIndex: 'roleCode', width: 100, render: v => <Tag style={{margin: 0}}>{v || '-'}</Tag>},
+        {title: '部门', dataIndex: 'deptCode', width: 130, ellipsis: true,
+            render: (_, r) => (selectedNode?.type === 'org' && r.deptCode) ? r.deptCode : '-'},
+        {title: '状态', dataIndex: 'memberStatus', width: 90,
+            render: v => <Tag color={MEMBER_STATUS_MAP[v]?.color || 'default'}
+                              style={{margin: 0}}>{MEMBER_STATUS_MAP[v]?.text || v}</Tag>},
+        {title: '加入时间', dataIndex: 'joinedAt', width: 160,
+            render: v => v ? String(v).replace('T', ' ').slice(0, 19) : '-'},
+    ]
+
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 0, flex: 1, minHeight: 0}}>
             {/* 租户/域不再提供页内选择器：登录态已定租户/域（顶栏 TenantSwitcher 是唯一切换入口），
@@ -617,6 +664,29 @@ export default function OrgManagement({
                                         pagination={false /* §2 规则 2 豁免：下级部门/组是选中节点的子表，行数由该节点的子节点数决定 */} size="small"
                                         locale={{emptyText: '暂无下级'}}
                                     />
+                                </Card>
+                            )}
+
+                            {selectedNode.type !== 'group' && (
+                                <Card type="inner" title="节点成员" size="small" style={{marginBottom: 16}}
+                                      extra={<span style={{fontSize: 12, color: '#999'}}>
+                                          {selectedNode.type === 'org' ? '本组织全部部门成员' : '本部门成员'}
+                                      </span>}>
+                                    <Table
+                                        columns={memberColumns}
+                                        dataSource={nodeMembers.map((r, i) => ({...r, key: `${r.userId}-${i}`}))}
+                                        rowKey="key"
+                                        loading={nodeMembersLoading}
+                                        pagination={false /* §2 规则 2 豁免：成员表是选中节点的下挂成员，行数由组织规模决定 */} size="small"
+                                        locale={{emptyText: '该节点下暂无成员'}}
+                                    />
+                                </Card>
+                            )}
+
+                            {selectedNode.type === 'group' && (
+                                <Card type="inner" title="节点成员" size="small" style={{marginBottom: 16}}>
+                                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                           description="组别层级暂未挂载成员（成员关系挂在部门维度）"/>
                                 </Card>
                             )}
 

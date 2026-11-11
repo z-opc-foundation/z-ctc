@@ -79,6 +79,12 @@ export const ctcAcDeptApi = {
         makeRequest().delete('/ctc/ac/depts', {
             params: {tenantCode, domainCode, orgCode, deptCode},
         }),
+
+    /** GET /api/ctc/ac/depts/members?tenantCode=&domainCode=&deptCode=|orgCode= — 节点成员 (deptCode 优先, orgCode 展开为部门集合) */
+    listMembers: (tenantCode, domainCode, {orgCode, deptCode} = {}) =>
+        makeRequest().get('/ctc/ac/depts/members', {
+            params: {tenantCode, domainCode, orgCode, deptCode},
+        }),
 }
 
 // ========== Group (组别) ==========

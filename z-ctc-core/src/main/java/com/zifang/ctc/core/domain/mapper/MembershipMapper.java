@@ -53,6 +53,28 @@ public interface MembershipMapper extends BaseMapper<MembershipDO> {
     }
 
     /**
+     * 查某租户某部门的 active 成员
+     */
+    default List<MembershipDO> selectActiveByDept(String tenantCode, String deptCode) {
+        return selectList(new QueryWrapper<MembershipDO>()
+                .eq("tenant_code", tenantCode)
+                .eq("dept_code", deptCode)
+                .eq("member_status", 1)
+                .orderByDesc("id"));
+    }
+
+    /**
+     * 查某租户一组部门 (如 org 展开的 dept 集合) 的 active 成员
+     */
+    default List<MembershipDO> selectActiveByDeptCodes(String tenantCode, java.util.Collection<String> deptCodes) {
+        return selectList(new QueryWrapper<MembershipDO>()
+                .eq("tenant_code", tenantCode)
+                .in("dept_code", deptCodes)
+                .eq("member_status", 1)
+                .orderByDesc("id"));
+    }
+
+    /**
      * 查 user 的 active 租户数量
      */
     default Long countActiveByUserId(Long userId) {

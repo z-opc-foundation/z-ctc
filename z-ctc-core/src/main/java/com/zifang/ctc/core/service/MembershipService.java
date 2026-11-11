@@ -47,6 +47,16 @@ public interface MembershipService {
 
     List<MembershipDO> listActiveByTenant(String tenantCode);
 
+    /**
+     * 查某租户某部门的 active 成员 (组织树节点成员视图).
+     */
+    List<MembershipDO> listActiveByDept(String tenantCode, String deptCode);
+
+    /**
+     * 查某租户一组部门的 active 成员 (org 节点 = 其下全部 dept 的并集).
+     */
+    List<MembershipDO> listActiveByDeptCodes(String tenantCode, java.util.Collection<String> deptCodes);
+
     long countActiveByUserId(Long userId);
 
     /**

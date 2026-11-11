@@ -175,6 +175,14 @@ public class AcDeptTreeServiceTest {
                     @Override public List<MembershipDO> selectActiveByUserId(Long u) { return Collections.emptyList(); }
                     @Override public List<MembershipDO> selectAllByUserId(Long u) { return Collections.emptyList(); }
                     @Override public List<MembershipDO> selectActiveByTenant(String t) { return mms; }
+                    @Override public List<MembershipDO> selectActiveByDept(String t, String d) {
+                        return mms.stream().filter(m -> t.equals(m.getTenantCode()) && d.equals(m.getDeptCode())
+                                && m.getMemberStatus() != null && m.getMemberStatus() == 1).collect(Collectors.toList());
+                    }
+                    @Override public List<MembershipDO> selectActiveByDeptCodes(String t, java.util.Collection<String> ds) {
+                        return mms.stream().filter(m -> t.equals(m.getTenantCode()) && ds.contains(m.getDeptCode())
+                                && m.getMemberStatus() != null && m.getMemberStatus() == 1).collect(Collectors.toList());
+                    }
                     @Override public long countActiveByUserId(Long u) { return 0; }
                     @Override public List<MembershipDO> selectByQuery(QueryWrapper<MembershipDO> w) { return mms; }
                 },

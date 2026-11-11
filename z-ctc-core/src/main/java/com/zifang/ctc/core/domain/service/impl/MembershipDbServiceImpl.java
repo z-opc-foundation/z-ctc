@@ -119,6 +119,30 @@ public class MembershipDbServiceImpl implements MembershipDbService {
     }
 
     /**
+     * 查询租户某部门的活跃会员关系列表。
+     *
+     * @param tenantCode 租户编码
+     * @param deptCode   部门编码
+     * @return 会员关系实体对象列表
+     */
+    @Override
+    public List<MembershipDO> selectActiveByDept(String tenantCode, String deptCode) {
+        return membershipMapper.selectActiveByDept(tenantCode, deptCode);
+    }
+
+    /**
+     * 查询租户一组部门的活跃会员关系列表。
+     *
+     * @param tenantCode 租户编码
+     * @param deptCodes  部门编码集合
+     * @return 会员关系实体对象列表
+     */
+    @Override
+    public List<MembershipDO> selectActiveByDeptCodes(String tenantCode, java.util.Collection<String> deptCodes) {
+        return membershipMapper.selectActiveByDeptCodes(tenantCode, deptCodes);
+    }
+
+    /**
      * 查询用户活跃会员关系数量。
      *
      * @param userId 用户主键

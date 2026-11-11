@@ -185,6 +185,22 @@ public class MembershipServiceImpl implements MembershipService {
         return membershipDbService.selectActiveByTenant(tenantCode);
     }
 
+    @Override
+    public List<MembershipDO> listActiveByDept(String tenantCode, String deptCode) {
+        if (tenantCode == null || deptCode == null || deptCode.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return membershipDbService.selectActiveByDept(tenantCode, deptCode);
+    }
+
+    @Override
+    public List<MembershipDO> listActiveByDeptCodes(String tenantCode, java.util.Collection<String> deptCodes) {
+        if (tenantCode == null || deptCodes == null || deptCodes.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return membershipDbService.selectActiveByDeptCodes(tenantCode, deptCodes);
+    }
+
     /**
      * 统计用户活跃的租户数量.
      *

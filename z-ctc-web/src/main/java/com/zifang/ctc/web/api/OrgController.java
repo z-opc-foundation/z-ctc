@@ -5,9 +5,12 @@ import com.zifang.ctc.core.domain.entity.GroupDO;
 import com.zifang.ctc.core.domain.entity.OrgDO;
 import com.zifang.ctc.core.service.DeptService;
 import com.zifang.ctc.core.service.GroupService;
+import com.zifang.ctc.core.service.MembershipService;
 import com.zifang.ctc.core.service.OrgService;
+import com.zifang.ctc.core.service.UserService;
 import com.zifang.ctc.core.vo.DeptVO;
 import com.zifang.ctc.core.vo.GroupVO;
+import com.zifang.ctc.core.vo.MemberVO;
 import com.zifang.ctc.core.vo.OrgVO;
 import com.zifang.util.core.lang.collection.Maps;
 import com.zifang.util.core.meta.Result;
@@ -15,6 +18,9 @@ import com.zifang.util.core.meta.ResultCode;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -37,6 +43,7 @@ import java.util.stream.Collectors;
  *   <li>POST/GET/PUT/DELETE /api/ctc/ac/orgs[?orgCode=&tenantCode=&domainCode=] — 组织 CRUD (请求参数)</li>
  *   <li>POST/GET/PUT/DELETE /api/ctc/ac/depts[?deptCode=&tenantCode=&domainCode=&orgCode=] — 部门 CRUD (请求参数)</li>
  *   <li>POST/GET/PUT/DELETE /api/ctc/ac/groups[?groupCode=&tenantCode=&domainCode=&deptCode=] — 小组 CRUD (请求参数)</li>
+ *   <li>GET /api/ctc/ac/depts/members[?tenantCode=&domainCode=&orgCode=|deptCode=] — 节点成员列表 (deptCode 优先, orgCode 展开为部门集合)</li>
  *   <li>GET /api/ctc/ac/orgs/health — 模块健康检查</li>
  * </ul>
  *
@@ -54,11 +61,16 @@ public class OrgController {
     private final OrgService orgService;
     private final DeptService deptService;
     private final GroupService groupService;
+    private final MembershipService membershipService;
+    private final UserService userService;
 
-    public OrgController(OrgService orgService, DeptService deptService, GroupService groupService) {
+    public OrgController(OrgService orgService, DeptService deptService, GroupService groupService,
+                         MembershipService membershipService, UserService userService) {
         this.orgService = orgService;
         this.deptService = deptService;
         this.groupService = groupService;
+        this.membershipService = membershipService;
+        this.userService = userService;
     }
 
     // ===== Org =====
@@ -249,6 +261,54 @@ public class OrgController {
         boolean ok = deptService.deleteDept(tenantCode, domainCode, deptCode);
         return ok ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
+    }
+
+    /**
+     * 列出挂在一个节点之下的成员 (组织树右面板).
+     * <p>
+     * 传 deptCode → 该部门的成员; 传 orgCode → 该组织下全部部门的成员并集.
+     * membership 模型只有 dept 维度 (z_ctc_ac_membership.dept_code), org 节点由此展开.
+     *
+     * @param tenantCode 租户编码, 必填
+     * @param domainCode 域编码, 必填
+     * @param orgCode    组织编码, 与 deptCode 二选一
+     * @param deptCode   部门编码, 优先于 orgCode
+     * @return 成员 VO 列表 (含 username/nickname 富化)
+     */
+    @GetMapping("/depts/members")
+    public Result<List<MemberVO>> listDeptMembers(@RequestParam("tenantCode") String tenantCode,
+                                                  @RequestParam("domainCode") String domainCode,
+                                                  @RequestParam(value = "orgCode", required = false) String orgCode,
+                                                  @RequestParam(value = "deptCode", required = false) String deptCode) {
+        List<com.zifang.ctc.core.domain.entity.MembershipDO> memberships;
+        if (deptCode != null && !deptCode.isEmpty()) {
+            memberships = membershipService.listActiveByDept(tenantCode, deptCode);
+        } else if (orgCode != null && !orgCode.isEmpty()) {
+            List<String> deptCodes = deptService.listByOrg(tenantCode, domainCode, orgCode).stream()
+                    .map(DeptDO::getDeptCode)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            memberships = membershipService.listActiveByDeptCodes(tenantCode, deptCodes);
+        } else {
+            return Result.<List<MemberVO>>fail("orgCode / deptCode 必传其一").code(400);
+        }
+
+        List<Long> userIds = memberships.stream()
+                .map(com.zifang.ctc.core.domain.entity.MembershipDO::getUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, com.zifang.ctc.core.domain.entity.UserDO> userMap = userIds.isEmpty()
+                ? Map.of()
+                : userService.listByIds(userIds).stream()
+                        .collect(Collectors.toMap(
+                                com.zifang.ctc.core.domain.entity.UserDO::getId,
+                                Function.identity(),
+                                (a, b) -> a));
+
+        return Result.success(memberships.stream()
+                .map(m -> MemberVO.from(m, m.getUserId() != null ? userMap.get(m.getUserId()) : null))
+                .collect(Collectors.toList()));
     }
 
     // ===== Group =====
