@@ -10,6 +10,7 @@ import {
     message,
     Modal,
     Popconfirm,
+    Select,
     Space,
     Table,
     Tag,
@@ -257,10 +258,12 @@ export default function OrgManagement({
         const meta = nodeData.data
         const type = meta?.type
         const data = meta?.data
+        // 组织建在**域**下（创建接口只认 domainCode，没有父组织字段），部门挂在组织下、
+        // 组别挂在部门下 ⇒ 组织节点上不再给「新增组织」：那样建出来的仍是域级根节点，
+        // 还会把父组织的 orgCode 预填进新组织的「编码」造成重码。
         const addItems =
             type === 'org'
                 ? [
-                    {key: 'org', label: <span><Tag color={TYPE_LABEL.org.color}>组织</Tag> 新增组织</span>},
                     {key: 'dept', label: <span><Tag color={TYPE_LABEL.dept.color}>部门</Tag> 新增部门</span>},
                 ]
                 : type === 'dept'
@@ -327,28 +330,38 @@ export default function OrgManagement({
     }
 
     // ── 新增实体 ──
+    // 租户 / 域 / 上级由上下文带出：顶部租户-域选择器是**过滤器**，
+    // 登录态里已经定了域，弹窗再让用户「选」一遍是多余的。
+    // parent: {tenantCode, domainCode, orgCode?, deptCode?, label?}
     const openEntityModal = (type, parent) => {
         setEntityType(type)
-        setEntityParent(parent)
+        setEntityParent(parent || null)
         entityForm.resetFields()
-        if (parent) {
-            entityForm.setFieldsValue({
-                tenantCode: parent.tenantCode || selectedTenant,
-                domainCode: parent.domainCode || selectedDomain,
-                orgCode: parent.orgCode,
-                deptCode: parent.deptCode,
-            })
-        }
         setEntityModalOpen(true)
     }
+
+    // 新节点的归属上下文：优先取父节点自身的归属，其次取当前过滤的租户/域
+    const entityContext = useMemo(() => {
+        const ctx = {
+            tenantCode: entityParent?.tenantCode || selectedTenant,
+            domainCode: entityParent?.domainCode || selectedDomain,
+        }
+        if (entityType === 'dept') ctx.orgCode = entityParent?.orgCode
+        if (entityType === 'group') {
+            ctx.deptCode = entityParent?.deptCode
+            if (entityParent?.orgCode) ctx.orgCode = entityParent.orgCode
+        }
+        return ctx
+    }, [entityType, entityParent, selectedTenant, selectedDomain])
 
     const handleEntitySave = async () => {
         if (!entityType) return
         try {
             const values = await entityForm.validateFields()
             const newNode = {
+                ...entityContext,
                 ...values,
-                status: values.status ?? 1,
+                status: Number(values.status ?? 1),
                 description: values.description || '',
                 extConfig: '[]',
             }
@@ -486,7 +499,8 @@ export default function OrgManagement({
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 0, flex: 1, minHeight: 0}}>
-            {/* 顶部 — 租户/域选择 (组件使用者可在外层提供, 这里只是兜底渲染) */}
+            {/* 顶部 — 租户/域**过滤器**（决定组织树取哪一片域的组织）；
+                组件使用者也可在外层提供，这里只是兜底渲染。 */}
             <div style={{
                 display: 'flex',
                 justifyContent: 'flex-start',
@@ -495,26 +509,28 @@ export default function OrgManagement({
             }}>
                 <Space>
                     <span style={{color: '#666'}}>租户</span>
-                    <select
-                        value={selectedTenant || ''}
-                        onChange={e => onTenantChange && onTenantChange(e.target.value || null)}
-                        style={{padding: '4px 8px', border: '1px solid #d9d9d9', borderRadius: 4, minWidth: 160}}
-                    >
-                        <option value="">请选择</option>
-                        {tenants.map(o => <option key={o.value || o.tenantCode}
-                                                  value={o.value || o.tenantCode}>{o.label || `${o.tenantName || o.tenantCode} (${o.tenantCode})`}</option>)}
-                    </select>
+                    <Select
+                        style={{minWidth: 200}}
+                        placeholder="请选择租户"
+                        value={selectedTenant || undefined}
+                        onChange={v => onTenantChange && onTenantChange(v || null)}
+                        options={tenants.map(o => ({
+                            value: o.value || o.tenantCode,
+                            label: o.label || `${o.tenantName || o.tenantCode} (${o.tenantCode})`,
+                        }))}
+                    />
                     <span style={{color: '#666'}}>域</span>
-                    <select
-                        value={selectedDomain || ''}
-                        onChange={e => onDomainChange && onDomainChange(e.target.value || null)}
+                    <Select
+                        style={{minWidth: 200}}
+                        placeholder="请选择域"
+                        value={selectedDomain || undefined}
                         disabled={!selectedTenant}
-                        style={{padding: '4px 8px', border: '1px solid #d9d9d9', borderRadius: 4, minWidth: 160}}
-                    >
-                        <option value="">请选择</option>
-                        {domains.map(o => <option key={o.value || o.domainCode}
-                                                  value={o.value || o.domainCode}>{o.label || `${o.domainName || o.domainCode} (${o.domainCode})`}</option>)}
-                    </select>
+                        onChange={v => onDomainChange && onDomainChange(v || null)}
+                        options={domains.map(o => ({
+                            value: o.value || o.domainCode,
+                            label: o.label || `${o.domainName || o.domainCode} (${o.domainCode})`,
+                        }))}
+                    />
                 </Space>
             </div>
 
@@ -670,15 +686,24 @@ export default function OrgManagement({
                 onOk={handleEntitySave}
                 destroyOnHidden
             >
+                {/* 归属上下文只读展示：租户/域来自顶部过滤器，上级来自点开弹窗的那个节点 */}
+                <div style={{
+                    marginTop: 12,
+                    padding: '8px 12px',
+                    background: '#f7f8fa',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    color: '#666',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 16,
+                }}>
+                    <span>租户：{entityContext.tenantCode || '-'}</span>
+                    <span>域：{entityContext.domainCode || '-'}</span>
+                    {entityType === 'dept' && <span>所属组织：{entityContext.orgCode || '-'}</span>}
+                    {entityType === 'group' && <span>所属部门：{entityContext.deptCode || '-'}</span>}
+                </div>
                 <Form form={entityForm} layout="vertical" style={{marginTop: 16}}>
-                    <Form.Item name="tenantCode" label="租户"><Input disabled/></Form.Item>
-                    <Form.Item name="domainCode" label="域"><Input disabled/></Form.Item>
-                    {(entityType === 'dept' || entityType === 'group') && (
-                        <Form.Item name="orgCode" label="所属组织"><Input disabled/></Form.Item>
-                    )}
-                    {entityType === 'group' && (
-                        <Form.Item name="deptCode" label="所属部门"><Input disabled/></Form.Item>
-                    )}
                     <Form.Item
                         name={entityType === 'org' ? 'orgCode' : entityType === 'dept' ? 'deptCode' : 'groupCode'}
                         label="编码" rules={[{required: true}]}>

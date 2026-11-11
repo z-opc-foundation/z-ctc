@@ -6,29 +6,33 @@ import {
     DatePicker,
     Descriptions,
     Drawer,
+    Empty,
     Form,
     Input,
-    Menu,
+    List,
     message,
     Modal,
     Select,
     Space,
+    Tabs,
     Tag,
-    Tooltip
+    Tooltip,
+    Typography,
 } from 'antd'
 import {
     DeleteOutlined,
     DownloadOutlined,
-    FileTextOutlined,
     PlusOutlined,
     ReloadOutlined,
     SearchOutlined,
     UndoOutlined,
-    UserOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {ctcAcAccountApi, ctcAcLoginLogApi} from './api'
+import {userPermissionApi} from '../_api/userPermission'
 import { ListTable, SearchInput } from '@yuku123/z-frontend-common/ui'
+
+const {Text} = Typography
 /**
  * 账号管理页 (4A AC 域) — 标准数据管理布局
  *
@@ -107,6 +111,11 @@ export default function AccountManagement({apiBaseURL}) {
     const [detailTab, setDetailTab] = useState('info')
     const [loginLogs, setLoginLogs] = useState([])
     const [loginLogsLoading, setLoginLogsLoading] = useState(false)
+    // 角色与权限页签的数据（懒加载：切到该页签才取）
+    const [accountRoles, setAccountRoles] = useState([])
+    const [accountPerms, setAccountPerms] = useState([])
+    const [rolesLoading, setRolesLoading] = useState(false)
+    const [permsLoading, setPermsLoading] = useState(false)
 
     const fetchLoginLogs = async (accountId) => {
         if (!accountId) {
@@ -124,6 +133,31 @@ export default function AccountManagement({apiBaseURL}) {
         }
     }
 
+    /** 该账号的角色 + 直接权限（页签懒加载，切进来才发请求） */
+    const fetchAccountAuth = async (accountId) => {
+        if (!accountId) {
+            setAccountRoles([])
+            setAccountPerms([])
+            return
+        }
+        setRolesLoading(true)
+        setPermsLoading(true)
+        try {
+            const [roles, perms] = await Promise.all([
+                userPermissionApi.listUserRoles(accountId),
+                userPermissionApi.listUserPermissions(accountId),
+            ])
+            setAccountRoles(Array.isArray(roles) ? roles : [])
+            setAccountPerms(Array.isArray(perms) ? perms : [])
+        } catch {
+            setAccountRoles([])
+            setAccountPerms([])
+        } finally {
+            setRolesLoading(false)
+            setPermsLoading(false)
+        }
+    }
+
     const openDetail = (r) => {
         setDetailAccount(r)
         setDetailTab('info')
@@ -135,12 +169,17 @@ export default function AccountManagement({apiBaseURL}) {
         setDetailOpen(false)
         setDetailAccount(null)
         setLoginLogs([])
+        setAccountRoles([])
+        setAccountPerms([])
     }
 
     const handleTabChange = (key) => {
         setDetailTab(key)
         if (key === 'logs' && detailAccount?.id) {
             fetchLoginLogs(detailAccount.id)
+        }
+        if (key === 'roles' && detailAccount?.id) {
+            fetchAccountAuth(detailAccount.id)
         }
     }
 
@@ -494,79 +533,136 @@ export default function AccountManagement({apiBaseURL}) {
                 title={detailAccount ? `账号详情 — ${detailAccount.username}` : '账号详情'}
                 open={detailOpen}
                 onClose={closeDetail}
-                size={900}
+                // 宽抽屉 + 横向页签（2026-11-11 CEO：详情要横向表达，别塞窄抽屉里
+                // 套一层竖排菜单）—— 三个页签平铺在顶部，一眼看全账号三面。
+                width="min(1120px, 94vw)"
                 destroyOnHidden
             >
                 {detailAccount && (
-                    <div style={{display: 'flex', gap: 16, minHeight: 480}}>
-                        <div style={{width: 160, borderRight: '1px solid #f0f0f0', paddingRight: 8}}>
-                            <Menu
-                                mode="inline"
-                                selectedKeys={[detailTab]}
-                                onClick={({key}) => handleTabChange(key)}
-                                style={{border: 'none', background: 'transparent'}}
-                                items={[
-                                    {key: 'info', icon: <UserOutlined/>, label: '基本信息'},
-                                    {key: 'logs', icon: <FileTextOutlined/>, label: '登录日志'},
-                                ]}
-                            />
-                        </div>
-
-                        <div style={{flex: 1, minWidth: 0}}>
-                            {detailTab === 'info' ? (
-                                <Descriptions
-                                    title="账号信息"
-                                    size="small"
-                                    bordered
-                                    column={2}
-                                >
-                                    <Descriptions.Item label="账号ID">{detailAccount.id}</Descriptions.Item>
-                                    <Descriptions.Item label="用户名">{detailAccount.username}</Descriptions.Item>
-                                    <Descriptions.Item label="昵称">{detailAccount.nickname || '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="账号类型">
-                                        <Tag color={TYPE_MAP[detailAccount.accountType ?? 3]?.color}>
-                                            {TYPE_MAP[detailAccount.accountType ?? 3]?.text || detailAccount.accountType}
-                                        </Tag>
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label="邮箱">{detailAccount.email || '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="手机">{detailAccount.phone || '-'}</Descriptions.Item>
-                                    <Descriptions.Item
-                                        label="租户">{detailAccount.tenantCode || '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="状态">
-                                        <Tag color={STATUS_MAP[detailAccount.status ?? 1]?.color}>
-                                            {STATUS_MAP[detailAccount.status ?? 1]?.text}
-                                        </Tag>
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label="到期时间">
-                                        {detailAccount.expireAt ? dayjs(detailAccount.expireAt).format('YYYY-MM-DD HH:mm:ss') : '永久'}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label="创建时间">
-                                        {detailAccount.createdAt ? dayjs(detailAccount.createdAt).format('YYYY-MM-DD HH:mm:ss') : '-'}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label="更新时间" span={2}>
-                                        {detailAccount.updatedAt ? dayjs(detailAccount.updatedAt).format('YYYY-MM-DD HH:mm:ss') : '-'}
-                                    </Descriptions.Item>
-                                </Descriptions>
-                            ) : (
-                                <ListTable
-                                    cardTitle={`登录日志（${loginLogs.length}）`}
-                                    cardExtra={
-                                        <Button size="small" icon={<ReloadOutlined/>}
-                                                onClick={() => detailAccount.id && fetchLoginLogs(detailAccount.id)}>
-                                            刷新
-                                        </Button>
-                                    }
-                                    rows={loginLogs}
-                                    columns={loginLogColumns}
-                                    rowKey="id"
-                                    loading={loginLogsLoading}
-                                    searchKeys={['identifier', 'clientIp']}
-                                    searchPlaceholder="按登录标识 / 客户端 IP 过滤"
-                                    emptyTitle="暂无登录记录"
-                                />
-                            )}
-                        </div>
-                    </div>
+                    <Tabs
+                        activeKey={detailTab}
+                        onChange={handleTabChange}
+                        tabBarExtraContent={
+                            detailTab === 'logs' ? (
+                                <Button size="small" icon={<ReloadOutlined/>}
+                                        onClick={() => detailAccount.id && fetchLoginLogs(detailAccount.id)}>
+                                    刷新日志
+                                </Button>
+                            ) : null
+                        }
+                        items={[
+                            {
+                                key: 'info',
+                                label: '基本信息',
+                                children: (
+                                    <Descriptions
+                                        title="账号信息"
+                                        size="small"
+                                        bordered
+                                        column={2}
+                                    >
+                                        <Descriptions.Item label="账号ID">{detailAccount.id}</Descriptions.Item>
+                                        <Descriptions.Item label="用户名">{detailAccount.username}</Descriptions.Item>
+                                        <Descriptions.Item label="昵称">{detailAccount.nickname || '-'}</Descriptions.Item>
+                                        <Descriptions.Item label="账号类型">
+                                            <Tag color={TYPE_MAP[detailAccount.accountType ?? 3]?.color}>
+                                                {TYPE_MAP[detailAccount.accountType ?? 3]?.text || detailAccount.accountType}
+                                            </Tag>
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="邮箱">{detailAccount.email || '-'}</Descriptions.Item>
+                                        <Descriptions.Item label="手机">{detailAccount.phone || '-'}</Descriptions.Item>
+                                        <Descriptions.Item
+                                            label="租户">{detailAccount.tenantCode || '-'}</Descriptions.Item>
+                                        <Descriptions.Item label="状态">
+                                            <Tag color={STATUS_MAP[detailAccount.status ?? 1]?.color}>
+                                                {STATUS_MAP[detailAccount.status ?? 1]?.text}
+                                            </Tag>
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="到期时间">
+                                            {detailAccount.expireAt ? dayjs(detailAccount.expireAt).format('YYYY-MM-DD HH:mm:ss') : '永久'}
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="创建时间">
+                                            {detailAccount.createdAt ? dayjs(detailAccount.createdAt).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="更新时间" span={2}>
+                                            {detailAccount.updatedAt ? dayjs(detailAccount.updatedAt).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                                        </Descriptions.Item>
+                                    </Descriptions>
+                                ),
+                            },
+                            {
+                                key: 'roles',
+                                label: `角色与权限${accountRoles.length ? `（${accountRoles.length}）` : ''}`,
+                                children: (
+                                    <div style={{display: 'flex', gap: 16, alignItems: 'flex-start'}}>
+                                        <Card size="small" style={{flex: '0 0 340px'}}
+                                              title={`角色（${accountRoles.length}）`}
+                                              loading={rolesLoading}>
+                                            {accountRoles.length ? (
+                                                <List size="small" dataSource={accountRoles} rowKey={(r) => r.id}
+                                                      renderItem={(r) => (
+                                                          <List.Item>
+                                                              <List.Item.Meta
+                                                                  title={
+                                                                      <Space>
+                                                                          <Text strong>{r.roleName || r.roleCode}</Text>
+                                                                          <Tag color="blue" style={{margin: 0}}>{r.roleCode}</Tag>
+                                                                      </Space>
+                                                                  }
+                                                                  description={r.description || '-'}
+                                                              />
+                                                          </List.Item>
+                                                      )}/>
+                                            ) : (
+                                                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="该账号暂无角色"/>
+                                            )}
+                                        </Card>
+                                        <ListTable
+                                            cardTitle={`直接权限（${accountPerms.length}）`}
+                                            rows={accountPerms}
+                                            rowKey={(r, i) => r.code || r.resourceCode || r.id || i}
+                                            // 后端权限对象两套字段名都可能出现（code/name 与
+                                            // resourceCode/resourceName），都列上，否则用户按列上
+                                            // 的字样搜却搜不到。
+                                            searchKeys={['code', 'name', 'resourceCode', 'resourceName']}
+                                            searchPlaceholder="按资源编码 / 名称过滤"
+                                            emptyTitle="该账号暂无直接权限"
+                                            loading={permsLoading}
+                                            columns={[
+                                                {
+                                                    title: '资源编码', dataIndex: 'code', width: 220,
+                                                    render: (_, r) => (
+                                                        <span style={{fontFamily: 'monospace'}}>
+                                                            {r.code || r.resourceCode || '-'}
+                                                        </span>
+                                                    ),
+                                                },
+                                                {
+                                                    title: '资源名称', dataIndex: 'name', ellipsis: true,
+                                                    render: (_, r) => r.name || r.resourceName || '-',
+                                                },
+                                            ]}
+                                        />
+                                    </div>
+                                ),
+                            },
+                            {
+                                key: 'logs',
+                                label: `登录日志（${loginLogs.length}）`,
+                                children: (
+                                    <ListTable
+                                        rows={loginLogs}
+                                        columns={loginLogColumns}
+                                        rowKey="id"
+                                        loading={loginLogsLoading}
+                                        searchKeys={['identifier', 'clientIp']}
+                                        searchPlaceholder="按登录标识 / 客户端 IP 过滤"
+                                        emptyTitle="暂无登录记录"
+                                    />
+                                ),
+                            },
+                        ]}
+                    />
                 )}
             </Drawer>
         </div>
