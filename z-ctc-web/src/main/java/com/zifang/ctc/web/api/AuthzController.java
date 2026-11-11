@@ -75,13 +75,13 @@ public class AuthzController {
      *
      * @param role   角色实体 (含 roleCode/roleName/描述)
      * @param userId 操作者账号 id, 来自请求头 X-User-Id, 可选
-     * @return 成功返回新建角色主键 id (HTTP 201)
+     * @return 成功返回新建角色主键 id 
      */
     @PostMapping("/roles")
     public Result<Long> createRole(@RequestBody RoleDO role,
                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
         Long id = authzService.createRole(role, userId);
-        return Result.success(id).code(201);
+        return Result.success(id);
     }
 
     /**
@@ -89,13 +89,13 @@ public class AuthzController {
      *
      * @param resource 资源实体 (含 resourceCode/resourceName/type/appCode)
      * @param userId   操作者账号 id, 来自请求头 X-User-Id, 可选
-     * @return 成功返回新建资源主键 id (HTTP 201)
+     * @return 成功返回新建资源主键 id 
      */
     @PostMapping("/resources")
     public Result<Long> createResource(@RequestBody ResourceDO resource,
                                        @RequestHeader(value = "X-User-Id", required = false) String userId) {
         Long id = authzService.createResource(resource, userId);
-        return Result.success(id).code(201);
+        return Result.success(id);
     }
 
     /**

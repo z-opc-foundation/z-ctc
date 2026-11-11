@@ -58,7 +58,7 @@ public class AccountController {
      * 创建账号. 校验用户名与密码非空后将请求参数映射为 DO 并入库, 返回新建账号的主键 id.
      *
      * @param request 创建账号请求体 (含用户名/密码/昵称/邮箱/手机号/账号类型/租户编码/过期时间)
-     * @return 成功时返回新建账号的主键 id (HTTP 201), 参数错误返回 400
+     * @return 成功时返回新建账号的主键 id , 参数错误返回 400
      */
     @PostMapping
     public Result<Long> create(@RequestBody CreateAccountRequest request) {
@@ -75,7 +75,7 @@ public class AccountController {
         account.setTenantCode(request.getTenantCode());
         account.setExpireAt(request.getExpireAt());
         Long id = accountService.createAccount(account, request.getPassword());
-        return Result.success(id).code(201);
+        return Result.success(id);
     }
 
     /**

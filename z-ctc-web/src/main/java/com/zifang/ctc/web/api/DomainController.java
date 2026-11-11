@@ -148,7 +148,7 @@ public class DomainController {
      *
      * @param domain 域实体 (含编码/名称/租户等)
      * @param userId 操作者账号 id, 来自请求头 X-User-Id, 可选
-     * @return 成功时返回新建域主键 id (HTTP 201); 状态冲突 409; 参数错误 400
+     * @return 成功时返回新建域主键 id ; 状态冲突 409; 参数错误 400
      */
     @PostMapping
     public Result<Long> create(@RequestBody DomainDO domain,
@@ -165,7 +165,7 @@ public class DomainController {
         }
         try {
             Long id = domainService.createDomain(domain, userId);
-            return Result.<Long>success(id).code(201);
+            return Result.<Long>success(id);
         } catch (IllegalStateException e) {
             return Result.<Long>fail(e.getMessage()).code(409);
         } catch (IllegalArgumentException e) {

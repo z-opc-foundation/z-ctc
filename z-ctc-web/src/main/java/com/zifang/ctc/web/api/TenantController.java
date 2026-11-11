@@ -87,7 +87,7 @@ public class TenantController {
      *
      * @param tenant 租户实体 (含 tenantCode / tenantName / 描述 / 状态等)
      * @param userId 操作者账号 id, 来自请求头 X-User-Id, 可选
-     * @return 成功返回新建租户主键 id (HTTP 201); 必填字段缺失返回 400
+     * @return 成功返回新建租户主键 id ; 必填字段缺失返回 400
      */
     @PostMapping
     public Result<Long> create(@RequestBody TenantDO tenant,
@@ -127,7 +127,7 @@ public class TenantController {
                     tenant.getTenantCode(), e.getMessage(), e);
         }
 
-        return Result.success(id).code(201);
+        return Result.success(id);
     }
 
     /**

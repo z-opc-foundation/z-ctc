@@ -115,7 +115,7 @@ public class MenuController {
      *
      * @param menu   菜单实体 (含 appCode/menuCode/menuName/path 等)
      * @param userId 操作者账号 id, 来自请求头 X-User-Id, 可选
-     * @return 成功返回新建菜单主键 id (HTTP 201)
+     * @return 成功返回新建菜单主键 id 
      */
     @PostMapping
     public Result<Long> create(
@@ -123,7 +123,7 @@ public class MenuController {
             @RequestHeader(value = "X-User-Id", required = false) String userId) {
         try {
             Long id = menuService.createMenu(menu, userId);
-            return Result.success(id).code(201);
+            return Result.success(id);
         } catch (IllegalStateException e) {
             // 判重冲突 — 返回 409
             return (Result) Result.fail("error").code(HttpStatus.CONFLICT.value());

@@ -68,14 +68,14 @@ public class OrgController {
      *
      * @param org    组织实体
      * @param userId 操作者账号 id, 来自请求头 X-User-Id, 可选
-     * @return 成功返回新建 Org 的主键 id (HTTP 201)
+     * @return 成功返回新建 Org 的主键 id 
      */
     @PostMapping("/orgs")
     public Result<Long> createOrg(@RequestBody OrgDO org,
                                   @RequestHeader(value = "X-User-Id", required = false) String userId) {
         try {
             Long id = orgService.createOrg(org, userId);
-            return Result.<Long>success(id).code(201);
+            return Result.<Long>success(id);
         } catch (IllegalStateException e) {
             return Result.<Long>fail(e.getMessage()).code(409);
         } catch (IllegalArgumentException e) {
@@ -160,14 +160,14 @@ public class OrgController {
      *
      * @param dept   部门实体
      * @param userId 操作者账号 id, 来自请求头 X-User-Id, 可选
-     * @return 成功返回新建 Dept 的主键 id (HTTP 201)
+     * @return 成功返回新建 Dept 的主键 id 
      */
     @PostMapping("/depts")
     public Result<Long> createDept(@RequestBody DeptDO dept,
                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
         try {
             Long id = deptService.createDept(dept, userId);
-            return Result.<Long>success(id).code(201);
+            return Result.<Long>success(id);
         } catch (IllegalStateException e) {
             return Result.<Long>fail(e.getMessage()).code(409);
         } catch (IllegalArgumentException e) {
@@ -258,14 +258,14 @@ public class OrgController {
      *
      * @param group  小组实体
      * @param userId 操作者账号 id, 来自请求头 X-User-Id, 可选
-     * @return 成功返回新建 Group 的主键 id (HTTP 201)
+     * @return 成功返回新建 Group 的主键 id 
      */
     @PostMapping("/groups")
     public Result<Long> createGroup(@RequestBody GroupDO group,
                                     @RequestHeader(value = "X-User-Id", required = false) String userId) {
         try {
             Long id = groupService.createGroup(group, userId);
-            return Result.<Long>success(id).code(201);
+            return Result.<Long>success(id);
         } catch (IllegalStateException e) {
             return Result.<Long>fail(e.getMessage()).code(409);
         } catch (IllegalArgumentException e) {
