@@ -246,12 +246,12 @@ export default function DictPage() {
                             title: '操作', width: 100,
                             render: (_, r) => (
                                 <Space onClick={e => e.stopPropagation()}>
-                                    <Button type="text" size="small" icon={<EditOutlined/>}
-                                            onClick={() => openEditType(r)}/>
+                                    <Button type="link" size="small"
+                                            onClick={() => openEditType(r)}>编辑</Button>
                                     <Popconfirm title="删除该类型?" okText="删除" cancelText="取消"
                                                 okButtonProps={{danger: true}}
                                                 onConfirm={() => handleDeleteType(r.id)}>
-                                        <Button type="text" size="small" danger icon={<DeleteOutlined/>}/>
+                                        <Button type="link" size="small" danger>删除</Button>
                                     </Popconfirm>
                                 </Space>
                             ),

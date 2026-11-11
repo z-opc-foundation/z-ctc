@@ -26,10 +26,10 @@ export default function UserTable({dataSource, loading, onEdit, onDelete, onRefr
             key: 'action',
             render: (_, record) => (
                 <Space>
-                    <Button size="small" icon={<EditOutlined/>} onClick={() => onEdit?.(record)}>
+                    <Button type="link" size="small" onClick={() => onEdit?.(record)}>
                         编辑
                     </Button>
-                    <Button size="small" danger icon={<DeleteOutlined/>} onClick={() => onDelete?.(record)}>
+                    <Button type="link" size="small" danger onClick={() => onDelete?.(record)}>
                         删除
                     </Button>
                 </Space>

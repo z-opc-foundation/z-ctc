@@ -115,7 +115,7 @@ export default function ResourcePage({apiBaseURL}) {
                 <Popconfirm key="delete" title={`删除资源 ${record.resourceCode}?`}
                             okText="删除" cancelText="取消" okButtonProps={{danger: true}}
                             onConfirm={() => handleDelete(record.id)}>
-                    <Button type="text" size="small" danger icon={<DeleteOutlined/>}>删除</Button>
+                    <Button type="link" size="small" danger>删除</Button>
                 </Popconfirm>,
             ],
         },

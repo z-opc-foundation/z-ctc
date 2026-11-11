@@ -186,12 +186,12 @@ export default function MyTenant({apiBaseURL}) {
             title: '操作', key: 'action', width: 150,
             render: (_, record) => (
                 <Space size={0}>
-                    <Button type="link" size="small" icon={<EditOutlined/>} onClick={() => openEdit(record)}>
+                    <Button type="link" size="small" onClick={() => openEdit(record)}>
                         编辑
                     </Button>
                     {isDefaultDomain(activeCode, record) ? (
                         <Tooltip title="默认域受保护，不可删除">
-                            <Button type="link" size="small" danger disabled icon={<DeleteOutlined/>}>
+                            <Button type="link" size="small" danger disabled>
                                 删除
                             </Button>
                         </Tooltip>
@@ -203,7 +203,7 @@ export default function MyTenant({apiBaseURL}) {
                             okText="确定"
                             cancelText="取消"
                         >
-                            <Button type="link" size="small" danger icon={<DeleteOutlined/>}>
+                            <Button type="link" size="small" danger>
                                 删除
                             </Button>
                         </Popconfirm>

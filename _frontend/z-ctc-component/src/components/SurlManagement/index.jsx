@@ -127,7 +127,7 @@ export default function SurlManagement({apiBaseURL}) {
             title: '操作', valueType: 'option', width: 100, fixed: 'right',
             render: (_, record) => [
                 <Popconfirm key="del" title="失效该短链？" onConfirm={() => handleDelete(record.mapKey)}>
-                    <Button type="text" danger size="small" icon={<DeleteOutlined/>}>失效</Button>
+                    <Button type="link" danger size="small">失效</Button>
                 </Popconfirm>,
             ],
         },

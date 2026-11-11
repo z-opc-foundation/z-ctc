@@ -293,7 +293,7 @@ export default function ApplicationManagement({apiBaseURL}) {
             render: (_, r) => (
                 <Popconfirm title="确认删除该资源？" okText="删除" okButtonProps={{danger: true}} cancelText="取消"
                             onConfirm={() => handleDeleteResource(r)}>
-                    <Button type="text" danger size="small">删除</Button>
+                    <Button type="link" danger size="small">删除</Button>
                 </Popconfirm>
             ),
         },

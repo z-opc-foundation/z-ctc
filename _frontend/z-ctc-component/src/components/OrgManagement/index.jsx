@@ -456,7 +456,7 @@ export default function OrgManagement({
             render: (_, r) => {
                 const t = detectType(r)
                 return (
-                    <Button type="link" size="small" icon={<EditOutlined/>}
+                    <Button type="link" size="small"
                             onClick={() => handleChildClick(r, t)}>详情</Button>
                 )
             },
@@ -470,14 +470,14 @@ export default function OrgManagement({
             title: '操作', width: 140,
             render: (_, r) => (
                 <Space>
-                    <Button size="small" type="link" icon={<EditOutlined/>}
+                    <Button size="small" type="link"
                             onClick={() => {
                                 setEditingKv(r)
                                 kvForm.setFieldsValue({dataId: r.key, content: r.value})
                                 setKvModalOpen(true)
                             }}>编辑</Button>
                     <Popconfirm title="确认删除" onConfirm={() => handleDeleteKv(r)}>
-                        <Button size="small" type="link" danger icon={<DeleteOutlined/>}>删除</Button>
+                        <Button size="small" type="link" danger>删除</Button>
                     </Popconfirm>
                 </Space>
             ),

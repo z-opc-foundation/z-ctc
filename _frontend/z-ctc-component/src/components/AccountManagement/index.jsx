@@ -61,6 +61,30 @@ const IDENTITY_MAP = {
     3: {text: '手机', color: 'cyan'},
 }
 
+/**
+ * 单元格单行省略 + 悬浮看全量。
+ *
+ * 为什么不用 antd 的 ellipsis 默认行为：它只在 title 上挂原生 title 属性，
+ * 样式跟主壳脱节；这里统一用 Tooltip，空值（'-'）不挂提示。
+ * 不换行是硬要求 —— 账号/手机这类列一旦折行，行高不齐、表格看着散。
+ */
+function EllipsisCell({value}) {
+    const text = value === null || value === undefined || value === '' ? '-' : String(value)
+    if (text === '-') return <span>-</span>
+    return (
+        <Tooltip title={text} placement="topLeft">
+            <span style={{
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+            }}>
+                {text}
+            </span>
+        </Tooltip>
+    )
+}
+
 export default function AccountManagement({apiBaseURL}) {
     const actionRef = useRef(undefined)
     const [searchForm] = Form.useForm()
@@ -280,28 +304,51 @@ export default function AccountManagement({apiBaseURL}) {
     ]
 
     const columns = [
-        {title: '账号', dataIndex: 'username', width: 120, fixed: 'left', search: false},
-        {title: '昵称', dataIndex: 'nickname', width: 120, search: false},
+        // 列宽按**内容实测长度**给（2026-11-11 CEO 走查：账号/时间太长换行、其余列空得
+        // 慌）：账号列拉平到能容下最长账号（tunnel-test-1788998650 ≈ 23 字符），
+        // 类型/状态/租户/时间按各自实际长度收窄；长文本一律单行省略，悬浮看全量。
         {
-            title: '类型', dataIndex: 'accountType', width: 110, search: false,
+            title: '账号', dataIndex: 'username', width: 200, fixed: 'left',
+            ellipsis: {showTitle: false}, search: false,
+            render: (_, r) => <EllipsisCell value={r.username}/>,
+        },
+        {
+            title: '昵称', dataIndex: 'nickname', width: 120,
+            ellipsis: {showTitle: false}, search: false,
+            render: (_, r) => <EllipsisCell value={r.nickname}/>,
+        },
+        {
+            title: '类型', dataIndex: 'accountType', width: 104, search: false,
             render: (_, r) => {
                 const t = TYPE_MAP[r.accountType ?? 3] || {text: String(r.accountType ?? '未知'), color: 'default'}
                 return <Tag color={t.color}>{t.text}</Tag>
             },
         },
-        {title: '邮箱', dataIndex: 'email', width: 160, ellipsis: true, search: false},
-        {title: '手机', dataIndex: 'phone', width: 120, search: false},
-        {title: '租户', dataIndex: 'tenantCode', width: 100, search: false},
         {
-            title: '状态', dataIndex: 'status', width: 80, search: false,
+            title: '邮箱', dataIndex: 'email', width: 150,
+            ellipsis: {showTitle: false}, search: false,
+            render: (_, r) => <EllipsisCell value={r.email}/>,
+        },
+        {
+            title: '手机', dataIndex: 'phone', width: 126,
+            ellipsis: {showTitle: false}, search: false,
+            render: (_, r) => <EllipsisCell value={r.phone}/>,
+        },
+        {
+            title: '租户', dataIndex: 'tenantCode', width: 92,
+            ellipsis: {showTitle: false}, search: false,
+            render: (_, r) => <EllipsisCell value={r.tenantCode}/>,
+        },
+        {
+            title: '状态', dataIndex: 'status', width: 84, search: false,
             render: (_, r) => {
                 const s = STATUS_MAP[r.status ?? 1] || {text: String(r.status ?? '未知'), color: 'default'}
                 return <Tag color={s.color}>{s.text}</Tag>
             },
         },
-        {title: '创建时间', dataIndex: 'createdAt', width: 170, valueType: 'dateTime', search: false},
+        {title: '创建时间', dataIndex: 'createdAt', width: 160, valueType: 'dateTime', search: false},
         {
-            title: '操作', valueType: 'option', width: 160, fixed: 'right', search: false,
+            title: '操作', valueType: 'option', width: 150, fixed: 'right', search: false,
             render: (_, record) => [
                 <Button key="status" type="link" size="small" danger={record.status === 1}
                         onClick={() => handleStatus(record.id, record.status ?? 1)}>
