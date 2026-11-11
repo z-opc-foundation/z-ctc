@@ -226,7 +226,6 @@ export default function PermissionManagement({apiBaseURL}) {
 
     // ── 表格列 ──
     const columns = [
-        {title: 'ID', dataIndex: 'id', width: 60, search: false},
         {
             title: '编码', dataIndex: 'resourceCode', width: 200, fixed: 'left', search: false,
             render: (_, r) => <Tooltip title={r.resourceCode}><span
@@ -485,7 +484,6 @@ export default function PermissionManagement({apiBaseURL}) {
                                     searchPlaceholder="按角色编码 / 角色名称过滤"
                                     emptyTitle="该权限点暂未被任何角色绑定"
                                     columns={[
-                                        {title: '角色ID', dataIndex: 'id', width: 80},
                                         {title: '角色编码', dataIndex: 'roleCode', width: 160},
                                         {title: '角色名称', dataIndex: 'roleName', width: 160},
                                         {

@@ -176,7 +176,6 @@ export default function DictPage() {
     }
 
     const itemColumns = [
-        {title: 'ID', dataIndex: 'id', width: 70},
         {
             title: '项编码',
             dataIndex: 'itemCode',

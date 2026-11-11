@@ -117,7 +117,6 @@ function LoginLogTab() {
     const recentFail = recent.filter(r => r.loginStatus !== 1).length
 
     const columns = [
-        {title: 'ID', dataIndex: 'id', width: 70},
         {title: '登录标识', dataIndex: 'identifier', width: 160},
         {
             title: '方式', dataIndex: 'identityType', width: 90,

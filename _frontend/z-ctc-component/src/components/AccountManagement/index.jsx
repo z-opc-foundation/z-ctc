@@ -280,7 +280,6 @@ export default function AccountManagement({apiBaseURL}) {
     ]
 
     const columns = [
-        {title: 'ID', dataIndex: 'id', width: 60, search: false},
         {title: '账号', dataIndex: 'username', width: 120, fixed: 'left', search: false},
         {title: '昵称', dataIndex: 'nickname', width: 120, search: false},
         {

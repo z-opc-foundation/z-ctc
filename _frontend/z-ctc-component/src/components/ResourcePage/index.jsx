@@ -78,7 +78,6 @@ export default function ResourcePage({apiBaseURL}) {
     }
 
     const columns = [
-        {title: 'ID', dataIndex: 'id', width: 70, search: false},
         {
             title: '资源编码', dataIndex: 'resourceCode', width: 220, fixed: 'left', search: false,
             render: (_, r) => <span style={{fontFamily: 'monospace'}}>{r.resourceCode}</span>,

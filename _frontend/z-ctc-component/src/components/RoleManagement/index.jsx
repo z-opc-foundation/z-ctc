@@ -280,7 +280,6 @@ export default function RoleManagement({apiBaseURL}) {
     }
 
     const columns = [
-        {title: 'ID', dataIndex: 'id', width: 60, search: false},
         {title: '角色编码', dataIndex: 'roleCode', width: 140, search: false},
         {title: '角色名称', dataIndex: 'roleName', width: 140, search: false},
         {title: '描述', dataIndex: 'description', width: 220, ellipsis: true, search: false},
