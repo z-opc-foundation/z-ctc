@@ -208,6 +208,8 @@ export default function PermissionManagement({apiBaseURL}) {
     const [grantedKeys, setGrantedKeys] = useState([])
     const [checkedKeys, setCheckedKeys] = useState([])
     const [treeSearch, setTreeSearch] = useState('')
+    // 权限树 tab：左树点条目 → 右侧详情（CEO 2026-11-12 定版）
+    const [treeDetailId, setTreeDetailId] = useState(null)
     const [granting, setGranting] = useState(false)
     const [treeLoading, setTreeLoading] = useState(false)
     const [treeExpandedKeys, setTreeExpandedKeys] = useState([])
@@ -748,35 +750,121 @@ export default function PermissionManagement({apiBaseURL}) {
         </div>
     )
 
+    const treeDetail = treeDetailId != null ? resources.find((r) => r.id === treeDetailId) : null
+
+    // 层级路径：沿 parentId 往上走到底（防环），用于详情页面包屑
+    const treeDetailPath = (() => {
+        if (!treeDetail) return []
+        const byId = new Map(resources.map((r) => [r.id, r]))
+        const path = [treeDetail]
+        const seen = new Set([treeDetail.id])
+        let cur = treeDetail
+        while (cur?.parentId && byId.has(cur.parentId) && !seen.has(cur.parentId)) {
+            cur = byId.get(cur.parentId)
+            seen.add(cur.id)
+            path.unshift(cur)
+        }
+        return path
+    })()
+
+    const treeDetailChildren = treeDetail ? resources.filter((r) => r.parentId === treeDetail.id) : []
+
     const renderTree = () => (
-        <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
-            <Card size="small" styles={{body: {padding: '12px 16px'}}}>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap'}}>
-                    <span style={{fontSize: 13, color: '#666'}}>
-                        权限模型全貌：按「应用 → 父子层级」组织的最细权限点，共 {resources.length} 个。
-                    </span>
-                    <Space>
+        <div style={{display: 'flex', gap: 16, alignItems: 'stretch', height: '100%', minHeight: 0}}>
+            {/* 左：权限树，拉到底部（CEO 2026-11-12 定版） */}
+            <div style={{width: 460, flexShrink: 0, display: 'flex'}}>
+                <Card size="small"
+                      style={{width: '100%', display: 'flex', flexDirection: 'column'}}
+                      styles={{body: {padding: 12, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden'}}}>
+                    <div style={{display: 'flex', gap: 8, alignItems: 'center'}}>
                         <Input.Search
                             allowClear
                             size="small"
-                            style={{width: 240}}
+                            style={{flex: 1}}
                             placeholder="按编码 / 名称过滤"
                             onSearch={setTreeSearch}
                             onChange={(e) => !e.target.value && setTreeSearch('')}
                         />
-                        <Button icon={<ReloadOutlined/>} onClick={loadResources}>刷新</Button>
-                    </Space>
-                </div>
-            </Card>
-            <Card size="small" styles={{body: {padding: '12px 16px'}}}>
-                <Tree
-                    blockNode
-                    height={560}
-                    treeData={permissionTree}
-                    loading={resourcesLoading}
-                    defaultExpandAll
-                />
-            </Card>
+                        <Button size="small" icon={<ReloadOutlined/>} onClick={loadResources}>刷新</Button>
+                    </div>
+                    <div style={{fontSize: 12, color: '#999'}}>
+                        权限模型全貌：按「应用 → 父子层级」组织，共 {resources.length} 个。点条目看详情。
+                    </div>
+                    <div style={{flex: 1, minHeight: 0, overflowY: 'auto'}}>
+                        <Tree
+                            blockNode
+                            treeData={permissionTree}
+                            loading={resourcesLoading}
+                            defaultExpandAll
+                            selectedKeys={treeDetailId != null ? [treeDetailId] : []}
+                            onSelect={(keys) => setTreeDetailId(keys.length ? keys[keys.length - 1] : null)}
+                        />
+                    </div>
+                </Card>
+            </div>
+
+            {/* 右：选中条目的详情与扩展字段 */}
+            <div style={{flex: 1, minWidth: 0, display: 'flex'}}>
+                <Card
+                    size="small"
+                    style={{width: '100%', display: 'flex', flexDirection: 'column'}}
+                    styles={{body: {padding: 16, flex: 1, minHeight: 0, overflowY: 'auto'}}}
+                    title={treeDetail ? `权限点详情 — ${treeDetail.resourceName || treeDetail.resourceCode}` : '权限点详情'}
+                >
+                    {!treeDetail ? (
+                        <Empty
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                            description="点左侧权限点，这里展示它的详情与扩展字段"
+                            style={{margin: '48px 0'}}
+                        />
+                    ) : (
+                        <div style={{display: 'flex', flexDirection: 'column', gap: 16}}>
+                            {/* 层级路径面包屑 */}
+                            <div style={{fontSize: 13, color: '#595959'}}>
+                                {treeDetailPath.map((p, i) => (
+                                    <span key={p.id}>
+                                        {i > 0 ? <span style={{color: '#bfbfbf', margin: '0 6px'}}>/</span> : null}
+                                        {p.resourceName || p.resourceCode}
+                                    </span>
+                                ))}
+                                <span style={{fontFamily: 'monospace', fontSize: 11, color: '#999', marginLeft: 10}}>
+                                    {treeDetail.resourceCode}
+                                </span>
+                            </div>
+                            <Descriptions bordered size="small" column={2}>
+                                <Descriptions.Item label="资源名称" span={2}>
+                                    <span style={{fontWeight: 600}}>{treeDetail.resourceName || '-'}</span>
+                                    <span style={{marginLeft: 8}}>{typeTag(treeDetail.resourceType)}</span>
+                                </Descriptions.Item>
+                                <Descriptions.Item label="编码" span={2}>
+                                    <span style={{fontFamily: 'monospace'}}>{treeDetail.resourceCode}</span>
+                                </Descriptions.Item>
+                                <Descriptions.Item label="应用">
+                                    {treeDetail.appCode
+                                        ? <Tag color="cyan" style={{margin: 0}}>{treeDetail.appCode}</Tag>
+                                        : <Tag color="default" style={{margin: 0}}>公共</Tag>}
+                                </Descriptions.Item>
+                                <Descriptions.Item label="状态">
+                                    <Tag color={treeDetail.status === 1 ? 'success' : 'default'} style={{margin: 0}}>
+                                        {treeDetail.status === 1 ? '启用' : '禁用'}
+                                    </Tag>
+                                </Descriptions.Item>
+                                <Descriptions.Item label="ID">{treeDetail.id}</Descriptions.Item>
+                                <Descriptions.Item label="排序">{treeDetail.sortOrder ?? 0}</Descriptions.Item>
+                                <Descriptions.Item label="父权限">
+                                    {treeDetail.parentId && resources.some((r) => r.id === treeDetail.parentId)
+                                        ? (resources.find((r) => r.id === treeDetail.parentId)?.resourceName || treeDetail.parentId)
+                                        : '顶层'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label="子权限点">{treeDetailChildren.length} 个</Descriptions.Item>
+                                <Descriptions.Item label="描述" span={2}>{treeDetail.description || '-'}</Descriptions.Item>
+                                <Descriptions.Item label="创建时间">{treeDetail.createdAt || '-'}</Descriptions.Item>
+                                <Descriptions.Item label="更新时间">{treeDetail.updatedAt || '-'}</Descriptions.Item>
+                            </Descriptions>
+                        </div>
+                    )}
+                </Card>
+            </div>
         </div>
     )
 
