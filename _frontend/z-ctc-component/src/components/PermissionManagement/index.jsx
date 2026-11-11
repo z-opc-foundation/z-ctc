@@ -16,6 +16,7 @@ import {
     Select,
     Space,
     Switch,
+    Tabs,
     Tag,
     Tooltip,
     Tree,
@@ -811,49 +812,23 @@ export default function PermissionManagement({apiBaseURL}) {
     )
 
     return (
-        <div style={{display: 'flex', gap: 16, alignItems: 'flex-start', minHeight: 0}}>
-            {/* 左侧页内菜单：角色 / 权限点 / 权限树 */}
-            <aside style={{width: 148, flexShrink: 0}}>
-                <div style={{
-                    background: '#f7f8fa',
-                    borderRadius: 8,
-                    padding: '6px 0',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                }}>
-                    {VIEW_MENU.map((m) => {
-                        const active = view === m.key
-                        return (
-                            <button
-                                key={m.key}
-                                type="button"
-                                onClick={() => setView(m.key)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                    padding: '8px 12px',
-                                    border: 'none',
-                                    background: active ? '#e6f4ff' : 'transparent',
-                                    color: active ? '#1677ff' : '#333',
-                                    fontSize: 13,
-                                    fontWeight: active ? 600 : 400,
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                }}
-                            >
-                                <span style={{display: 'inline-flex', width: 16, justifyContent: 'center'}}>{m.icon}</span>
-                                <span>{m.label}</span>
-                            </button>
-                        )
-                    })}
-                </div>
-            </aside>
-
-            <div style={{flex: 1, minWidth: 0}}>
-                {view === 'roles' ? renderRoles() : view === 'points' ? renderPoints() : renderTree()}
-            </div>
+        <div style={{display: 'flex', flexDirection: 'column', minHeight: 0}}>
+            {/* 顶部横排三个 tab：角色 / 权限点 / 权限树（CEO 2026-11-11 定版） */}
+            <Tabs
+                activeKey={view}
+                onChange={setView}
+                items={VIEW_MENU.map((m) => ({
+                    key: m.key,
+                    label: (
+                        <span style={{display: 'inline-flex', alignItems: 'center', gap: 6}}>
+                            {m.icon}
+                            {m.label}
+                        </span>
+                    ),
+                    children: m.key === 'roles' ? renderRoles() : m.key === 'points' ? renderPoints() : renderTree(),
+                }))}
+                destroyInactiveTabPane
+            />
 
             {/* 角色新增 / 编辑 */}
             <Modal
