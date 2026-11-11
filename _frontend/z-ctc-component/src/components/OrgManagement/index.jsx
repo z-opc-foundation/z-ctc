@@ -10,7 +10,6 @@ import {
     message,
     Modal,
     Popconfirm,
-    Select,
     Space,
     Table,
     Tag,
@@ -37,14 +36,13 @@ import {configureApiBaseURL, ctcAcDeptApi, ctcAcGroupApi, ctcAcOrgApi} from './a
  * └──────────────────────────────────────────────────────────────┘
  *
  * Props:
- *   - tenants: Array<{tenantCode, tenantName}>          租户列表 (必填)
- *   - domains: Array<{domainCode, domainName}>          当前租户的域列表 (必填)
- *   - selectedTenant: string                            当前选中租户 (必填)
- *   - selectedDomain: string                            当前选中域 (必填)
- *   - onTenantChange: (code) => void                    租户切换回调
- *   - onDomainChange: (code) => void                    域切换回调
+ *   - selectedTenant: string                            当前租户 (必填, 来自登录态)
+ *   - selectedDomain: string                            当前域 (必填, 来自登录态)
  *   - apiBaseURL: string                                后端 baseURL, 默认 '/api'
  *   - extConfigStorageKey: string                       K-V 扩展配置 localStorage key, 默认 'z_org_ext_config'
+ *
+ * 租户/域不设页内选择器：顶栏 TenantSwitcher 是唯一切换入口，
+ * 本面板只渲染登录租户/域下的组织树。
  *
  * 后端契约 (z-ctc/z-ctc-ac/OrgController @ /api/ctc/ac):
  *   - /orgs  POST / GET(list) / GET(code) / PUT(code) / DELETE(code)
@@ -103,12 +101,8 @@ function saveExtConfig(key, list, storageKey) {
 }
 
 export default function OrgManagement({
-                                          tenants = [],
-                                          domains = [],
                                           selectedTenant = null,
                                           selectedDomain = null,
-                                          onTenantChange,
-                                          onDomainChange,
                                           apiBaseURL,
                                           extConfigStorageKey = EXT_CONFIG_KEY_DEFAULT,
                                       }) {
@@ -499,40 +493,8 @@ export default function OrgManagement({
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 0, flex: 1, minHeight: 0}}>
-            {/* 顶部 — 租户/域**过滤器**（决定组织树取哪一片域的组织）；
-                组件使用者也可在外层提供，这里只是兜底渲染。 */}
-            <div style={{
-                display: 'flex',
-                justifyContent: 'flex-start',
-                alignItems: 'center',
-                marginBottom: 12,
-            }}>
-                <Space>
-                    <span style={{color: '#666'}}>租户</span>
-                    <Select
-                        style={{minWidth: 200}}
-                        placeholder="请选择租户"
-                        value={selectedTenant || undefined}
-                        onChange={v => onTenantChange && onTenantChange(v || null)}
-                        options={tenants.map(o => ({
-                            value: o.value || o.tenantCode,
-                            label: o.label || `${o.tenantName || o.tenantCode} (${o.tenantCode})`,
-                        }))}
-                    />
-                    <span style={{color: '#666'}}>域</span>
-                    <Select
-                        style={{minWidth: 200}}
-                        placeholder="请选择域"
-                        value={selectedDomain || undefined}
-                        disabled={!selectedTenant}
-                        onChange={v => onDomainChange && onDomainChange(v || null)}
-                        options={domains.map(o => ({
-                            value: o.value || o.domainCode,
-                            label: o.label || `${o.domainName || o.domainCode} (${o.domainCode})`,
-                        }))}
-                    />
-                </Space>
-            </div>
+            {/* 租户/域不再提供页内选择器：登录态已定租户/域（顶栏 TenantSwitcher 是唯一切换入口），
+                本面板就是当前租户/域下的组织树。归属上下文见 openEntityModal。 */}
 
             {/* 左树 + 右表 */}
             <div style={{display: 'flex', gap: 16, flex: 1, minHeight: 0}}>
@@ -576,7 +538,7 @@ export default function OrgManagement({
                             <Empty description="该域下暂无组织，请点击右上角新增"/>
                         )
                     ) : (
-                        <Empty description="请先选择租户和域"/>
+                        <Empty description="未获取到登录租户/域上下文"/>
                     )}
                 </Card>
 

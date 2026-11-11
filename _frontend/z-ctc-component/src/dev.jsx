@@ -39,7 +39,7 @@ const App = () => {
                 onDelete={(record) => console.log('delete', record)}
             />
 
-            <h2>OrgManagement 示例 (FEATURE016 — 业务组件, 需传 tenants/domains props)</h2>
+            <h2>OrgManagement 示例 (FEATURE016 — 业务组件, 租户/域取登录态)</h2>
             <div style={{height: 400, border: '1px solid #eee'}}>
                 <OrgManagement/>
             </div>

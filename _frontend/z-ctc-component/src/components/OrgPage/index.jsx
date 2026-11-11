@@ -1,11 +1,15 @@
 import {useEffect, useState} from 'react'
 import OrgManagement from '../OrgManagement'
-import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi} from '../TenantManagement/api'
+import {configureApiBaseURL} from '../TenantManagement/api'
 /**
  * 4A 中心 / 组织管理 (4a/org).
  *
  * FEATURE016: 页面逻辑抽取为可复用组件 @yuku123/z-ctc-frontend-component/OrgManagement
- * 本组件是 4A 中心 / 组织管理 的标准页面 — 自动拉取租户 / 域, 维护 selected 状态, 传给 OrgManagement.
+ * 本组件是 4A 中心 / 组织管理 的标准页面 — 租户/域**直接取登录态**，不再提供页内选择器：
+ *   - userInfo.tenantCode（登录写入）
+ *   - z_ctc_domain.domainCode（顶栏 TenantSwitcher 写入；tenantCode 与 userInfo 一致才采纳，
+ *     防跨组织串台——与 TenantSwitcher 同一套校验口径）
+ * 想看别的租户/域的组织 ⇒ 顶栏切域，本页随登录态走。
  *
  * 组件本身负责:
  *   - 组织/部门/组 三级树 CRUD (走 /api/ctc/ac/{orgs,depts,groups})
@@ -13,94 +17,43 @@ import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi} from '../TenantMana
  *
  * Props:
  *   - apiBaseURL?: string   后端 baseURL, 默认 '/api'
- *   - defaultTenant?: string 初始选中的租户 (默认从 localStorage z_tenant 读取)
- *   - defaultDomain?: string 初始选中的域 (默认从 localStorage z_domain 读取)
  *
  * 从 z-opc-main-starter-frontend/src/pages/ctc/4a/org/index.tsx 迁入.
  */
-export default function OrgPage({apiBaseURL, defaultTenant, defaultDomain}) {
+function readLoginTenantDomain() {
+    let tenantCode = ''
+    let domainCode = ''
+    try {
+        const info = JSON.parse(localStorage.getItem('userInfo') || '{}')
+        tenantCode = String(info?.tenantCode ?? '')
+        domainCode = String(info?.domainCode ?? '')
+    } catch { /* 登录态缺失按空处理 */ }
+    try {
+        const sel = JSON.parse(localStorage.getItem('z_ctc_domain') || 'null')
+        if (sel && sel.tenantCode && sel.tenantCode === tenantCode && sel.domainCode) {
+            domainCode = String(sel.domainCode)
+        }
+    } catch { /* 保持 userInfo 的域 */ }
+    return {
+        tenantCode: tenantCode || null,
+        domainCode: domainCode || null,
+    }
+}
+
+export default function OrgPage({apiBaseURL}) {
     // 配置 baseURL (组件 mount 时生效)
     useEffect(() => {
         if (apiBaseURL) configureApiBaseURL(apiBaseURL)
     }, [apiBaseURL])
 
-    const [tenants, setTenants] = useState([])
-    const [domains, setDomains] = useState([])
-    const [selectedTenant, setSelectedTenant] = useState(null)
-    const [selectedDomain, setSelectedDomain] = useState(null)
-
-    // 加载租户列表
-    useEffect(() => {
-        (async () => {
-            try {
-                const list = await ctcAcTenantApi.listAll()
-                const arr = Array.isArray(list) ? list : []
-                const opts = arr.map(t => ({
-                    value: t.tenantCode,
-                    label: `${t.tenantName || t.tenantCode} (${t.tenantCode})`,
-                }))
-                setTenants(opts)
-                const saved = defaultTenant || localStorage.getItem('z_tenant')
-                if (saved && arr.some(t => t.tenantCode === saved)) {
-                    setSelectedTenant(saved)
-                } else if (arr.length > 0) {
-                    setSelectedTenant(arr[0].tenantCode)
-                }
-            } catch (e) {
-                // 静默失败 — 业务侧可选用 prop 接管数据源
-                setTenants([])
-            }
-        })()
-    }, [defaultTenant])
-
-    // 选中租户变化 → 拉该租户下的域
-    useEffect(() => {
-        if (!selectedTenant) {
-            setDomains([])
-            setSelectedDomain(null)
-            return
-        }
-        (async () => {
-            try {
-                const list = await ctcAcDomainApi.listByTenant(selectedTenant)
-                const arr = Array.isArray(list) ? list : []
-                const opts = arr.map(d => ({
-                    value: d.domainCode,
-                    label: `${d.domainName || d.domainCode} (${d.domainCode})`,
-                }))
-                setDomains(opts)
-                const saved = defaultDomain || localStorage.getItem('z_domain')
-                if (saved && arr.some(d => d.domainCode === saved)) {
-                    setSelectedDomain(saved)
-                } else if (arr.length > 0) {
-                    setSelectedDomain(arr[0].domainCode)
-                }
-            } catch (e) {
-                setDomains([])
-            }
-        })()
-    }, [selectedTenant, defaultDomain])
-
-    const onTenantChange = (code) => {
-        setSelectedTenant(code)
-        localStorage.setItem('z_tenant', code || '')
-        localStorage.removeItem('z_domain')
-    }
-
-    const onDomainChange = (code) => {
-        setSelectedDomain(code)
-        localStorage.setItem('z_domain', code || '')
-    }
+    // 登录态在 mount 时读一次；切域走顶栏 TenantSwitcher（会整页刷新），无需监听 storage
+    const [{tenantCode, domainCode}, setCtx] = useState(readLoginTenantDomain)
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 12, height: '100%'}}>
             <OrgManagement
-                tenants={tenants}
-                domains={domains}
-                selectedTenant={selectedTenant}
-                selectedDomain={selectedDomain}
-                onTenantChange={onTenantChange}
-                onDomainChange={onDomainChange}
+                selectedTenant={tenantCode}
+                selectedDomain={domainCode}
                 apiBaseURL="/api"
             />
         </div>
