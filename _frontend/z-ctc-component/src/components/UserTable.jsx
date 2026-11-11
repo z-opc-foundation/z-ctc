@@ -2,7 +2,7 @@
  * 用户管理表格组件 - 可复用
  */
 import {Button, Space, Tag} from 'antd'
-import {DeleteOutlined, EditOutlined} from '@ant-design/icons'
+
 import {ListTable} from '@yuku123/z-frontend-common/ui'
 
 export default function UserTable({dataSource, loading, onEdit, onDelete, onRefresh}) {

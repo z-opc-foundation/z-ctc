@@ -15,7 +15,7 @@ import {
     Tag,
     Tooltip,
 } from 'antd'
-import {DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
+import {PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi, isDefaultDomain} from '../TenantManagement/api'
 
 /**

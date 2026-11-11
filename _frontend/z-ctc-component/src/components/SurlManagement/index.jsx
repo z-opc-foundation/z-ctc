@@ -1,7 +1,7 @@
 import {useMemo, useRef, useState} from 'react'
 import {ProForm, ProFormDigit, ProFormText, ProTable} from '@ant-design/pro-components'
 import {Button, Card, Form, Input, message, Popconfirm, Space, Tag, Tooltip} from 'antd'
-import {CopyOutlined, DeleteOutlined, LinkOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
+import {CopyOutlined, LinkOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import {configureApiBaseURL, ctcSurlApi} from './api'
 /**
  * 短链生成器 (4A SURL 域)

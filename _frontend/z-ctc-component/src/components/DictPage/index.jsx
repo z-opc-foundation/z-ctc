@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react'
 import {Button, Card, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Tag} from 'antd'
-import {DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
+import {PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import {dictApi} from '../_api/dict'
 import { ListTable } from '@yuku123/z-frontend-common/ui'
 /**

@@ -16,7 +16,7 @@ import {
     Tooltip,
     Tree,
 } from 'antd'
-import {DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
+import {DeleteOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import {configureApiBaseURL, ctcAcDeptApi, ctcAcGroupApi, ctcAcOrgApi} from './api'
 
 /**

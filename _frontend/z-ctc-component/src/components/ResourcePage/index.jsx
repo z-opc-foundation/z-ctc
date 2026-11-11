@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react'
 import {ProTable} from '@ant-design/pro-components'
 import {Button, Card, Form, Input, message, Popconfirm, Select, Space, Tag} from 'antd'
-import {DeleteOutlined, ReloadOutlined, SearchOutlined, UndoOutlined} from '@ant-design/icons'
+import {ReloadOutlined, SearchOutlined, UndoOutlined} from '@ant-design/icons'
 import {ctcAuthorizationApi} from '../_api/ctcAuthorization'
 import {metaAppApi} from '../_api/metaApp'
 /**
