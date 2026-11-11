@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useState} from 'react'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {
     Button,
     Card,
@@ -15,7 +15,7 @@ import {
     Tooltip,
     Tree,
 } from 'antd'
-import {DeleteOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined,} from '@ant-design/icons'
+import {DeleteOutlined, PlusOutlined, ReloadOutlined,} from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {configureApiBaseURL, ctcAcDomainApi, ctcAcTenantApi, isDefaultDomain} from './api'
 /**
@@ -91,6 +91,40 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
     const [editingKv, setEditingKv] = useState(null)
     const [kvForm] = Form.useForm()
 
+    // ── 左右分栏拖拽 ── 宽度落 localStorage, 下次进页保持
+    const [leftWidth, setLeftWidth] = useState(() => {
+        try {
+            const v = Number(localStorage.getItem('ctc_tenant_tree_width'))
+            return Number.isFinite(v) && v >= 220 && v <= 640 ? v : 320
+        } catch {
+            return 320
+        }
+    })
+    const leftWidthRef = useRef(leftWidth)
+    const handleSplitterMouseDown = (e) => {
+        e.preventDefault()
+        const startX = e.clientX
+        const startW = leftWidthRef.current
+        const onMove = (ev) => {
+            const w = Math.min(640, Math.max(220, startW + ev.clientX - startX))
+            leftWidthRef.current = w
+            setLeftWidth(w)
+        }
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('mouseup', onUp)
+            document.body.style.cursor = ''
+            document.body.style.userSelect = ''
+            try {
+                localStorage.setItem('ctc_tenant_tree_width', String(leftWidthRef.current))
+            } catch { /* ignore */ }
+        }
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
+        document.body.style.cursor = 'col-resize'
+        document.body.style.userSelect = 'none'
+    }
+
     // 拉取租户 — platformView 走全平台接口 (平台管理员专属), 否则走「我能看到的租户」
     const fetchTenants = useCallback(async () => {
         setLoadingTenants(true)
@@ -139,9 +173,11 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
         const tree = tenants.map(t => ({
             key: nodeKey('tenant', t.tenantCode),
             title: (
-                <span style={{display: 'inline-flex', alignItems: 'center', gap: 6}}>
-                    {t.tenantName || t.tenantCode}
-                    <Tag color={STATUS_MAP[t.status ?? 1]?.color} style={{margin: 0, fontSize: 10}}>
+                <span style={{display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0, maxWidth: '100%'}}>
+                    <span style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                        {t.tenantName || t.tenantCode}
+                    </span>
+                    <Tag color={STATUS_MAP[t.status ?? 1]?.color} style={{margin: 0, fontSize: 10, flexShrink: 0}}>
                         {STATUS_MAP[t.status ?? 1]?.text}
                     </Tag>
                 </span>
@@ -152,9 +188,11 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
             children: (Array.isArray(domainMap[t.tenantCode]) ? domainMap[t.tenantCode] : []).map(d => ({
                 key: nodeKey('domain', t.tenantCode, d.domainCode),
                 title: (
-                    <span style={{display: 'inline-flex', alignItems: 'center', gap: 6}}>
-                        {d.domainName}
-                        <Tag color={STATUS_MAP[d.status]?.color} style={{margin: 0, fontSize: 10}}>
+                    <span style={{display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0, maxWidth: '100%'}}>
+                        <span style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                            {d.domainName}
+                        </span>
+                        <Tag color={STATUS_MAP[d.status]?.color} style={{margin: 0, fontSize: 10, flexShrink: 0}}>
                             {STATUS_MAP[d.status]?.text}
                         </Tag>
                     </span>
@@ -417,12 +455,12 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
             {/* ── 左树 + 右表 ── */}
-            <div style={{display: 'flex', gap: 16, height: 'calc(100vh - 140px)'}}>
+            <div style={{display: 'flex', gap: 0, height: 'calc(100vh - 140px)'}}>
                 {/* 左：租户/域树 */}
                 <Card
                     title="租户 / 域"
                     size="small"
-                    style={{width: 300, flexShrink: 0}}
+                    style={{width: leftWidth, minWidth: leftWidth, flexShrink: 0}}
                     styles={{body: {padding: 8, overflow: 'auto', height: 'calc(100% - 40px)'}}}
                     extra={
                         <Space size={4}>
@@ -431,11 +469,6 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
                                     createForm.resetFields()
                                     setCreateOpen(true)
                                 }}/>
-                            </Tooltip>
-                            <Tooltip
-                                title="租户由 FEATURE049 多租户身份模型在用户加入/创建租户时自动建立, 此处仅维护已有租户 (不能新建)">
-                                <Button size="small" type="text"
-                                        icon={<InfoCircleOutlined style={{color: '#1890ff'}}/>}/>
                             </Tooltip>
                             <Tooltip title="刷新">
                                 <Button size="small" type="text" icon={<ReloadOutlined/>}
@@ -460,6 +493,19 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
                         <Empty description={loadingTenants ? '加载中...' : '暂无租户，点击右上"新增租户"图标创建'}/>
                     )}
                 </Card>
+
+                {/* 中缝拖拽条: 拖动调左树宽度 (220~640), 松手落 localStorage */}
+                <div
+                    onMouseDown={handleSplitterMouseDown}
+                    title="拖动调整宽度"
+                    style={{
+                        width: 5,
+                        flexShrink: 0,
+                        cursor: 'col-resize',
+                        borderRadius: 2,
+                        background: '#eef0f3',
+                    }}
+                />
 
                 {/* 右：详情 + K-V 配置 */}
                 <Card size="small" style={{flex: 1, overflow: 'auto'}} styles={{body: {padding: 16}}}>
