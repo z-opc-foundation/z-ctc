@@ -10,6 +10,7 @@ import {
     message,
     Modal,
     Popconfirm,
+    Select,
     Space,
     Table,
     Tag,
@@ -18,6 +19,7 @@ import {
 } from 'antd'
 import {DeleteOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import {configureApiBaseURL, ctcAcDeptApi, ctcAcGroupApi, ctcAcOrgApi} from './api'
+import {ctcAcAccountApi} from '../_api/ctcAcAccount'
 
 /**
  * 组织 / 部门 / 组 管理 (4A AC 域) — 左树右表布局。
@@ -128,15 +130,20 @@ export default function OrgManagement({
     const [nodeMembers, setNodeMembers] = useState([])
     const [nodeMembersLoading, setNodeMembersLoading] = useState(false)
 
-    // ── 节点成员 (membership 模型只有 dept 维度: dept 节点查本部门, org 节点查其下全部部门并集, group 无成员模型) ──
-    useEffect(() => {
-        if (!selectedNode || !selectedTenant || !selectedDomain || selectedNode.type === 'group') {
+    // ── 添加成员弹窗 (membership 模型只有 dept 维度, 只在部门节点提供) ──
+    const [addMemberOpen, setAddMemberOpen] = useState(false)
+    const [accountOptions, setAccountOptions] = useState([])
+    const [addMemberForm] = Form.useForm()
+
+    // 节点成员 (dept 节点查本部门, org 节点查其下全部部门并集, group 无成员模型)
+    const fetchNodeMembers = useCallback((node) => {
+        if (!node || !selectedTenant || !selectedDomain || node.type === 'group') {
             setNodeMembers([])
             return
         }
         let cancelled = false
         setNodeMembersLoading(true)
-        const {type, data} = selectedNode
+        const {type, data} = node
         ctcAcDeptApi.listMembers(selectedTenant, selectedDomain, {
             deptCode: type === 'dept' ? data.deptCode : undefined,
             orgCode: type === 'org' ? data.orgCode : undefined,
@@ -150,7 +157,56 @@ export default function OrgManagement({
         return () => {
             cancelled = true
         }
-    }, [selectedNode, selectedTenant, selectedDomain])
+    }, [selectedTenant, selectedDomain])
+
+    useEffect(() => {
+        fetchNodeMembers(selectedNode)
+    }, [selectedNode, fetchNodeMembers])
+
+    // ── 添加成员：账号候选来自账号管理列表（分页接口一次拉大页足够展示） ──
+    const openAddMember = async () => {
+        setAddMemberOpen(true)
+        try {
+            const page = await ctcAcAccountApi.listByTenant({pageNum: 1, pageSize: 200})
+            const records = Array.isArray(page) ? page : (page?.records || page?.data?.records || [])
+            setAccountOptions(records.map(u => ({
+                value: u.userId ?? u.id,
+                label: u.nickname ? `${u.username || `#${u.userId}`}（${u.nickname}）` : (u.username || `#${u.userId}`),
+            })))
+        } catch {
+            setAccountOptions([])
+            message.error('账号列表加载失败')
+        }
+    }
+
+    const handleAttachMember = async () => {
+        try {
+            const values = await addMemberForm.validateFields()
+            await ctcAcDeptApi.attachMember(
+                selectedTenant, selectedDomain, selectedNode.data.deptCode,
+                values.userId, values.roleCode || undefined,
+            )
+            message.success('成员已挂载到部门')
+            setAddMemberOpen(false)
+            addMemberForm.resetFields()
+            fetchNodeMembers(selectedNode)
+        } catch (e) {
+            if (e?.errorFields) return
+            message.error('挂载失败：' + (e?.message || '未知错误'))
+        }
+    }
+
+    const handleDetachMember = async (record) => {
+        try {
+            await ctcAcDeptApi.detachMember(
+                selectedTenant, selectedDomain, selectedNode.data.deptCode, record.userId,
+            )
+            message.success('已移出部门')
+            fetchNodeMembers(selectedNode)
+        } catch (e) {
+            message.error('移出失败：' + (e?.message || '未知错误'))
+        }
+    }
 
     // ── 弹窗：K-V ──
     const [kvModalOpen, setKvModalOpen] = useState(false)
@@ -559,6 +615,18 @@ export default function OrgManagement({
                               style={{margin: 0}}>{MEMBER_STATUS_MAP[v]?.text || v}</Tag>},
         {title: '加入时间', dataIndex: 'joinedAt', width: 160,
             render: v => v ? String(v).replace('T', ' ').slice(0, 19) : '-'},
+        // 移出只对部门节点开放：membership 的 dept_code 只能被置空，
+        // org 视图是全部门并集，无从知道该移回哪个「无部门」状态之外的目标。
+        ...(selectedNode?.type === 'dept' ? [{
+            title: '操作', width: 90,
+            render: (_, r) => (
+                <Popconfirm title={`将 ${r.nickname || r.username || `#${r.userId}`} 移出本部门？`}
+                            onConfirm={() => handleDetachMember(r)}
+                            okText="移出" cancelText="取消">
+                    <Button type="link" size="small" danger>移出部门</Button>
+                </Popconfirm>
+            ),
+        }] : []),
     ]
 
     return (
@@ -669,9 +737,17 @@ export default function OrgManagement({
 
                             {selectedNode.type !== 'group' && (
                                 <Card type="inner" title="节点成员" size="small" style={{marginBottom: 16}}
-                                      extra={<span style={{fontSize: 12, color: '#999'}}>
-                                          {selectedNode.type === 'org' ? '本组织全部部门成员' : '本部门成员'}
-                                      </span>}>
+                                      extra={
+                                          <Space size={8}>
+                                              <span style={{fontSize: 12, color: '#999'}}>
+                                                  {selectedNode.type === 'org' ? '本组织全部部门成员' : '本部门成员'}
+                                              </span>
+                                              {selectedNode.type === 'dept' && (
+                                                  <Button size="small" type="primary" icon={<PlusOutlined/>}
+                                                          onClick={openAddMember}>添加成员</Button>
+                                              )}
+                                          </Space>
+                                      }>
                                     <Table
                                         columns={memberColumns}
                                         dataSource={nodeMembers.map((r, i) => ({...r, key: `${r.userId}-${i}`}))}
@@ -778,6 +854,39 @@ export default function OrgManagement({
                     </Form.Item>
                     <Form.Item name="description" label="描述">
                         <Input.TextArea rows={2}/>
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            <Modal
+                title={`添加成员到「${selectedNode ? nameOf(selectedNode.data) : ''}」`}
+                open={addMemberOpen}
+                onCancel={() => {
+                    setAddMemberOpen(false)
+                    addMemberForm.resetFields()
+                }}
+                onOk={handleAttachMember}
+                okText="挂载" destroyOnHidden
+            >
+                <Form form={addMemberForm} layout="vertical" style={{marginTop: 16}}>
+                    <Form.Item name="userId" label="账号" rules={[{required: true, message: '请选择账号'}]}>
+                        <Select
+                            showSearch
+                            optionFilterProp="label"
+                            placeholder="搜索 / 选择账号"
+                            options={accountOptions}
+                            notFoundContent={accountOptions.length === 0 ? '账号列表为空' : undefined}
+                        />
+                    </Form.Item>
+                    <Form.Item name="roleCode" label="角色" initialValue="member">
+                        <Select
+                            allowClear
+                            placeholder="默认 member"
+                            options={[
+                                {value: 'member', label: 'member（成员）'},
+                                {value: 'admin', label: 'admin（管理员）'},
+                            ]}
+                        />
                     </Form.Item>
                 </Form>
             </Modal>

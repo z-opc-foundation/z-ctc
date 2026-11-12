@@ -75,4 +75,17 @@ public interface MembershipService {
      * owner 不能退出, 应在调用方校验.
      */
     boolean leave(Long id);
+
+    /**
+     * 把用户挂到部门 (组织树「添加成员」的正向操作).
+     * <p>
+     * uk_user_tenant 约束下一人一租户只有一条成员关系:
+     * 已有关系则改挂部门/角色并回正状态, 否则新建.
+     */
+    MembershipDO attachToDept(Long userId, String tenantCode, String deptCode, String roleCode);
+
+    /**
+     * 把用户从部门摘下 — membership 保留, 仅清空 dept_code.
+     */
+    boolean detachFromDept(Long userId, String tenantCode);
 }

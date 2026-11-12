@@ -44,6 +44,7 @@ import java.util.stream.Collectors;
  *   <li>POST/GET/PUT/DELETE /api/ctc/ac/depts[?deptCode=&tenantCode=&domainCode=&orgCode=] — 部门 CRUD (请求参数)</li>
  *   <li>POST/GET/PUT/DELETE /api/ctc/ac/groups[?groupCode=&tenantCode=&domainCode=&deptCode=] — 小组 CRUD (请求参数)</li>
  *   <li>GET /api/ctc/ac/depts/members[?tenantCode=&domainCode=&orgCode=|deptCode=] — 节点成员列表 (deptCode 优先, orgCode 展开为部门集合)</li>
+ *   <li>POST/DELETE /api/ctc/ac/depts/members?tenantCode=&domainCode=&deptCode=&userId=[&roleCode=] — 挂载/摘除部门成员</li>
  *   <li>GET /api/ctc/ac/orgs/health — 模块健康检查</li>
  * </ul>
  *
@@ -309,6 +310,53 @@ public class OrgController {
         return Result.success(memberships.stream()
                 .map(m -> MemberVO.from(m, m.getUserId() != null ? userMap.get(m.getUserId()) : null))
                 .collect(Collectors.toList()));
+    }
+
+    /**
+     * 把账户挂到部门 (组织树成员卡片的「添加成员」).
+     * uk_user_tenant 约束下一人一租户只有一条成员关系: 已有关系则改挂部门并回正状态.
+     *
+     * @param tenantCode 租户编码, 必填
+     * @param domainCode 域编码, 必填
+     * @param deptCode   部门编码, 必填
+     * @param userId     账号主键 id, 必填
+     * @param roleCode   角色编码, 可选 (默认 member)
+     * @return 挂载后的成员 VO
+     */
+    @PostMapping("/depts/members")
+    public Result<MemberVO> attachDeptMember(@RequestParam("tenantCode") String tenantCode,
+                                             @RequestParam("domainCode") String domainCode,
+                                             @RequestParam("deptCode") String deptCode,
+                                             @RequestParam("userId") Long userId,
+                                             @RequestParam(value = "roleCode", required = false) String roleCode) {
+        try {
+            com.zifang.ctc.core.domain.entity.MembershipDO ms =
+                    membershipService.attachToDept(userId, tenantCode, deptCode, roleCode);
+            com.zifang.ctc.core.domain.entity.UserDO u =
+                    userService.findById(userId).orElse(null);
+            return Result.success(MemberVO.from(ms, u));
+        } catch (IllegalArgumentException e) {
+            return Result.<MemberVO>fail(e.getMessage()).code(400);
+        }
+    }
+
+    /**
+     * 把账户从部门摘下 — membership 保留, 仅清空 dept_code.
+     *
+     * @param tenantCode 租户编码, 必填
+     * @param domainCode 域编码, 必填
+     * @param deptCode   部门编码, 必填 (当前展示用的节点, 服务端按 user+tenant 定位)
+     * @param userId     账号主键 id, 必填
+     * @return 成功返回空体, 成员关系不存在返回 404
+     */
+    @DeleteMapping("/depts/members")
+    public Result<Void> detachDeptMember(@RequestParam("tenantCode") String tenantCode,
+                                         @RequestParam("domainCode") String domainCode,
+                                         @RequestParam("deptCode") String deptCode,
+                                         @RequestParam("userId") Long userId) {
+        boolean ok = membershipService.detachFromDept(userId, tenantCode);
+        return ok ? Result.<Void>success()
+                : Result.<Void>fail("成员关系不存在").code(ResultCode.NOT_FOUND.getCode());
     }
 
     // ===== Group =====

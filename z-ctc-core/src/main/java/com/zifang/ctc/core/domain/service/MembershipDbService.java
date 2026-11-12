@@ -51,6 +51,11 @@ public interface MembershipDbService {
     List<MembershipDO> selectActiveByDeptCodes(String tenantCode, java.util.Collection<String> deptCodes);
 
     /**
+     * 清空用户在某租户的 dept_code (updateById 忽略 null 字段, 须走 UpdateWrapper)
+     */
+    int clearDeptCode(Long userId, String tenantCode);
+
+    /**
      * 查 user 的 active 租户数量
      */
     long countActiveByUserId(Long userId);

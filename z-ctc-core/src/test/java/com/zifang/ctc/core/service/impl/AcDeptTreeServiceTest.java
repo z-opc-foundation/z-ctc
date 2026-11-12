@@ -184,6 +184,10 @@ public class AcDeptTreeServiceTest {
                                 && m.getMemberStatus() != null && m.getMemberStatus() == 1).collect(Collectors.toList());
                     }
                     @Override public long countActiveByUserId(Long u) { return 0; }
+                    @Override public int clearDeptCode(Long u, String t) {
+                        boolean found = mms.stream().anyMatch(m -> u.equals(m.getUserId()) && t.equals(m.getTenantCode()));
+                        return found ? 1 : 0;
+                    }
                     @Override public List<MembershipDO> selectByQuery(QueryWrapper<MembershipDO> w) { return mms; }
                 },
                 new UserDbService() {

@@ -267,4 +267,38 @@ public class MembershipServiceImpl implements MembershipService {
         }
         return disable(id, 3);
     }
+
+    @Override
+    @Transactional
+    public MembershipDO attachToDept(Long userId, String tenantCode, String deptCode, String roleCode) {
+        if (userId == null || tenantCode == null || tenantCode.isEmpty()
+                || deptCode == null || deptCode.isEmpty()) {
+            throw new IllegalArgumentException("userId / tenantCode / deptCode 必填");
+        }
+        MembershipDO exist = membershipDbService.selectByUserAndTenant(userId, tenantCode);
+        if (exist != null) {
+            exist.setDeptCode(deptCode);
+            if (roleCode != null && !roleCode.isEmpty()) { exist.setRoleCode(roleCode); }
+            if (exist.getMemberStatus() == null || exist.getMemberStatus() != MEMBER_ACTIVE) {
+                exist.setMemberStatus(MEMBER_ACTIVE);
+                exist.setJoinedAt(LocalDateTime.now());
+            }
+            exist.setUpdatedAt(LocalDateTime.now());
+            membershipDbService.updateById(exist);
+            log.info("MembershipServiceImpl.attachToDept 改挂: userId={}, tenant={}, dept={}",
+                    userId, tenantCode, deptCode);
+            return exist;
+        }
+        return create(userId, tenantCode, roleCode, deptCode);
+    }
+
+    @Override
+    @Transactional
+    public boolean detachFromDept(Long userId, String tenantCode) {
+        if (userId == null || tenantCode == null || tenantCode.isEmpty()) {
+            throw new IllegalArgumentException("userId / tenantCode 必填");
+        }
+        // MyBatis-Plus updateById 默认忽略 null 字段, 清空 dept_code 必须走 UpdateWrapper set
+        return membershipDbService.clearDeptCode(userId, tenantCode) > 0;
+    }
 }

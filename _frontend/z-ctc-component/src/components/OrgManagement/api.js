@@ -85,6 +85,18 @@ export const ctcAcDeptApi = {
         makeRequest().get('/ctc/ac/depts/members', {
             params: {tenantCode, domainCode, orgCode, deptCode},
         }),
+
+    /** POST /api/ctc/ac/depts/members?tenantCode=&domainCode=&deptCode=&userId=&roleCode= — 挂载成员 (已有租户关系则改挂) */
+    attachMember: (tenantCode, domainCode, deptCode, userId, roleCode) =>
+        makeRequest().post('/ctc/ac/depts/members', null, {
+            params: {tenantCode, domainCode, deptCode, userId, roleCode},
+        }),
+
+    /** DELETE /api/ctc/ac/depts/members?tenantCode=&domainCode=&deptCode=&userId= — 摘除成员 (清 dept_code, 保留租户关系) */
+    detachMember: (tenantCode, domainCode, deptCode, userId) =>
+        makeRequest().delete('/ctc/ac/depts/members', {
+            params: {tenantCode, domainCode, deptCode, userId},
+        }),
 }
 
 // ========== Group (组别) ==========

@@ -75,6 +75,19 @@ public interface MembershipMapper extends BaseMapper<MembershipDO> {
     }
 
     /**
+     * 清空用户在某租户的 dept_code (MyBatis-Plus updateById 忽略 null 字段, 必须走 set)
+     */
+    default int clearDeptCode(Long userId, String tenantCode) {
+        com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<MembershipDO> uw =
+                new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<>();
+        uw.eq("user_id", userId)
+                .eq("tenant_code", tenantCode)
+                .set("dept_code", null)
+                .set("updated_at", java.time.LocalDateTime.now());
+        return update(null, uw);
+    }
+
+    /**
      * 查 user 的 active 租户数量
      */
     default Long countActiveByUserId(Long userId) {

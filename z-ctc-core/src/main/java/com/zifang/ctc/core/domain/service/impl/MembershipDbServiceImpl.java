@@ -143,6 +143,18 @@ public class MembershipDbServiceImpl implements MembershipDbService {
     }
 
     /**
+     * 清空用户在某租户的 dept_code。
+     *
+     * @param userId     用户主键
+     * @param tenantCode 租户编码
+     * @return 更新成功的记录数
+     */
+    @Override
+    public int clearDeptCode(Long userId, String tenantCode) {
+        return membershipMapper.clearDeptCode(userId, tenantCode);
+    }
+
+    /**
      * 查询用户活跃会员关系数量。
      *
      * @param userId 用户主键
