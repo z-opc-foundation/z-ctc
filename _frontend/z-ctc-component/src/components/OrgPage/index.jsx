@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react'
 import OrgManagement from '../OrgManagement'
-import {configureApiBaseURL} from '../TenantManagement/api'
+import {configureApiBaseURL, ctcAcDomainApi} from '../TenantManagement/api'
 /**
  * 4A 中心 / 组织管理 (4a/org).
  *
@@ -48,6 +48,28 @@ export default function OrgPage({apiBaseURL}) {
 
     // 登录态在 mount 时读一次；切域走顶栏 TenantSwitcher（会整页刷新），无需监听 storage
     const [{tenantCode, domainCode}, setCtx] = useState(readLoginTenantDomain)
+
+    // 兜底：登录 / select-tenant 的返回体不带 domainCode（account 表不存），z_ctc_domain
+    // 只有显式点过顶栏「切换」才写入 —— 从未显式选过域（新浏览器 / 清过 localStorage）时
+    // 本页会永远卡在「未获取到登录租户/域上下文」。与 TenantSwitcher chip 的 implied 口径
+    // 一致：租户下**恰好一个**域才借它（多个域仍要求显式选，防跨组织串台），借到后落盘
+    // z_ctc_domain，与显式选择同一数据形状。
+    useEffect(() => {
+        if (!tenantCode || domainCode) return
+        let cancelled = false
+        ctcAcDomainApi.listByTenant(tenantCode).then((list) => {
+            if (cancelled || !Array.isArray(list) || list.length !== 1) return
+            const d = list[0]
+            const code = String(d?.domainCode ?? '')
+            if (!code) return
+            const sel = {tenantCode, domainCode: code, domainName: String(d?.domainName ?? code)}
+            try {
+                localStorage.setItem('z_ctc_domain', JSON.stringify(sel))
+            } catch { /* 落盘失败只影响下次进入, 本次 state 已兜住 */ }
+            setCtx((prev) => (prev.domainCode ? prev : {...prev, domainCode: code}))
+        }).catch(() => { /* 拉不到域保持空态提示, 不打断页面 */ })
+        return () => { cancelled = true }
+    }, [tenantCode, domainCode])
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 12, height: '100%'}}>
