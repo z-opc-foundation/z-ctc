@@ -24,7 +24,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "vite": "^6.2.0"
+    "vite": "^6.4.5"
   },
   "keywords": [
     "z-ctc",
@@ -32,5 +32,8 @@
     "spa",
     "yuku123"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "overrides": {
+    "follow-redirects": "^1.16.2"
+  }
 }
