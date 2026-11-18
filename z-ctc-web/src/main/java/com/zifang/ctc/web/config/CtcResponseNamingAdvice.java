@@ -1,7 +1,7 @@
 package com.zifang.ctc.web.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -30,7 +30,7 @@ public class CtcResponseNamingAdvice implements ResponseBodyAdvice<Object> {
 
     public CtcResponseNamingAdvice(ObjectMapper objectMapper) {
         this.camelCaseMapper = objectMapper.copy()
-                .setPropertyNamingStrategy(PropertyNamingStrategy.LOWER_CAMEL_CASE);
+                .setPropertyNamingStrategy(PropertyNamingStrategies.LOWER_CAMEL_CASE);
     }
 
     @Override
