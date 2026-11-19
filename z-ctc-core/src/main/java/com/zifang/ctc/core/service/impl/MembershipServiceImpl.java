@@ -3,6 +3,7 @@ package com.zifang.ctc.core.service.impl;
 import com.zifang.ctc.core.domain.entity.MembershipDO;
 import com.zifang.ctc.core.domain.service.MembershipDbService;
 import com.zifang.ctc.core.service.MembershipService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,7 @@ public class MembershipServiceImpl implements MembershipService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建用户租户关系（幂等）", module = "z-ctc", description = "创建用户租户关系（幂等）.", operation = BizMethod.Operation.CREATE)
     public MembershipDO create(Long userId, String tenantCode, String roleCode, String deptCode) {
         if (userId == null || tenantCode == null) {
             throw new IllegalArgumentException("userId / tenantCode 必填");
@@ -87,6 +89,7 @@ public class MembershipServiceImpl implements MembershipService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建租户 owner（特权方法，直接调用 create）", module = "z-ctc", description = "创建租户 owner（特权方法，直接调用 create）.", operation = BizMethod.Operation.CREATE)
     public MembershipDO createOwner(Long userId, String tenantCode) {
         return create(userId, tenantCode, "owner", null);
     }
@@ -99,6 +102,7 @@ public class MembershipServiceImpl implements MembershipService {
      * @return MembershipDO，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据用户ID和租户编码查询租户关系", module = "z-ctc", description = "根据用户ID和租户编码查询租户关系.", operation = BizMethod.Operation.QUERY)
     public Optional<MembershipDO> findByUserAndTenant(Long userId, String tenantCode) {
         if (userId == null || tenantCode == null) { return Optional.empty(); }
 
@@ -113,6 +117,7 @@ public class MembershipServiceImpl implements MembershipService {
      * @return true = 活跃成员
      */
     @Override
+    @BizMethod(name = "用户是否为该租户的活跃成员 (member_status = 1)", module = "z-ctc", description = "用户是否为该租户的活跃成员 (member_status = 1).", operation = BizMethod.Operation.ACTION)
     public boolean isMember(Long userId, String tenantCode) {
         if (userId == null || tenantCode == null || tenantCode.isEmpty()) { return false; }
         return findByUserAndTenant(userId, tenantCode)
@@ -128,6 +133,7 @@ public class MembershipServiceImpl implements MembershipService {
      * @return true = 该租户的 owner/admin
      */
     @Override
+    @BizMethod(name = "用户是否能在该租户下做管理操作 (活跃成员 且 role_code ∈ {owner, admin})", module = "z-ctc", description = "用户是否能在该租户下做管理操作 (活跃成员 且 role_code ∈ {owner, admin}).", operation = BizMethod.Operation.ACTION)
     public boolean isTenantAdmin(Long userId, String tenantCode) {
         if (userId == null || tenantCode == null || tenantCode.isEmpty()) { return false; }
         return findByUserAndTenant(userId, tenantCode)
@@ -144,6 +150,7 @@ public class MembershipServiceImpl implements MembershipService {
      * @return MembershipDO，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据ID查询租户关系", module = "z-ctc", description = "根据ID查询租户关系.", operation = BizMethod.Operation.QUERY)
     public Optional<MembershipDO> findById(Long id) {
         if (id == null) { return Optional.empty(); }
 
@@ -157,6 +164,7 @@ public class MembershipServiceImpl implements MembershipService {
      * @return MembershipDO 列表
      */
     @Override
+    @BizMethod(name = "查询用户所有活跃的租户关系", module = "z-ctc", description = "查询用户所有活跃的租户关系.", operation = BizMethod.Operation.QUERY)
     public List<MembershipDO> listActiveByUserId(Long userId) {
         return membershipDbService.selectActiveByUserId(userId);
     }
@@ -168,6 +176,7 @@ public class MembershipServiceImpl implements MembershipService {
      * @return MembershipDO 列表
      */
     @Override
+    @BizMethod(name = "查询用户所有租户关系（包含非活跃）", module = "z-ctc", description = "查询用户所有租户关系（包含非活跃）.", operation = BizMethod.Operation.QUERY)
     public List<MembershipDO> listAllByUserId(Long userId) {
         return membershipDbService.selectAllByUserId(userId);
     }
@@ -179,6 +188,7 @@ public class MembershipServiceImpl implements MembershipService {
      * @return MembershipDO 列表
      */
     @Override
+    @BizMethod(name = "查询租户所有活跃的租户关系", module = "z-ctc", description = "查询租户所有活跃的租户关系.", operation = BizMethod.Operation.QUERY)
     public List<MembershipDO> listActiveByTenant(String tenantCode) {
         if (tenantCode == null) { return java.util.Collections.emptyList(); }
 
@@ -186,6 +196,7 @@ public class MembershipServiceImpl implements MembershipService {
     }
 
     @Override
+    @BizMethod(name = "listActiveByDept", module = "z-ctc", description = "", operation = BizMethod.Operation.QUERY)
     public List<MembershipDO> listActiveByDept(String tenantCode, String deptCode) {
         if (tenantCode == null || deptCode == null || deptCode.isEmpty()) {
             return java.util.Collections.emptyList();
@@ -194,6 +205,7 @@ public class MembershipServiceImpl implements MembershipService {
     }
 
     @Override
+    @BizMethod(name = "listActiveByDeptCodes", module = "z-ctc", description = "", operation = BizMethod.Operation.QUERY)
     public List<MembershipDO> listActiveByDeptCodes(String tenantCode, java.util.Collection<String> deptCodes) {
         if (tenantCode == null || deptCodes == null || deptCodes.isEmpty()) {
             return java.util.Collections.emptyList();
@@ -208,6 +220,7 @@ public class MembershipServiceImpl implements MembershipService {
      * @return 活跃租户数量
      */
     @Override
+    @BizMethod(name = "统计用户活跃的租户数量", module = "z-ctc", description = "统计用户活跃的租户数量.", operation = BizMethod.Operation.QUERY)
     public long countActiveByUserId(Long userId) {
         return membershipDbService.countActiveByUserId(userId);
     }
@@ -221,6 +234,7 @@ public class MembershipServiceImpl implements MembershipService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "禁用租户关系（逻辑删除）", module = "z-ctc", description = "禁用租户关系（逻辑删除）.", operation = BizMethod.Operation.DELETE)
     public boolean disable(Long id, int newStatus) {
         MembershipDO ms = membershipDbService.selectById(id);
         if (ms == null) { return false; }
@@ -245,6 +259,7 @@ public class MembershipServiceImpl implements MembershipService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "禁用租户关系（等价于 disable(id, 2)）", module = "z-ctc", description = "禁用租户关系（等价于 disable(id, 2)）.", operation = BizMethod.Operation.DELETE)
     public boolean remove(Long id) {
         return disable(id, 2);
     }
@@ -258,6 +273,7 @@ public class MembershipServiceImpl implements MembershipService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "用户主动退出租户（owner 不允许退出）", module = "z-ctc", description = "用户主动退出租户（owner 不允许退出）.", operation = BizMethod.Operation.ACTION)
     public boolean leave(Long id) {
         MembershipDO ms = membershipDbService.selectById(id);
         if (ms == null) { return false; }
@@ -270,6 +286,7 @@ public class MembershipServiceImpl implements MembershipService {
 
     @Override
     @Transactional
+    @BizMethod(name = "attachToDept", module = "z-ctc", description = "", operation = BizMethod.Operation.ACTION)
     public MembershipDO attachToDept(Long userId, String tenantCode, String deptCode, String roleCode) {
         if (userId == null || tenantCode == null || tenantCode.isEmpty()
                 || deptCode == null || deptCode.isEmpty()) {
@@ -294,6 +311,7 @@ public class MembershipServiceImpl implements MembershipService {
 
     @Override
     @Transactional
+    @BizMethod(name = "detachFromDept", module = "z-ctc", description = "", operation = BizMethod.Operation.ACTION)
     public boolean detachFromDept(Long userId, String tenantCode) {
         if (userId == null || tenantCode == null || tenantCode.isEmpty()) {
             throw new IllegalArgumentException("userId / tenantCode 必填");
@@ -302,3 +320,6 @@ public class MembershipServiceImpl implements MembershipService {
         return membershipDbService.clearDeptCode(userId, tenantCode) > 0;
     }
 }
+
+
+

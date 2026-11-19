@@ -5,6 +5,7 @@ import com.zifang.ctc.core.domain.entity.AuthDO;
 import com.zifang.ctc.core.domain.service.AuthDbService;
 import com.zifang.ctc.core.service.AccountWithAuth;
 import com.zifang.ctc.core.service.AuthService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.security.crypto.bcrypt.BCrypt;
@@ -45,6 +46,7 @@ public class AcAuthServiceImpl implements AuthService {
      * @return 账号信息（含凭证），不存在或状态异常返回空
      */
     @Override
+    @BizMethod(name = "根据身份类型和标识符查找账号（含凭证信息）", module = "z-ctc", description = "根据身份类型和标识符查找账号（含凭证信息）.", operation = BizMethod.Operation.QUERY)
     public Optional<AccountWithAuth> findAccountByCredential(int identityType, String identifier, String tenantCode) {
         if (identifier == null) { return Optional.empty(); }
 
@@ -78,6 +80,7 @@ public class AcAuthServiceImpl implements AuthService {
      * @return true 密码匹配，false 不匹配或异常
      */
     @Override
+    @BizMethod(name = "验证密码是否匹配", module = "z-ctc", description = "验证密码是否匹配.", operation = BizMethod.Operation.ACTION)
     public boolean verifyPassword(String rawPassword, String storedHash) {
         if (rawPassword == null || storedHash == null) { return false; }
 
@@ -102,6 +105,7 @@ public class AcAuthServiceImpl implements AuthService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "添加账号凭证", module = "z-ctc", description = "添加账号凭证.", operation = BizMethod.Operation.CREATE)
     public Long addCredential(Long accountId, int identityType, String identifier, String credential, Integer strength) {
         if (accountId == null || identifier == null) {
             throw new IllegalArgumentException("accountId / identifier must not be null");
@@ -133,7 +137,11 @@ public class AcAuthServiceImpl implements AuthService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "移除账号凭证", module = "z-ctc", description = "移除账号凭证.", operation = BizMethod.Operation.DELETE)
     public boolean removeCredential(Long accountId, int identityType, String identifier) {
         return authDbService.deleteByAccountAndIdentity(accountId, identityType, identifier) > 0;
     }
 }
+
+
+

@@ -3,6 +3,7 @@ package com.zifang.ctc.core.service.impl;
 import com.zifang.ctc.core.domain.entity.MenuDO;
 import com.zifang.ctc.core.domain.service.MenuDbService;
 import com.zifang.ctc.core.service.MenuService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -92,6 +93,7 @@ public class CtcMenuServiceImpl implements MenuService {
      * @return 菜单树根节点列表
      */
     @Override
+    @BizMethod(name = "查询应用菜单树（按层级结构返回）", module = "z-ctc", description = "查询应用菜单树（按层级结构返回）.", operation = BizMethod.Operation.QUERY)
     public List<MenuDO> listAsTree(String appCode) {
         if (appCode == null || appCode.isEmpty()) {
             return Collections.emptyList();
@@ -110,6 +112,7 @@ public class CtcMenuServiceImpl implements MenuService {
      * @return 菜单列表
      */
     @Override
+    @BizMethod(name = "查询应用菜单列表（扁平结构）", module = "z-ctc", description = "查询应用菜单列表（扁平结构）.", operation = BizMethod.Operation.QUERY)
     public List<MenuDO> listFlat(String appCode) {
         if (appCode == null || appCode.isEmpty()) {
             return Collections.emptyList();
@@ -129,6 +132,7 @@ public class CtcMenuServiceImpl implements MenuService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建菜单", module = "z-ctc", description = "创建菜单.", operation = BizMethod.Operation.CREATE)
     public Long createMenu(MenuDO menu, String createdBy) {
         if (menu == null || menu.getAppCode() == null || menu.getMenuCode() == null) {
             throw new IllegalArgumentException("appCode / menuCode 必填");
@@ -165,6 +169,7 @@ public class CtcMenuServiceImpl implements MenuService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新菜单信息", module = "z-ctc", description = "更新菜单信息.", operation = BizMethod.Operation.UPDATE)
     public boolean updateMenu(Long id, MenuDO patch, String updatedBy) {
         if (id == null || patch == null) { return false; }
 
@@ -205,6 +210,7 @@ public class CtcMenuServiceImpl implements MenuService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "删除菜单（级联删除所有子孙菜单）", module = "z-ctc", description = "删除菜单（级联删除所有子孙菜单）.", operation = BizMethod.Operation.DELETE)
     public boolean deleteMenu(Long id) {
         if (id == null) { return false; }
 
@@ -246,7 +252,11 @@ public class CtcMenuServiceImpl implements MenuService {
      * @return 菜单信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据ID查询菜单", module = "z-ctc", description = "根据ID查询菜单.", operation = BizMethod.Operation.QUERY)
     public Optional<MenuDO> findById(Long id) {
         return Optional.ofNullable(menuDbService.selectById(id));
     }
 }
+
+
+

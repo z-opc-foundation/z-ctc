@@ -13,6 +13,9 @@ import com.zifang.ctc.core.tenant.TenantContext;
 import com.zifang.ctc.core.vo.TenantVO;
 import com.zifang.util.core.meta.Result;
 import com.zifang.util.core.meta.ResultCode;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.web.bind.annotation.*;
@@ -90,8 +93,10 @@ public class TenantController {
      * @return 成功返回新建租户主键 id ; 必填字段缺失返回 400
      */
     @PostMapping
-    public Result<Long> create(@RequestBody TenantDO tenant,
-                               @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    @BizApi(summary = "新建租户. tenantCode 与 tenantName 必填", description = "新建租户. tenantCode 与 tenantName 必填.", tags = { "z-ctc" })
+    public Result<Long> create(@RequestBody @BizParam(name = "tenant", type = BizField.FieldType.STRING, description = "租户实体 (含 tenantCode / tenantName / 描述 / 状态等)", position = BizParam.Position.BODY) TenantDO tenant,
+                               @RequestHeader(value = "X-User-Id", required = false)
+                               @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         if (tenant == null || tenant.getTenantCode() == null || tenant.getTenantName() == null) {
             return Result.<Long>fail("参数错误").code(ResultCode.PARAM_VALID_ERROR.getCode());
         }
@@ -137,7 +142,8 @@ public class TenantController {
      * @return Tenant VO; 不存在时返回 404
      */
     @GetMapping
-    public Result<TenantVO> findByCode(@RequestParam("tenantCode") String tenantCode) {
+    @BizApi(summary = "按编码查询租户详情. 不存在时返回 404", description = "按编码查询租户详情. 不存在时返回 404.", tags = { "z-ctc" })
+    public Result<TenantVO> findByCode(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 请求参数 (?tenantCode=xxx)", position = BizParam.Position.QUERY) String tenantCode) {
         // 详情: 平台管理员可看任意租户; 普通用户只能看自己所属租户
         if (!isPlatformAdmin()) {
             Long userId = TenantContext.getUserId();
@@ -162,8 +168,10 @@ public class TenantController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @PostMapping("/status")
-    public Result<Void> updateStatus(@RequestParam("tenantCode") String tenantCode,
-                                     @RequestParam("status") int status) {
+    @BizApi(summary = "修改租户启用/停用状态. 资源不存在返回 404", description = "修改租户启用/停用状态. 资源不存在返回 404.", tags = { "z-ctc" })
+    public Result<Void> updateStatus(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 请求参数 (?tenantCode=xxx)", position = BizParam.Position.QUERY) String tenantCode,
+                                     @RequestParam("status")
+                                     @BizParam(name = "status", type = BizField.FieldType.INTEGER, description = "目标状态值, 业务定义 (例如 1 启用, 0 停用)", position = BizParam.Position.QUERY) int status) {
         // 平台级操作: 仅平台管理员可启停任意租户
         if (!isPlatformAdmin()) {
             return forbidden();
@@ -183,6 +191,7 @@ public class TenantController {
      * @return 当前用户所属的 Tenant VO 列表
      */
     @GetMapping("/list")
+    @BizApi(summary = "列出当前用户有 membership 的租户 (FEATURE049 多租户隔离)", description = "列出当前用户有 membership 的租户 (FEATURE049 多租户隔离). 不再返回所有平台租户 — 普通用户只能看到他所属的租户, 平台管理员 (roleCode=admin 且无 tenantCode 限制) 才看全部.", tags = { "z-ctc" })
     public Result<List<TenantVO>> listAll() {
         Long userId = TenantContext.getUserId();
         String ctxTenant = TenantContext.getTenantCode();
@@ -231,6 +240,7 @@ public class TenantController {
      * @return 平台全部租户; 非平台管理员 403
      */
     @GetMapping("/list-all")
+    @BizApi(summary = "平台管理员专用的全量租户列表 (系统租户面板)", description = "平台管理员专用的全量租户列表 (系统租户面板). 与 {@link #listAll()} 是两个问题, 不要合并: 那个回答「我登录后能看哪些租户」(按 membership 分层, 谁都能调), 这个回答「平台上一共有哪些租户」(只有平台管理员能问). 非平台管理员一律 403 而不是静默返回空表 —— 否则前端会把 「我只有 1 个租户」误当成「全平台只有 1 个租户」, 这类静默降级比报错难查得多.", tags = { "z-ctc" })
     public Result<List<TenantVO>> listAllForPlatform() {
         if (!isPlatformAdmin()) {
             return forbidden();
@@ -250,10 +260,14 @@ public class TenantController {
      * @return 分页响应 VO, 含当前页数据与总记录数
      */
     @GetMapping("/page")
+    @BizApi(summary = "关键字分页查询: 按租户编码/名称做不区分大小写的子串匹配, 然后内存分页", description = "关键字分页查询: 按租户编码/名称做不区分大小写的子串匹配, 然后内存分页.", tags = { "z-ctc" })
     public Result<PageResponseVO<TenantVO>> page(
-            @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "pageNum", defaultValue = "1") int pageNum,
-            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize) {
+            @RequestParam(value = "keyword", required = false)
+            @BizParam(name = "keyword", type = BizField.FieldType.STRING, description = "关键字, 可选; 匹配 tenantCode/tenantName, 不区分大小写", position = BizParam.Position.QUERY) String keyword,
+            @RequestParam(value = "pageNum", defaultValue = "1")
+            @BizParam(name = "pageNum", type = BizField.FieldType.INTEGER, description = "页码, 默认 1", position = BizParam.Position.QUERY) int pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "20")
+            @BizParam(name = "pageSize", type = BizField.FieldType.INTEGER, description = "每页大小, 默认 20", position = BizParam.Position.QUERY) int pageSize) {
         // === 多租户隔离 (FEATURE049) + 平台管理员例外 ===
         // 平台管理员: 分页查全部租户; 普通用户: 只显示所属租户
         Long userId = TenantContext.getUserId();
@@ -300,9 +314,11 @@ public class TenantController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @PutMapping
+    @BizApi(summary = "按编码更新租户字段. patch 中为 null 的字段由 Service 决定是否保留原值", description = "按编码更新租户字段. patch 中为 null 的字段由 Service 决定是否保留原值.", tags = { "z-ctc" })
     public Result<Void> update(
-            @RequestParam("tenantCode") String tenantCode,
-            @RequestBody TenantDO patch) {
+            @RequestParam("tenantCode")
+            @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 请求参数 (?tenantCode=xxx)", position = BizParam.Position.QUERY) String tenantCode,
+            @RequestBody @BizParam(name = "patch", type = BizField.FieldType.STRING, description = "待更新字段 (TenantDO)", position = BizParam.Position.BODY) TenantDO patch) {
         // 平台级操作: 仅平台管理员可改任意租户字段
         if (!isPlatformAdmin()) {
             return forbidden();
@@ -318,7 +334,8 @@ public class TenantController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @DeleteMapping
-    public Result<Void> delete(@RequestParam("tenantCode") String tenantCode) {
+    @BizApi(summary = "按编码删除租户. 资源不存在返回 404", description = "按编码删除租户. 资源不存在返回 404.", tags = { "z-ctc" })
+    public Result<Void> delete(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 请求参数 (?tenantCode=xxx)", position = BizParam.Position.QUERY) String tenantCode) {
         // 平台级操作: 仅平台管理员可删除租户
         if (!isPlatformAdmin()) {
             return forbidden();
@@ -327,3 +344,6 @@ public class TenantController {
         return ok ? Result.<Void>success() : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
     }
 }
+
+
+

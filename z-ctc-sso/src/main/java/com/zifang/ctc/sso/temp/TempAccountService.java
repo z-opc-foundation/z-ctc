@@ -2,6 +2,7 @@ package com.zifang.ctc.sso.temp;
 
 import com.zifang.ctc.sso.JwtUtil;
 import com.zifang.ctc.sso.model.UserInfo;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +59,7 @@ public class TempAccountService {
      * @param reason      业务备注 (如 "为 XX 客户开通 7 天试用")
      * @return TempAccountResult 含 token (业务方下发) + recordId (业务方可持久化以便追踪)
      */
+    @BizMethod(name = "开一个临时账号", module = "z-ctc", description = "开一个临时账号.", operation = BizMethod.Operation.ACTION)
     public TempAccountResult openTempAccount(String openedBy, String subject, long ttlMillis, String reason) {
         if (subject == null || subject.isEmpty()) {
             return null;
@@ -95,6 +97,7 @@ public class TempAccountService {
     /**
      * 关闭一个临时账号. token 立即失效 (通过 revoked 列表).
      */
+    @BizMethod(name = "关闭一个临时账号. token 立即失效 (通过 revoked 列表)", module = "z-ctc", description = "关闭一个临时账号. token 立即失效 (通过 revoked 列表).", operation = BizMethod.Operation.ACTION)
     public boolean closeTempAccount(String recordId) {
         TempAccountRecord record = records.remove(recordId);
         if (record == null) {
@@ -110,6 +113,7 @@ public class TempAccountService {
      *
      * @return true 表示 token 有效, false 表示 token 不是临时账号 / 已过期 / 已关闭
      */
+    @BizMethod(name = "校验 token 是否属于\"未过期且未关闭\"的临时账号", module = "z-ctc", description = "校验 token 是否属于\"未过期且未关闭\"的临时账号. 业务方在 SsoInterceptor 之前调用, 作为临时账号二次校验.", operation = BizMethod.Operation.ACTION)
     public boolean isValid(String token) {
         if (token == null) {
             return false;
@@ -125,6 +129,7 @@ public class TempAccountService {
     /**
      * 查询临时账号记录. 仅供业务方审计使用.
      */
+    @BizMethod(name = "查询临时账号记录. 仅供业务方审计使用", module = "z-ctc", description = "查询临时账号记录. 仅供业务方审计使用.", operation = BizMethod.Operation.QUERY)
     public TempAccountRecord getRecord(String recordId) {
         return records.get(recordId);
     }
@@ -132,6 +137,7 @@ public class TempAccountService {
     /**
      * 清空全部 (单元测试用).
      */
+    @BizMethod(name = "清空全部 (单元测试用)", module = "z-ctc", description = "清空全部 (单元测试用).", operation = BizMethod.Operation.DELETE)
     public void clear() {
         records.clear();
     }
@@ -171,3 +177,6 @@ public class TempAccountService {
         }
     }
 }
+
+
+

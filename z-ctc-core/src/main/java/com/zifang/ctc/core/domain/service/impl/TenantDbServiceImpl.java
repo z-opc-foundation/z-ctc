@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zifang.ctc.core.domain.entity.TenantDO;
 import com.zifang.ctc.core.domain.mapper.TenantMapper;
 import com.zifang.ctc.core.domain.service.TenantDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -37,6 +38,7 @@ public class TenantDbServiceImpl implements TenantDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入租户记录", module = "z-ctc", description = "插入租户记录。", operation = BizMethod.Operation.CREATE)
     public int insert(TenantDO entity) {
         return tenantMapper.insert(entity);
     }
@@ -48,6 +50,7 @@ public class TenantDbServiceImpl implements TenantDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键更新租户记录", module = "z-ctc", description = "根据主键更新租户记录。", operation = BizMethod.Operation.UPDATE)
     public int updateById(TenantDO entity) {
         return tenantMapper.updateById(entity);
     }
@@ -59,6 +62,7 @@ public class TenantDbServiceImpl implements TenantDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键删除租户记录", module = "z-ctc", description = "根据主键删除租户记录。", operation = BizMethod.Operation.DELETE)
     public int deleteById(Long id) {
         return tenantMapper.deleteById(id);
     }
@@ -70,6 +74,7 @@ public class TenantDbServiceImpl implements TenantDbService {
      * @return 租户实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据租户编码查询租户记录", module = "z-ctc", description = "根据租户编码查询租户记录。", operation = BizMethod.Operation.QUERY)
     public TenantDO selectByTenantCode(String tenantCode) {
         return tenantMapper.selectByTenantCode(tenantCode);
     }
@@ -81,6 +86,7 @@ public class TenantDbServiceImpl implements TenantDbService {
      * @return 租户实体对象列表
      */
     @Override
+    @BizMethod(name = "根据查询条件查询租户列表", module = "z-ctc", description = "根据查询条件查询租户列表。", operation = BizMethod.Operation.QUERY)
     public List<TenantDO> selectByQuery(QueryWrapper<TenantDO> wrapper) {
         return tenantMapper.selectList(wrapper);
     }
@@ -93,7 +99,11 @@ public class TenantDbServiceImpl implements TenantDbService {
      * @return 分页的租户实体对象列表
      */
     @Override
+    @BizMethod(name = "分页查询租户列表", module = "z-ctc", description = "分页查询租户列表。", operation = BizMethod.Operation.QUERY)
     public IPage<TenantDO> selectPage(IPage<TenantDO> page, QueryWrapper<TenantDO> wrapper) {
         return tenantMapper.selectPage(page, wrapper);
     }
 }
+
+
+

@@ -3,6 +3,7 @@ package com.zifang.ctc.core.domain.service.impl;
 import com.zifang.ctc.core.domain.entity.DomainDO;
 import com.zifang.ctc.core.domain.mapper.DomainMapper;
 import com.zifang.ctc.core.domain.service.DomainDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class DomainDbServiceImpl implements DomainDbService {
      * @return 域列表
      */
     @Override
+    @BizMethod(name = "根据租户编码查询域列表", module = "z-ctc", description = "根据租户编码查询域列表.", operation = BizMethod.Operation.QUERY)
     public List<DomainDO> selectByTenant(String tenantCode) {
         return domainMapper.selectByTenant(tenantCode);
     }
@@ -43,6 +45,7 @@ public class DomainDbServiceImpl implements DomainDbService {
      * @return 域列表
      */
     @Override
+    @BizMethod(name = "查询所有域", module = "z-ctc", description = "查询所有域.", operation = BizMethod.Operation.QUERY)
     public List<DomainDO> selectAll() {
         return domainMapper.selectAll();
     }
@@ -54,6 +57,7 @@ public class DomainDbServiceImpl implements DomainDbService {
      * @return 域对象
      */
     @Override
+    @BizMethod(name = "根据ID查询域", module = "z-ctc", description = "根据ID查询域.", operation = BizMethod.Operation.QUERY)
     public DomainDO selectById(Long id) {
         return domainMapper.selectById(id);
     }
@@ -66,6 +70,7 @@ public class DomainDbServiceImpl implements DomainDbService {
      * @return 域对象
      */
     @Override
+    @BizMethod(name = "根据租户/域编码查询域", module = "z-ctc", description = "根据租户/域编码查询域.", operation = BizMethod.Operation.QUERY)
     public DomainDO selectByDomainCode(String tenantCode, String domainCode) {
         return domainMapper.selectByDomainCode(tenantCode, domainCode);
     }
@@ -77,6 +82,7 @@ public class DomainDbServiceImpl implements DomainDbService {
      * @return 影响行数
      */
     @Override
+    @BizMethod(name = "插入域", module = "z-ctc", description = "插入域.", operation = BizMethod.Operation.CREATE)
     public int insert(DomainDO entity) {
         return domainMapper.insert(entity);
     }
@@ -88,6 +94,7 @@ public class DomainDbServiceImpl implements DomainDbService {
      * @return 影响行数
      */
     @Override
+    @BizMethod(name = "根据ID更新域", module = "z-ctc", description = "根据ID更新域.", operation = BizMethod.Operation.UPDATE)
     public int updateById(DomainDO entity) {
         return domainMapper.updateById(entity);
     }
@@ -99,7 +106,11 @@ public class DomainDbServiceImpl implements DomainDbService {
      * @return 影响行数
      */
     @Override
+    @BizMethod(name = "根据ID删除域", module = "z-ctc", description = "根据ID删除域.", operation = BizMethod.Operation.DELETE)
     public int deleteById(Long id) {
         return domainMapper.deleteById(id);
     }
 }
+
+
+

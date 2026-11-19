@@ -7,16 +7,17 @@ import com.zifang.ctc.core.domain.service.InvitationDbService;
 import com.zifang.ctc.core.service.InvitationService;
 import com.zifang.ctc.core.service.MembershipService;
 import com.zifang.ctc.core.service.UserService;
+import com.zifang.util.core.lang.RandomUtil;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.security.SecureRandom;
-import com.zifang.util.core.lang.RandomUtil;
 
 /**
  * 邀请服务实现类.
@@ -75,6 +76,7 @@ public class InvitationServiceImpl implements InvitationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建邀请", module = "z-ctc", description = "创建邀请.", operation = BizMethod.Operation.CREATE)
     public InvitationDO create(String tenantCode, Long inviterUserId, String inviteeEmail,
                                String inviteePhone, String roleCode, Integer maxUses, String type) {
         if (tenantCode == null) { throw new IllegalArgumentException("tenantCode 必填"); }
@@ -118,6 +120,7 @@ public class InvitationServiceImpl implements InvitationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "通过 Token 接受邀请（邮箱/链接邀请）", module = "z-ctc", description = "通过 Token 接受邀请（邮箱/链接邀请）.", operation = BizMethod.Operation.ACTION)
     public MembershipDO acceptByToken(String token, Long acceptorUserId) {
         InvitationDO inv = invitationDbService.selectByToken(token);
         validateAcceptable(inv);
@@ -138,6 +141,7 @@ public class InvitationServiceImpl implements InvitationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "通过邀请码接受邀请（Code 邀请）", module = "z-ctc", description = "通过邀请码接受邀请（Code 邀请）.", operation = BizMethod.Operation.ACTION)
     public MembershipDO redeemByCode(String code, Long acceptorUserId) {
         InvitationDO inv = invitationDbService.selectByInviteCode(code);
         validateAcceptable(inv);
@@ -213,6 +217,7 @@ public class InvitationServiceImpl implements InvitationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "撤销邀请", module = "z-ctc", description = "撤销邀请.", operation = BizMethod.Operation.ACTION)
     public boolean revoke(Long id) {
         InvitationDO inv = invitationDbService.selectById(id);
         if (inv == null) { return false; }
@@ -233,6 +238,7 @@ public class InvitationServiceImpl implements InvitationService {
      * @return 邀请列表
      */
     @Override
+    @BizMethod(name = "查询租户的所有邀请", module = "z-ctc", description = "查询租户的所有邀请.", operation = BizMethod.Operation.QUERY)
     public List<InvitationDO> listByTenant(String tenantCode) {
         if (tenantCode == null) { return java.util.Collections.emptyList(); }
 
@@ -246,6 +252,7 @@ public class InvitationServiceImpl implements InvitationService {
      * @return 邀请记录，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据ID查询邀请", module = "z-ctc", description = "根据ID查询邀请.", operation = BizMethod.Operation.QUERY)
     public Optional<InvitationDO> findById(Long id) {
         if (id == null) { return Optional.empty(); }
 
@@ -259,6 +266,7 @@ public class InvitationServiceImpl implements InvitationService {
      * @return 邀请记录，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据Token查询邀请", module = "z-ctc", description = "根据Token查询邀请.", operation = BizMethod.Operation.QUERY)
     public Optional<InvitationDO> findByToken(String token) {
         if (token == null) { return Optional.empty(); }
 
@@ -272,6 +280,7 @@ public class InvitationServiceImpl implements InvitationService {
      * @return 邀请记录，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据邀请码查询邀请", module = "z-ctc", description = "根据邀请码查询邀请.", operation = BizMethod.Operation.QUERY)
     public Optional<InvitationDO> findByInviteCode(String code) {
         if (code == null) { return Optional.empty(); }
 
@@ -298,3 +307,6 @@ public class InvitationServiceImpl implements InvitationService {
         return RandomUtil.uuidShort(6).toUpperCase();
     }
 }
+
+
+

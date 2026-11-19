@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.zifang.ctc.core.domain.entity.UserDO;
 import com.zifang.ctc.core.domain.mapper.UserMapper;
 import com.zifang.ctc.core.domain.service.UserDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,6 +37,7 @@ public class UserDbServiceImpl implements UserDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入用户记录", module = "z-ctc", description = "插入用户记录。", operation = BizMethod.Operation.CREATE)
     public int insert(UserDO entity) {
         return userMapper.insert(entity);
     }
@@ -47,6 +49,7 @@ public class UserDbServiceImpl implements UserDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键更新用户记录", module = "z-ctc", description = "根据主键更新用户记录。", operation = BizMethod.Operation.UPDATE)
     public int updateById(UserDO entity) {
         return userMapper.updateById(entity);
     }
@@ -58,6 +61,7 @@ public class UserDbServiceImpl implements UserDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键删除用户记录", module = "z-ctc", description = "根据主键删除用户记录。", operation = BizMethod.Operation.DELETE)
     public int deleteById(Long id) {
         return userMapper.deleteById(id);
     }
@@ -69,6 +73,7 @@ public class UserDbServiceImpl implements UserDbService {
      * @return 用户实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据主键查询用户记录", module = "z-ctc", description = "根据主键查询用户记录。", operation = BizMethod.Operation.QUERY)
     public UserDO selectById(Long id) {
         return userMapper.selectById(id);
     }
@@ -80,6 +85,7 @@ public class UserDbServiceImpl implements UserDbService {
      * @return 用户实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据用户编号查询用户记录", module = "z-ctc", description = "根据用户编号查询用户记录。", operation = BizMethod.Operation.QUERY)
     public UserDO selectByUserNo(String userNo) {
         return userMapper.selectByUserNo(userNo);
     }
@@ -91,6 +97,7 @@ public class UserDbServiceImpl implements UserDbService {
      * @return 用户实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据邮箱查询用户记录", module = "z-ctc", description = "根据邮箱查询用户记录。", operation = BizMethod.Operation.QUERY)
     public UserDO selectByEmail(String email) {
         return userMapper.selectByEmail(email);
     }
@@ -102,6 +109,7 @@ public class UserDbServiceImpl implements UserDbService {
      * @return 用户实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据手机号查询用户记录", module = "z-ctc", description = "根据手机号查询用户记录。", operation = BizMethod.Operation.QUERY)
     public UserDO selectByPhone(String phone) {
         return userMapper.selectByPhone(phone);
     }
@@ -113,6 +121,7 @@ public class UserDbServiceImpl implements UserDbService {
      * @return 用户实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据用户名查询用户记录", module = "z-ctc", description = "根据用户名查询用户记录。", operation = BizMethod.Operation.QUERY)
     public UserDO selectByUsername(String username) {
         if (username == null) { return null; }
 
@@ -128,7 +137,11 @@ public class UserDbServiceImpl implements UserDbService {
      * @return 用户实体对象列表
      */
     @Override
+    @BizMethod(name = "根据查询条件查询用户列表", module = "z-ctc", description = "根据查询条件查询用户列表。", operation = BizMethod.Operation.QUERY)
     public List<UserDO> selectByQuery(QueryWrapper<UserDO> wrapper) {
         return userMapper.selectList(wrapper);
     }
 }
+
+
+

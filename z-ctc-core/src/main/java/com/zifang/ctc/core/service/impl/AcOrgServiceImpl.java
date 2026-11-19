@@ -3,6 +3,7 @@ package com.zifang.ctc.core.service.impl;
 import com.zifang.ctc.core.domain.entity.OrgDO;
 import com.zifang.ctc.core.domain.service.OrgDbService;
 import com.zifang.ctc.core.service.OrgService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,7 @@ public class AcOrgServiceImpl implements OrgService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建组织", module = "z-ctc", description = "创建组织.", operation = BizMethod.Operation.CREATE)
     public Long createOrg(OrgDO org, String createdBy) {
         if (org == null) { throw new IllegalArgumentException("org 不能为空"); }
 
@@ -84,6 +86,7 @@ public class AcOrgServiceImpl implements OrgService {
      * @return 组织信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据租户/域/组织编码查询组织", module = "z-ctc", description = "根据租户/域/组织编码查询组织.", operation = BizMethod.Operation.QUERY)
     public Optional<OrgDO> findByCode(String tenantCode, String domainCode, String orgCode) {
         return Optional.ofNullable(orgDbService.selectByOrgCode(tenantCode, domainCode, orgCode));
     }
@@ -96,6 +99,7 @@ public class AcOrgServiceImpl implements OrgService {
      * @return 组织列表
      */
     @Override
+    @BizMethod(name = "查询域下的所有组织", module = "z-ctc", description = "查询域下的所有组织.", operation = BizMethod.Operation.QUERY)
     public List<OrgDO> listByDomain(String tenantCode, String domainCode) {
         if (tenantCode == null || domainCode == null) { return Collections.emptyList(); }
 
@@ -114,6 +118,7 @@ public class AcOrgServiceImpl implements OrgService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新组织信息", module = "z-ctc", description = "更新组织信息.", operation = BizMethod.Operation.UPDATE)
     public boolean updateOrg(String tenantCode, String domainCode, String orgCode, OrgDO patch, String updatedBy) {
         if (tenantCode == null || domainCode == null || orgCode == null || patch == null) { return false; }
 
@@ -143,6 +148,7 @@ public class AcOrgServiceImpl implements OrgService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "删除组织", module = "z-ctc", description = "删除组织.", operation = BizMethod.Operation.DELETE)
     public boolean deleteOrg(String tenantCode, String domainCode, String orgCode) {
         OrgDO exist = orgDbService.selectByOrgCode(tenantCode, domainCode, orgCode);
         if (exist == null) { return false; }
@@ -150,3 +156,6 @@ public class AcOrgServiceImpl implements OrgService {
         return orgDbService.deleteById(exist.getId()) > 0;
     }
 }
+
+
+

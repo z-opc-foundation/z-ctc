@@ -3,6 +3,7 @@ package com.zifang.ctc.core.domain.service.impl;
 import com.zifang.ctc.core.domain.entity.MenuDO;
 import com.zifang.ctc.core.domain.mapper.MenuMapper;
 import com.zifang.ctc.core.domain.service.MenuDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
@@ -36,6 +37,7 @@ public class MenuDbServiceImpl implements MenuDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入菜单记录", module = "z-ctc", description = "插入菜单记录。", operation = BizMethod.Operation.CREATE)
     public int insert(MenuDO entity) {
         return menuMapper.insert(entity);
     }
@@ -47,6 +49,7 @@ public class MenuDbServiceImpl implements MenuDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键更新菜单记录", module = "z-ctc", description = "根据主键更新菜单记录。", operation = BizMethod.Operation.UPDATE)
     public int updateById(MenuDO entity) {
         return menuMapper.updateById(entity);
     }
@@ -58,6 +61,7 @@ public class MenuDbServiceImpl implements MenuDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键删除菜单记录", module = "z-ctc", description = "根据主键删除菜单记录。", operation = BizMethod.Operation.DELETE)
     public int deleteById(Long id) {
         return menuMapper.deleteById(id);
     }
@@ -69,6 +73,7 @@ public class MenuDbServiceImpl implements MenuDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "批量根据主键删除菜单记录", module = "z-ctc", description = "批量根据主键删除菜单记录。", operation = BizMethod.Operation.DELETE)
     public int deleteBatchIds(Collection<Long> ids) {
         return menuMapper.deleteBatchIds(ids);
     }
@@ -80,6 +85,7 @@ public class MenuDbServiceImpl implements MenuDbService {
      * @return 菜单实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据主键查询菜单记录", module = "z-ctc", description = "根据主键查询菜单记录。", operation = BizMethod.Operation.QUERY)
     public MenuDO selectById(Long id) {
         return menuMapper.selectById(id);
     }
@@ -92,6 +98,7 @@ public class MenuDbServiceImpl implements MenuDbService {
      * @return 菜单实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据应用编码和菜单编码查询菜单记录", module = "z-ctc", description = "根据应用编码和菜单编码查询菜单记录。", operation = BizMethod.Operation.QUERY)
     public MenuDO selectByMenuCode(String appCode, String menuCode) {
         return menuMapper.selectByMenuCode(appCode, menuCode);
     }
@@ -103,7 +110,11 @@ public class MenuDbServiceImpl implements MenuDbService {
      * @return 菜单实体对象列表
      */
     @Override
+    @BizMethod(name = "根据应用编码查询菜单列表", module = "z-ctc", description = "根据应用编码查询菜单列表。", operation = BizMethod.Operation.QUERY)
     public List<MenuDO> selectByAppCode(String appCode) {
         return menuMapper.selectByAppCode(appCode);
     }
 }
+
+
+

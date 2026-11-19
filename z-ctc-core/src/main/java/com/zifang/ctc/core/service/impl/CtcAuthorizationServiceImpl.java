@@ -11,6 +11,7 @@ import com.zifang.ctc.core.domain.entity.UserGrantDO;
 import com.zifang.ctc.core.domain.entity.UserRoleDO;
 import com.zifang.ctc.core.domain.service.AuthorizationDbService;
 import com.zifang.ctc.core.service.AuthorizationService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建角色", module = "z-ctc", description = "创建角色。", operation = BizMethod.Operation.CREATE)
     public Long createRole(RoleDO role, String createdBy) {
         if (role.getStatus() == null) role.setStatus(1);
 
@@ -71,6 +73,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建资源", module = "z-ctc", description = "创建资源。", operation = BizMethod.Operation.CREATE)
     public Long createResource(ResourceDO resource, String createdBy) {
         if (resource.getStatus() == null) resource.setStatus(1);
 
@@ -94,6 +97,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "授权用户角色关系", module = "z-ctc", description = "授权用户角色关系。", operation = BizMethod.Operation.ACTION)
     public boolean grantUserRole(Long userId, Long roleId, String grantedBy, LocalDateTime expireAt) {
         // 幂等: 已存在则跳过
         Long count = dbService.countUserRole(userId, roleId);
@@ -120,6 +124,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "撤销用户角色关系", module = "z-ctc", description = "撤销用户角色关系。", operation = BizMethod.Operation.ACTION)
     public boolean revokeUserRole(Long userId, Long roleId) {
         return dbService.deleteUserRole(userId, roleId) > 0;
     }
@@ -135,6 +140,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "授权角色资源关系", module = "z-ctc", description = "授权角色资源关系。", operation = BizMethod.Operation.ACTION)
     public boolean grantRoleResource(Long roleId, Long resourceId, String dataFilter, String grantedBy) {
         Long count = dbService.countRoleResource(roleId, resourceId);
         if (count != null && count > 0) {
@@ -159,6 +165,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "撤销角色资源关系", module = "z-ctc", description = "撤销角色资源关系。", operation = BizMethod.Operation.ACTION)
     public boolean revokeRoleResource(Long roleId, Long resourceId) {
         return dbService.deleteRoleResource(roleId, resourceId) > 0;
     }
@@ -170,6 +177,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 角色实体列表
      */
     @Override
+    @BizMethod(name = "查询用户的角色列表", module = "z-ctc", description = "查询用户的角色列表。", operation = BizMethod.Operation.QUERY)
     public List<RoleDO> listUserRoles(Long userId) {
         List<UserRoleDO> urs = dbService.selectUserRoleByUserId(userId);
         if (urs.isEmpty()) { return Collections.emptyList(); }
@@ -184,6 +192,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 资源实体列表
      */
     @Override
+    @BizMethod(name = "查询用户的权限列表（含角色继承、白名单、黑名单逻辑）", module = "z-ctc", description = "查询用户的权限列表（含角色继承、白名单、黑名单逻辑）。", operation = BizMethod.Operation.QUERY)
     public List<ResourceDO> listUserPermissions(Long userId) {
         // ── Step 1: 收集所有角色 ID (含父角色继承) ──
         Set<Long> allRoleIds = new LinkedHashSet<>();
@@ -270,6 +279,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 资源实体列表
      */
     @Override
+    @BizMethod(name = "查询角色的权限列表", module = "z-ctc", description = "查询角色的权限列表。", operation = BizMethod.Operation.QUERY)
     public List<ResourceDO> listRolePermissions(Long roleId) {
         List<RoleResourceDO> rrs = dbService.selectRoleResourceByRoleId(roleId);
         if (rrs.isEmpty()) { return Collections.emptyList(); }
@@ -285,6 +295,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 是否有权限
      */
     @Override
+    @BizMethod(name = "检查用户是否具有指定权限", module = "z-ctc", description = "检查用户是否具有指定权限。", operation = BizMethod.Operation.ACTION)
     public boolean checkPermission(Long userId, String resourceCode) {
         if (userId == null || resourceCode == null) { return false; }
 
@@ -300,6 +311,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 角色实体 Optional
      */
     @Override
+    @BizMethod(name = "根据角色编码查找角色", module = "z-ctc", description = "根据角色编码查找角色。", operation = BizMethod.Operation.QUERY)
     public Optional<RoleDO> findRoleByCode(String roleCode, String tenantCode) {
         if (roleCode == null) { return Optional.empty(); }
 
@@ -315,6 +327,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 资源实体 Optional
      */
     @Override
+    @BizMethod(name = "根据资源编码、应用编码和租户编码查找资源", module = "z-ctc", description = "根据资源编码、应用编码和租户编码查找资源。", operation = BizMethod.Operation.QUERY)
     public Optional<ResourceDO> findResourceByCode(String resourceCode, String appCode, String tenantCode) {
         // FEATURE-ZTEAM-AUTH-UNIFY 段 4: DB 层强制 app_code 过滤, 业务侧声明「我要 z-team 范围的」即可消除跨 app 同名歧义.
         if (resourceCode == null) { return Optional.empty(); }
@@ -330,6 +343,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 资源实体 Optional
      */
     @Override
+    @BizMethod(name = "根据资源编码和租户编码查找资源（旧签名，委托三参版本）", module = "z-ctc", description = "根据资源编码和租户编码查找资源（旧签名，委托三参版本）。", operation = BizMethod.Operation.QUERY)
     public Optional<ResourceDO> findResourceByCode(String resourceCode, String tenantCode) {
         // 旧签名委托三参版本, appCode=null (admin 通用视图用, 业务侧请改用三参版本)
         return findResourceByCode(resourceCode, null, tenantCode);
@@ -343,6 +357,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 角色实体列表
      */
     @Override
+    @BizMethod(name = "查询所有角色", module = "z-ctc", description = "查询所有角色。", operation = BizMethod.Operation.QUERY)
     public List<RoleDO> listAllRoles() {
         return dbService.selectRoleList(new QueryWrapper<RoleDO>().orderByDesc("created_at"));
     }
@@ -357,6 +372,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 角色实体列表
      */
     @Override
+    @BizMethod(name = "分页查询角色列表", module = "z-ctc", description = "分页查询角色列表。", operation = BizMethod.Operation.QUERY)
     public List<RoleDO> pageRoles(String keyword, int pageNum, int pageSize, long total) {
         Page<RoleDO> page = new Page<>(pageNum, pageSize);
         QueryWrapper<RoleDO> qw = new QueryWrapper<>();
@@ -377,6 +393,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 角色实体 Optional
      */
     @Override
+    @BizMethod(name = "根据主键查找角色", module = "z-ctc", description = "根据主键查找角色。", operation = BizMethod.Operation.QUERY)
     public Optional<RoleDO> findRoleById(Long id) {
         return Optional.ofNullable(dbService.selectRoleById(id));
     }
@@ -391,6 +408,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新角色", module = "z-ctc", description = "更新角色。", operation = BizMethod.Operation.UPDATE)
     public boolean updateRole(Long id, RoleDO patch, String updatedBy) {
         if (id == null || patch == null) { return false; }
 
@@ -420,6 +438,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "删除角色", module = "z-ctc", description = "删除角色。", operation = BizMethod.Operation.DELETE)
     public boolean deleteRole(Long id) {
         if (id == null) { return false; }
 
@@ -435,6 +454,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 资源实体列表
      */
     @Override
+    @BizMethod(name = "查询所有资源", module = "z-ctc", description = "查询所有资源。", operation = BizMethod.Operation.QUERY)
     public List<ResourceDO> listAllResources() {
         return dbService.selectResourceList(new QueryWrapper<ResourceDO>().orderByAsc("sort_order").orderByAsc("id"));
     }
@@ -449,6 +469,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 资源实体列表
      */
     @Override
+    @BizMethod(name = "分页查询资源列表", module = "z-ctc", description = "分页查询资源列表。", operation = BizMethod.Operation.QUERY)
     public List<ResourceDO> pageResources(String keyword, int pageNum, int pageSize, long total) {
         Page<ResourceDO> page = new Page<>(pageNum, pageSize);
         QueryWrapper<ResourceDO> qw = new QueryWrapper<>();
@@ -469,6 +490,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 资源实体 Optional
      */
     @Override
+    @BizMethod(name = "根据主键查找资源", module = "z-ctc", description = "根据主键查找资源。", operation = BizMethod.Operation.QUERY)
     public Optional<ResourceDO> findResourceById(Long id) {
         return Optional.ofNullable(dbService.selectResourceById(id));
     }
@@ -483,6 +505,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新资源", module = "z-ctc", description = "更新资源。", operation = BizMethod.Operation.UPDATE)
     public boolean updateResource(Long id, ResourceDO patch, String updatedBy) {
         if (id == null || patch == null) { return false; }
 
@@ -522,6 +545,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "删除资源", module = "z-ctc", description = "删除资源。", operation = BizMethod.Operation.DELETE)
     public boolean deleteResource(Long id) {
         if (id == null) { return false; }
 
@@ -544,6 +568,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 资源实体列表
      */
     @Override
+    @BizMethod(name = "分页查询应用的资源列表", module = "z-ctc", description = "分页查询应用的资源列表。", operation = BizMethod.Operation.QUERY)
     public List<ResourceDO> pageResourcesByApp(String appCode, Integer type, String keyword, int pageNum, int pageSize, long total) {
         Page<ResourceDO> page = new Page<>(pageNum, pageSize);
         QueryWrapper<ResourceDO> qw = new QueryWrapper<>();
@@ -569,6 +594,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 应用编码列表
      */
     @Override
+    @BizMethod(name = "查询所有不同的应用编码列表", module = "z-ctc", description = "查询所有不同的应用编码列表。", operation = BizMethod.Operation.QUERY)
     public List<String> listDistinctApps() {
         return dbService.selectDistinctApps();
     }
@@ -580,6 +606,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 角色实体列表
      */
     @Override
+    @BizMethod(name = "根据资源主键查询关联的角色列表", module = "z-ctc", description = "根据资源主键查询关联的角色列表。", operation = BizMethod.Operation.QUERY)
     public List<RoleDO> listRolesByResource(Long resourceId) {
         if (resourceId == null) { return Collections.emptyList(); }
 
@@ -604,6 +631,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "授权用户资源关系（白名单）", module = "z-ctc", description = "授权用户资源关系（白名单）。", operation = BizMethod.Operation.ACTION)
     public boolean grantUserResource(Long userId, Long resourceId, String tenantCode, String grantedBy, LocalDateTime expireAt) {
         if (userId == null || resourceId == null) { return false; }
 
@@ -632,6 +660,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "撤销用户资源关系（白名单）", module = "z-ctc", description = "撤销用户资源关系（白名单）。", operation = BizMethod.Operation.ACTION)
     public boolean revokeUserResource(Long userId, Long resourceId) {
         return dbService.deleteUserGrant(userId, resourceId) > 0;
     }
@@ -643,6 +672,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 用户授权列表
      */
     @Override
+    @BizMethod(name = "查询用户的授权列表（白名单）", module = "z-ctc", description = "查询用户的授权列表（白名单）。", operation = BizMethod.Operation.QUERY)
     public List<UserGrantDO> listUserGrants(Long userId) {
         return dbService.selectUserGrantByUserId(userId);
     }
@@ -661,6 +691,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "拒绝用户资源关系（黑名单）", module = "z-ctc", description = "拒绝用户资源关系（黑名单）。", operation = BizMethod.Operation.ACTION)
     public boolean denyUserResource(Long userId, Long resourceId, String tenantCode, String deniedBy, LocalDateTime expireAt) {
         if (userId == null || resourceId == null) { return false; }
 
@@ -689,6 +720,7 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "撤销用户资源拒绝关系（黑名单）", module = "z-ctc", description = "撤销用户资源拒绝关系（黑名单）。", operation = BizMethod.Operation.ACTION)
     public boolean undenyUserResource(Long userId, Long resourceId) {
         return dbService.deleteUserDeny(userId, resourceId) > 0;
     }
@@ -700,7 +732,11 @@ public class CtcAuthorizationServiceImpl implements AuthorizationService {
      * @return 用户拒绝列表
      */
     @Override
+    @BizMethod(name = "查询用户的拒绝列表（黑名单）", module = "z-ctc", description = "查询用户的拒绝列表（黑名单）。", operation = BizMethod.Operation.QUERY)
     public List<UserDenyDO> listUserDenies(Long userId) {
         return dbService.selectUserDenyByUserId(userId);
     }
 }
+
+
+

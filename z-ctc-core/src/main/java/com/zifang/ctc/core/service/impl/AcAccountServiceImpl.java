@@ -7,6 +7,7 @@ import com.zifang.ctc.core.domain.entity.AccountDO;
 import com.zifang.ctc.core.domain.entity.UserRoleDO;
 import com.zifang.ctc.core.domain.service.AccountDbService;
 import com.zifang.ctc.core.service.AccountService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.security.crypto.bcrypt.BCrypt;
@@ -49,6 +50,7 @@ public class AcAccountServiceImpl implements AccountService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建账号（含密码哈希）", module = "z-ctc", description = "创建账号（含密码哈希）.", operation = BizMethod.Operation.CREATE)
     public Long createAccount(AccountDO account, String rawPassword) {
         if (account == null) {
             throw new IllegalArgumentException("account must not be null");
@@ -78,6 +80,7 @@ public class AcAccountServiceImpl implements AccountService {
      * @return 账号信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据ID查询账号", module = "z-ctc", description = "根据ID查询账号.", operation = BizMethod.Operation.QUERY)
     public Optional<AccountDO> findById(Long id) {
         if (id == null) { return Optional.empty(); }
 
@@ -92,6 +95,7 @@ public class AcAccountServiceImpl implements AccountService {
      * @return 账号信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据用户名和租户编码查询账号", module = "z-ctc", description = "根据用户名和租户编码查询账号.", operation = BizMethod.Operation.QUERY)
     public Optional<AccountDO> findByUsername(String username, String tenantCode) {
         if (username == null) { return Optional.empty(); }
 
@@ -105,6 +109,7 @@ public class AcAccountServiceImpl implements AccountService {
      * @return 账号信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据账号编号查询账号", module = "z-ctc", description = "根据账号编号查询账号.", operation = BizMethod.Operation.QUERY)
     public Optional<AccountDO> findByAccountNo(String accountNo) {
         if (accountNo == null) { return Optional.empty(); }
 
@@ -120,6 +125,7 @@ public class AcAccountServiceImpl implements AccountService {
      * @return 账号列表
      */
     @Override
+    @BizMethod(name = "分页查询租户下的账号", module = "z-ctc", description = "分页查询租户下的账号.", operation = BizMethod.Operation.QUERY)
     public List<AccountDO> listByTenant(String tenantCode, int pageNum, int pageSize) {
         Page<AccountDO> page = new Page<>(pageNum, pageSize);
         QueryWrapper<AccountDO> qw = new QueryWrapper<>();
@@ -140,6 +146,7 @@ public class AcAccountServiceImpl implements AccountService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新账号状态", module = "z-ctc", description = "更新账号状态.", operation = BizMethod.Operation.UPDATE)
     public boolean updateStatus(Long id, int newStatus, String updatedBy) {
         AccountDO account = accountDbService.selectById(id);
         if (account == null) { return false; }
@@ -160,6 +167,7 @@ public class AcAccountServiceImpl implements AccountService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "修改密码（需验证旧密码）", module = "z-ctc", description = "修改密码（需验证旧密码）.", operation = BizMethod.Operation.UPDATE)
     public boolean changePassword(Long id, String oldRawPassword, String newRawPassword) {
         AccountDO account = accountDbService.selectById(id);
         if (account == null) { return false; }
@@ -185,6 +193,7 @@ public class AcAccountServiceImpl implements AccountService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "重置密码（无需验证旧密码）", module = "z-ctc", description = "重置密码（无需验证旧密码）.", operation = BizMethod.Operation.ACTION)
     public boolean resetPassword(Long id, String newRawPassword, String updatedBy) {
         AccountDO account = accountDbService.selectById(id);
         if (account == null) { return false; }
@@ -203,6 +212,7 @@ public class AcAccountServiceImpl implements AccountService {
      * @return 账号列表
      */
     @Override
+    @BizMethod(name = "查询所有账号（按创建时间倒序）", module = "z-ctc", description = "查询所有账号（按创建时间倒序）.", operation = BizMethod.Operation.QUERY)
     public List<AccountDO> listAll() {
         return accountDbService.selectByQuery(new QueryWrapper<AccountDO>().orderByDesc("created_at"));
     }
@@ -218,6 +228,7 @@ public class AcAccountServiceImpl implements AccountService {
      * @return 账号列表
      */
     @Override
+    @BizMethod(name = "分页查询账号（支持关键词搜索）", module = "z-ctc", description = "分页查询账号（支持关键词搜索）.", operation = BizMethod.Operation.QUERY)
     public List<AccountDO> pageList(String tenantCode, String keyword, int pageNum, int pageSize, long total) {
         Page<AccountDO> page = new Page<>(pageNum, pageSize);
         QueryWrapper<AccountDO> qw = new QueryWrapper<>();
@@ -243,6 +254,7 @@ public class AcAccountServiceImpl implements AccountService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新账号信息", module = "z-ctc", description = "更新账号信息.", operation = BizMethod.Operation.UPDATE)
     public boolean updateAccount(Long id, AccountDO patch, String updatedBy) {
         if (id == null || patch == null) { return false; }
 
@@ -276,6 +288,7 @@ public class AcAccountServiceImpl implements AccountService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "删除账号", module = "z-ctc", description = "删除账号.", operation = BizMethod.Operation.DELETE)
     public boolean deleteAccount(Long id) {
         if (id == null) { return false; }
 
@@ -295,6 +308,7 @@ public class AcAccountServiceImpl implements AccountService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "分配角色给账号", module = "z-ctc", description = "分配角色给账号.", operation = BizMethod.Operation.ACTION)
     public boolean assignRole(Long userId, Long roleId, String grantedBy) {
         if (userId == null || roleId == null) { return false; }
 
@@ -316,3 +330,6 @@ public class AcAccountServiceImpl implements AccountService {
         return true;
     }
 }
+
+
+

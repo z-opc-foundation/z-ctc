@@ -1,9 +1,12 @@
 package com.zifang.ctc.web.api;
 
-import com.zifang.util.core.meta.BaseStatusCode;
-import com.zifang.util.core.meta.Result;
 import com.zifang.ctc.core.service.StaffSimpleService;
 import com.zifang.ctc.core.vo.StaffSimpleVO;
+import com.zifang.util.core.meta.BaseStatusCode;
+import com.zifang.util.core.meta.Result;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -78,9 +81,12 @@ public class OscStaffController {
      * @return 员工列表；无数据返回空数组
      */
     @PostMapping("/getStaffSimpleListWithoutLogin")
+    @BizApi(summary = "获取全部员工名录（**脱敏后**的最小字段集）", description = "获取全部员工名录（**脱敏后**的最小字段集）。 响应契约（2026-10-21 收窄后）： {@code {code:0, data:[{id,accountNo,name,extend:{nickname,flowerName,avatar?}}]}}。 不再输出 {@code telephone} / {@code jobNumber} / {@code extend.email} / {@code extend.userNo}（工号）—— 这四个字段曾可被公网匿名拖走。 消费方 {@code parseStaffResponse} 会 丢弃 extend 为空的记录 ， 故 {@link PublicStaffVO#getExtend()} 保证非 null。 同时提供 GET 便于浏览器直连排查（消费方用 POST 是历史遗留）。", tags = { "z-ctc" })
     public Result<List<PublicStaffVO>> getStaffSimpleListWithoutLogin(
-            @RequestParam(required = false, defaultValue = "") String tenantCode,
-            @RequestHeader(value = "Tenant-Code", required = false) String tenantCodeHeader) {
+            @RequestParam(required = false, defaultValue = "")
+            @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码；缺省时读 {@code Tenant-Code} 头，再缺省 {@code default}", position = BizParam.Position.QUERY) String tenantCode,
+            @RequestHeader(value = "Tenant-Code", required = false)
+            @BizParam(name = "Tenant-Code", type = BizField.FieldType.STRING, description = "消费方实际发送的请求头", position = BizParam.Position.HEADER) String tenantCodeHeader) {
         try {
             List<StaffSimpleVO> rows =
                     staffSimpleService.listSimpleStaff(resolveTenant(tenantCode, tenantCodeHeader));
@@ -93,9 +99,12 @@ public class OscStaffController {
 
     /** GET 别名，语义与 POST 版完全相同（供浏览器直连排查用）。 */
     @GetMapping("/getStaffSimpleListWithoutLogin")
+    @BizApi(summary = "GET 别名，语义与 POST 版完全相同（供浏览器直连排查用）", description = "GET 别名，语义与 POST 版完全相同（供浏览器直连排查用）。", tags = { "z-ctc" })
     public Result<List<PublicStaffVO>> getStaffSimpleListWithoutLoginGet(
-            @RequestParam(required = false, defaultValue = "") String tenantCode,
-            @RequestHeader(value = "Tenant-Code", required = false) String tenantCodeHeader) {
+            @RequestParam(required = false, defaultValue = "")
+            @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String tenantCode,
+            @RequestHeader(value = "Tenant-Code", required = false)
+            @BizParam(name = "Tenant-Code", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.HEADER) String tenantCodeHeader) {
         return getStaffSimpleListWithoutLogin(tenantCode, tenantCodeHeader);
     }
 
@@ -229,3 +238,6 @@ public class OscStaffController {
         return "default";
     }
 }
+
+
+

@@ -15,6 +15,9 @@ import com.zifang.ctc.core.vo.OrgVO;
 import com.zifang.util.core.lang.collection.Maps;
 import com.zifang.util.core.meta.Result;
 import com.zifang.util.core.meta.ResultCode;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -84,8 +87,10 @@ public class OrgController {
      * @return 成功返回新建 Org 的主键 id 
      */
     @PostMapping("/orgs")
-    public Result<Long> createOrg(@RequestBody OrgDO org,
-                                  @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    @BizApi(summary = "新建组织 (Org). 业务冲突 (如编码重复) 返回 409, 参数错误返回 400", description = "新建组织 (Org). 业务冲突 (如编码重复) 返回 409, 参数错误返回 400.", tags = { "z-ctc" })
+    public Result<Long> createOrg(@RequestBody @BizParam(name = "org", type = BizField.FieldType.STRING, description = "组织实体", position = BizParam.Position.BODY) OrgDO org,
+                                  @RequestHeader(value = "X-User-Id", required = false)
+                                  @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         try {
             Long id = orgService.createOrg(org, userId);
             return Result.<Long>success(id);
@@ -104,8 +109,10 @@ public class OrgController {
      * @return 该域下的 Org VO 列表
      */
     @GetMapping("/orgs/list")
-    public Result<List<OrgVO>> listOrgs(@RequestParam("tenantCode") String tenantCode,
-                                        @RequestParam("domainCode") String domainCode) {
+    @BizApi(summary = "列出指定 (租户, 域) 下的所有组织. tenantCode 与 domainCode 均为必填", description = "列出指定 (租户, 域) 下的所有组织. tenantCode 与 domainCode 均为必填.", tags = { "z-ctc" })
+    public Result<List<OrgVO>> listOrgs(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                        @RequestParam("domainCode")
+                                        @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode) {
         return Result.success(orgService.listByDomain(tenantCode, domainCode).stream()
                 .map(OrgVO::from)
                 .collect(Collectors.toList()));
@@ -120,9 +127,12 @@ public class OrgController {
      * @return Org VO; 不存在时返回 404
      */
     @GetMapping("/orgs")
-    public Result<OrgVO> getOrg(@RequestParam("tenantCode") String tenantCode,
-                                @RequestParam("domainCode") String domainCode,
-                                @RequestParam("orgCode") String orgCode) {
+    @BizApi(summary = "按编码查询组织详情. 找不到时返回 404", description = "按编码查询组织详情. 找不到时返回 404.", tags = { "z-ctc" })
+    public Result<OrgVO> getOrg(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                @RequestParam("domainCode")
+                                @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                @RequestParam("orgCode")
+                                @BizParam(name = "orgCode", type = BizField.FieldType.STRING, description = "组织编码, 请求参数 (?orgCode=xxx)", position = BizParam.Position.QUERY) String orgCode) {
         return orgService.findByCode(tenantCode, domainCode, orgCode)
                 .map(o -> Result.<OrgVO>success(OrgVO.from(o)))
                 .orElseGet(() -> Result.<OrgVO>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode()));
@@ -139,11 +149,15 @@ public class OrgController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @PutMapping("/orgs")
-    public Result<Void> updateOrg(@RequestParam("tenantCode") String tenantCode,
-                                  @RequestParam("domainCode") String domainCode,
-                                  @RequestParam("orgCode") String orgCode,
-                                  @RequestBody OrgDO patch,
-                                  @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    @BizApi(summary = "按编码更新组织字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计", description = "按编码更新组织字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计.", tags = { "z-ctc" })
+    public Result<Void> updateOrg(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                  @RequestParam("domainCode")
+                                  @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                  @RequestParam("orgCode")
+                                  @BizParam(name = "orgCode", type = BizField.FieldType.STRING, description = "组织编码, 请求参数 (?orgCode=xxx)", position = BizParam.Position.QUERY) String orgCode,
+                                  @RequestBody @BizParam(name = "patch", type = BizField.FieldType.STRING, description = "待更新字段 (OrgDO)", position = BizParam.Position.BODY) OrgDO patch,
+                                  @RequestHeader(value = "X-User-Id", required = false)
+                                  @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         boolean ok = orgService.updateOrg(tenantCode, domainCode, orgCode, patch, userId);
         return ok ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -158,9 +172,12 @@ public class OrgController {
      * @return 成功返回空体, 资源不存在时返回 404
      */
     @DeleteMapping("/orgs")
-    public Result<Void> deleteOrg(@RequestParam("tenantCode") String tenantCode,
-                                  @RequestParam("domainCode") String domainCode,
-                                  @RequestParam("orgCode") String orgCode) {
+    @BizApi(summary = "按编码删除组织. 资源不存在时返回 404", description = "按编码删除组织. 资源不存在时返回 404.", tags = { "z-ctc" })
+    public Result<Void> deleteOrg(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                  @RequestParam("domainCode")
+                                  @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                  @RequestParam("orgCode")
+                                  @BizParam(name = "orgCode", type = BizField.FieldType.STRING, description = "组织编码, 请求参数 (?orgCode=xxx)", position = BizParam.Position.QUERY) String orgCode) {
         boolean ok = orgService.deleteOrg(tenantCode, domainCode, orgCode);
         return ok ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -176,8 +193,10 @@ public class OrgController {
      * @return 成功返回新建 Dept 的主键 id 
      */
     @PostMapping("/depts")
-    public Result<Long> createDept(@RequestBody DeptDO dept,
-                                   @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    @BizApi(summary = "新建部门 (Dept). 业务冲突 (如编码重复) 返回 409, 参数错误返回 400", description = "新建部门 (Dept). 业务冲突 (如编码重复) 返回 409, 参数错误返回 400.", tags = { "z-ctc" })
+    public Result<Long> createDept(@RequestBody @BizParam(name = "dept", type = BizField.FieldType.STRING, description = "部门实体", position = BizParam.Position.BODY) DeptDO dept,
+                                   @RequestHeader(value = "X-User-Id", required = false)
+                                   @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         try {
             Long id = deptService.createDept(dept, userId);
             return Result.<Long>success(id);
@@ -197,9 +216,12 @@ public class OrgController {
      * @return 该组织下的 Dept VO 列表
      */
     @GetMapping("/depts/list")
-    public Result<List<DeptVO>> listDepts(@RequestParam("tenantCode") String tenantCode,
-                                          @RequestParam("domainCode") String domainCode,
-                                          @RequestParam("orgCode") String orgCode) {
+    @BizApi(summary = "列出指定组织下的所有部门", description = "列出指定组织下的所有部门.", tags = { "z-ctc" })
+    public Result<List<DeptVO>> listDepts(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                          @RequestParam("domainCode")
+                                          @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                          @RequestParam("orgCode")
+                                          @BizParam(name = "orgCode", type = BizField.FieldType.STRING, description = "组织编码, 必填", position = BizParam.Position.QUERY) String orgCode) {
         return Result.success(deptService.listByOrg(tenantCode, domainCode, orgCode).stream()
                 .map(DeptVO::from)
                 .collect(Collectors.toList()));
@@ -215,10 +237,14 @@ public class OrgController {
      * @return Dept VO; 不存在时返回 404
      */
     @GetMapping("/depts")
-    public Result<DeptVO> getDept(@RequestParam("tenantCode") String tenantCode,
-                                  @RequestParam("domainCode") String domainCode,
-                                  @RequestParam("orgCode") String orgCode,
-                                  @RequestParam("deptCode") String deptCode) {
+    @BizApi(summary = "按编码查询部门详情. 找不到时返回 404", description = "按编码查询部门详情. 找不到时返回 404.", tags = { "z-ctc" })
+    public Result<DeptVO> getDept(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                  @RequestParam("domainCode")
+                                  @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                  @RequestParam("orgCode")
+                                  @BizParam(name = "orgCode", type = BizField.FieldType.STRING, description = "隶属组织编码, 必填", position = BizParam.Position.QUERY) String orgCode,
+                                  @RequestParam("deptCode")
+                                  @BizParam(name = "deptCode", type = BizField.FieldType.STRING, description = "部门编码, 请求参数 (?deptCode=xxx)", position = BizParam.Position.QUERY) String deptCode) {
         return deptService.findByCode(tenantCode, domainCode, deptCode)
                 .map(d -> Result.<DeptVO>success(DeptVO.from(d)))
                 .orElseGet(() -> Result.<DeptVO>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode()));
@@ -235,11 +261,15 @@ public class OrgController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @PutMapping("/depts")
-    public Result<Void> updateDept(@RequestParam("tenantCode") String tenantCode,
-                                   @RequestParam("domainCode") String domainCode,
-                                   @RequestParam("deptCode") String deptCode,
-                                   @RequestBody DeptDO patch,
-                                   @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    @BizApi(summary = "按编码更新部门字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计", description = "按编码更新部门字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计.", tags = { "z-ctc" })
+    public Result<Void> updateDept(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                   @RequestParam("domainCode")
+                                   @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                   @RequestParam("deptCode")
+                                   @BizParam(name = "deptCode", type = BizField.FieldType.STRING, description = "部门编码, 请求参数 (?deptCode=xxx)", position = BizParam.Position.QUERY) String deptCode,
+                                   @RequestBody @BizParam(name = "patch", type = BizField.FieldType.STRING, description = "待更新字段 (DeptDO)", position = BizParam.Position.BODY) DeptDO patch,
+                                   @RequestHeader(value = "X-User-Id", required = false)
+                                   @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         boolean ok = deptService.updateDept(tenantCode, domainCode, deptCode, patch, userId);
         return ok ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -255,10 +285,14 @@ public class OrgController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @DeleteMapping("/depts")
-    public Result<Void> deleteDept(@RequestParam("tenantCode") String tenantCode,
-                                   @RequestParam("domainCode") String domainCode,
-                                   @RequestParam("orgCode") String orgCode,
-                                   @RequestParam("deptCode") String deptCode) {
+    @BizApi(summary = "按编码删除部门. 资源不存在返回 404", description = "按编码删除部门. 资源不存在返回 404.", tags = { "z-ctc" })
+    public Result<Void> deleteDept(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                   @RequestParam("domainCode")
+                                   @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                   @RequestParam("orgCode")
+                                   @BizParam(name = "orgCode", type = BizField.FieldType.STRING, description = "隶属组织编码, 必填", position = BizParam.Position.QUERY) String orgCode,
+                                   @RequestParam("deptCode")
+                                   @BizParam(name = "deptCode", type = BizField.FieldType.STRING, description = "部门编码, 请求参数 (?deptCode=xxx)", position = BizParam.Position.QUERY) String deptCode) {
         boolean ok = deptService.deleteDept(tenantCode, domainCode, deptCode);
         return ok ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -277,10 +311,14 @@ public class OrgController {
      * @return 成员 VO 列表 (含 username/nickname 富化)
      */
     @GetMapping("/depts/members")
-    public Result<List<MemberVO>> listDeptMembers(@RequestParam("tenantCode") String tenantCode,
-                                                  @RequestParam("domainCode") String domainCode,
-                                                  @RequestParam(value = "orgCode", required = false) String orgCode,
-                                                  @RequestParam(value = "deptCode", required = false) String deptCode) {
+    @BizApi(summary = "列出挂在一个节点之下的成员 (组织树右面板)", description = "列出挂在一个节点之下的成员 (组织树右面板). 传 deptCode → 该部门的成员; 传 orgCode → 该组织下全部部门的成员并集. membership 模型只有 dept 维度 (z_ctc_ac_membership.dept_code), org 节点由此展开.", tags = { "z-ctc" })
+    public Result<List<MemberVO>> listDeptMembers(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                                  @RequestParam("domainCode")
+                                                  @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                                  @RequestParam(value = "orgCode", required = false)
+                                                  @BizParam(name = "orgCode", type = BizField.FieldType.STRING, description = "组织编码, 与 deptCode 二选一", position = BizParam.Position.QUERY) String orgCode,
+                                                  @RequestParam(value = "deptCode", required = false)
+                                                  @BizParam(name = "deptCode", type = BizField.FieldType.STRING, description = "部门编码, 优先于 orgCode", position = BizParam.Position.QUERY) String deptCode) {
         List<com.zifang.ctc.core.domain.entity.MembershipDO> memberships;
         if (deptCode != null && !deptCode.isEmpty()) {
             memberships = membershipService.listActiveByDept(tenantCode, deptCode);
@@ -324,11 +362,16 @@ public class OrgController {
      * @return 挂载后的成员 VO
      */
     @PostMapping("/depts/members")
-    public Result<MemberVO> attachDeptMember(@RequestParam("tenantCode") String tenantCode,
-                                             @RequestParam("domainCode") String domainCode,
-                                             @RequestParam("deptCode") String deptCode,
-                                             @RequestParam("userId") Long userId,
-                                             @RequestParam(value = "roleCode", required = false) String roleCode) {
+    @BizApi(summary = "把账户挂到部门 (组织树成员卡片的「添加成员」)", description = "把账户挂到部门 (组织树成员卡片的「添加成员」). uk_user_tenant 约束下一人一租户只有一条成员关系: 已有关系则改挂部门并回正状态.", tags = { "z-ctc" })
+    public Result<MemberVO> attachDeptMember(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                             @RequestParam("domainCode")
+                                             @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                             @RequestParam("deptCode")
+                                             @BizParam(name = "deptCode", type = BizField.FieldType.STRING, description = "部门编码, 必填", position = BizParam.Position.QUERY) String deptCode,
+                                             @RequestParam("userId")
+                                             @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "账号主键 id, 必填", position = BizParam.Position.QUERY) Long userId,
+                                             @RequestParam(value = "roleCode", required = false)
+                                             @BizParam(name = "roleCode", type = BizField.FieldType.STRING, description = "角色编码, 可选 (默认 member)", position = BizParam.Position.QUERY) String roleCode) {
         try {
             com.zifang.ctc.core.domain.entity.MembershipDO ms =
                     membershipService.attachToDept(userId, tenantCode, deptCode, roleCode);
@@ -350,10 +393,14 @@ public class OrgController {
      * @return 成功返回空体, 成员关系不存在返回 404
      */
     @DeleteMapping("/depts/members")
-    public Result<Void> detachDeptMember(@RequestParam("tenantCode") String tenantCode,
-                                         @RequestParam("domainCode") String domainCode,
-                                         @RequestParam("deptCode") String deptCode,
-                                         @RequestParam("userId") Long userId) {
+    @BizApi(summary = "把账户从部门摘下 — membership 保留, 仅清空 dept_code", description = "把账户从部门摘下 — membership 保留, 仅清空 dept_code.", tags = { "z-ctc" })
+    public Result<Void> detachDeptMember(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                         @RequestParam("domainCode")
+                                         @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                         @RequestParam("deptCode")
+                                         @BizParam(name = "deptCode", type = BizField.FieldType.STRING, description = "部门编码, 必填 (当前展示用的节点, 服务端按 user+tenant 定位)", position = BizParam.Position.QUERY) String deptCode,
+                                         @RequestParam("userId")
+                                         @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "账号主键 id, 必填", position = BizParam.Position.QUERY) Long userId) {
         boolean ok = membershipService.detachFromDept(userId, tenantCode);
         return ok ? Result.<Void>success()
                 : Result.<Void>fail("成员关系不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -369,8 +416,10 @@ public class OrgController {
      * @return 成功返回新建 Group 的主键 id 
      */
     @PostMapping("/groups")
-    public Result<Long> createGroup(@RequestBody GroupDO group,
-                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    @BizApi(summary = "新建小组 (Group). 业务冲突 (如编码重复) 返回 409, 参数错误返回 400", description = "新建小组 (Group). 业务冲突 (如编码重复) 返回 409, 参数错误返回 400.", tags = { "z-ctc" })
+    public Result<Long> createGroup(@RequestBody @BizParam(name = "group", type = BizField.FieldType.STRING, description = "小组实体", position = BizParam.Position.BODY) GroupDO group,
+                                    @RequestHeader(value = "X-User-Id", required = false)
+                                    @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         try {
             Long id = groupService.createGroup(group, userId);
             return Result.<Long>success(id);
@@ -390,9 +439,12 @@ public class OrgController {
      * @return 该部门下的 Group VO 列表
      */
     @GetMapping("/groups/list")
-    public Result<List<GroupVO>> listGroups(@RequestParam("tenantCode") String tenantCode,
-                                            @RequestParam("domainCode") String domainCode,
-                                            @RequestParam("deptCode") String deptCode) {
+    @BizApi(summary = "列出指定部门下的所有小组", description = "列出指定部门下的所有小组.", tags = { "z-ctc" })
+    public Result<List<GroupVO>> listGroups(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                            @RequestParam("domainCode")
+                                            @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                            @RequestParam("deptCode")
+                                            @BizParam(name = "deptCode", type = BizField.FieldType.STRING, description = "隶属部门编码, 必填", position = BizParam.Position.QUERY) String deptCode) {
         return Result.success(groupService.listByDept(tenantCode, domainCode, deptCode).stream()
                 .map(GroupVO::from)
                 .collect(Collectors.toList()));
@@ -408,10 +460,14 @@ public class OrgController {
      * @return Group VO; 不存在时返回 404
      */
     @GetMapping("/groups")
-    public Result<GroupVO> getGroup(@RequestParam("tenantCode") String tenantCode,
-                                    @RequestParam("domainCode") String domainCode,
-                                    @RequestParam("deptCode") String deptCode,
-                                    @RequestParam("groupCode") String groupCode) {
+    @BizApi(summary = "按编码查询小组详情. 找不到时返回 404", description = "按编码查询小组详情. 找不到时返回 404.", tags = { "z-ctc" })
+    public Result<GroupVO> getGroup(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                    @RequestParam("domainCode")
+                                    @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                    @RequestParam("deptCode")
+                                    @BizParam(name = "deptCode", type = BizField.FieldType.STRING, description = "隶属部门编码, 必填", position = BizParam.Position.QUERY) String deptCode,
+                                    @RequestParam("groupCode")
+                                    @BizParam(name = "groupCode", type = BizField.FieldType.STRING, description = "小组编码, 请求参数 (?groupCode=xxx)", position = BizParam.Position.QUERY) String groupCode) {
         return groupService.findByCode(tenantCode, domainCode, groupCode)
                 .map(g -> Result.<GroupVO>success(GroupVO.from(g)))
                 .orElseGet(() -> Result.<GroupVO>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode()));
@@ -429,12 +485,17 @@ public class OrgController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @PutMapping("/groups")
-    public Result<Void> updateGroup(@RequestParam("tenantCode") String tenantCode,
-                                    @RequestParam("domainCode") String domainCode,
-                                    @RequestParam("deptCode") String deptCode,
-                                    @RequestParam("groupCode") String groupCode,
-                                    @RequestBody GroupDO patch,
-                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    @BizApi(summary = "按编码更新小组字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计", description = "按编码更新小组字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计.", tags = { "z-ctc" })
+    public Result<Void> updateGroup(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                    @RequestParam("domainCode")
+                                    @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                    @RequestParam("deptCode")
+                                    @BizParam(name = "deptCode", type = BizField.FieldType.STRING, description = "隶属部门编码, 必填", position = BizParam.Position.QUERY) String deptCode,
+                                    @RequestParam("groupCode")
+                                    @BizParam(name = "groupCode", type = BizField.FieldType.STRING, description = "小组编码, 请求参数 (?groupCode=xxx)", position = BizParam.Position.QUERY) String groupCode,
+                                    @RequestBody @BizParam(name = "patch", type = BizField.FieldType.STRING, description = "待更新字段 (GroupDO)", position = BizParam.Position.BODY) GroupDO patch,
+                                    @RequestHeader(value = "X-User-Id", required = false)
+                                    @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         boolean ok = groupService.updateGroup(tenantCode, domainCode, groupCode, patch, userId);
         return ok ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -450,10 +511,14 @@ public class OrgController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @DeleteMapping("/groups")
-    public Result<Void> deleteGroup(@RequestParam("tenantCode") String tenantCode,
-                                    @RequestParam("domainCode") String domainCode,
-                                    @RequestParam("deptCode") String deptCode,
-                                    @RequestParam("groupCode") String groupCode) {
+    @BizApi(summary = "按编码删除小组. 资源不存在返回 404", description = "按编码删除小组. 资源不存在返回 404.", tags = { "z-ctc" })
+    public Result<Void> deleteGroup(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 必填", position = BizParam.Position.QUERY) String tenantCode,
+                                    @RequestParam("domainCode")
+                                    @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码, 必填", position = BizParam.Position.QUERY) String domainCode,
+                                    @RequestParam("deptCode")
+                                    @BizParam(name = "deptCode", type = BizField.FieldType.STRING, description = "隶属部门编码, 必填", position = BizParam.Position.QUERY) String deptCode,
+                                    @RequestParam("groupCode")
+                                    @BizParam(name = "groupCode", type = BizField.FieldType.STRING, description = "小组编码, 请求参数 (?groupCode=xxx)", position = BizParam.Position.QUERY) String groupCode) {
         boolean ok = groupService.deleteGroup(tenantCode, domainCode, groupCode);
         return ok ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -465,6 +530,7 @@ public class OrgController {
      * @return 含 module、feature、status 三个键的成功结果
      */
     @GetMapping("/orgs/health")
+    @BizApi(summary = "模块健康检查端点, 返回固定字段 (module / feature / status=ok). 用于探活/监控", description = "模块健康检查端点, 返回固定字段 (module / feature / status=ok). 用于探活/监控.", tags = { "z-ctc" })
     public Result<?> health() {
         return Result.success(Maps.of(
                 "module", "z-ctc-ac",
@@ -473,3 +539,6 @@ public class OrgController {
         ));
     }
 }
+
+
+

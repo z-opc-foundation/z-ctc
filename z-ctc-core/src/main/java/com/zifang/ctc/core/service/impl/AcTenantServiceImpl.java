@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zifang.ctc.core.domain.entity.TenantDO;
 import com.zifang.ctc.core.domain.service.TenantDbService;
 import com.zifang.ctc.core.service.TenantService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,7 @@ public class AcTenantServiceImpl implements TenantService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建租户", module = "z-ctc", description = "创建租户.", operation = BizMethod.Operation.CREATE)
     public Long createTenant(TenantDO tenant, String createdBy) {
         if (tenant == null || tenant.getTenantCode() == null || tenant.getTenantName() == null) {
             throw new IllegalArgumentException("tenantCode/tenantName required");
@@ -67,6 +69,7 @@ public class AcTenantServiceImpl implements TenantService {
      * @return 租户信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据租户编码查询租户", module = "z-ctc", description = "根据租户编码查询租户.", operation = BizMethod.Operation.QUERY)
     public Optional<TenantDO> findByTenantCode(String tenantCode) {
         return Optional.ofNullable(tenantDbService.selectByTenantCode(tenantCode));
     }
@@ -80,6 +83,7 @@ public class AcTenantServiceImpl implements TenantService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新租户状态", module = "z-ctc", description = "更新租户状态.", operation = BizMethod.Operation.UPDATE)
     public boolean updateStatus(String tenantCode, int newStatus) {
         TenantDO t = tenantDbService.selectByTenantCode(tenantCode);
         if (t == null) { return false; }
@@ -95,6 +99,7 @@ public class AcTenantServiceImpl implements TenantService {
      * @return 租户列表
      */
     @Override
+    @BizMethod(name = "查询所有租户（按创建时间倒序）", module = "z-ctc", description = "查询所有租户（按创建时间倒序）.", operation = BizMethod.Operation.QUERY)
     public List<TenantDO> listAll() {
         return tenantDbService.selectByQuery(new QueryWrapper<TenantDO>().orderByDesc("created_at"));
     }
@@ -109,6 +114,7 @@ public class AcTenantServiceImpl implements TenantService {
      * @return 租户列表
      */
     @Override
+    @BizMethod(name = "分页查询租户（支持关键词搜索）", module = "z-ctc", description = "分页查询租户（支持关键词搜索）.", operation = BizMethod.Operation.QUERY)
     public List<TenantDO> pageList(String keyword, int pageNum, int pageSize, long total) {
         Page<TenantDO> page = new Page<>(pageNum, pageSize);
         QueryWrapper<TenantDO> qw = new QueryWrapper<>();
@@ -131,6 +137,7 @@ public class AcTenantServiceImpl implements TenantService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新租户信息", module = "z-ctc", description = "更新租户信息.", operation = BizMethod.Operation.UPDATE)
     public boolean updateTenant(String tenantCode, TenantDO patch) {
         if (tenantCode == null || patch == null) { return false; }
 
@@ -161,6 +168,7 @@ public class AcTenantServiceImpl implements TenantService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "删除租户", module = "z-ctc", description = "删除租户.", operation = BizMethod.Operation.DELETE)
     public boolean deleteTenant(String tenantCode) {
         TenantDO t = tenantDbService.selectByTenantCode(tenantCode);
         if (t == null) { return false; }
@@ -168,3 +176,6 @@ public class AcTenantServiceImpl implements TenantService {
         return tenantDbService.deleteById(t.getId()) > 0;
     }
 }
+
+
+

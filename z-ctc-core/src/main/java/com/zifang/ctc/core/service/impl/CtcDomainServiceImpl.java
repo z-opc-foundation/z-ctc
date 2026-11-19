@@ -3,6 +3,7 @@ package com.zifang.ctc.core.service.impl;
 import com.zifang.ctc.core.domain.entity.DomainDO;
 import com.zifang.ctc.core.domain.service.DomainDbService;
 import com.zifang.ctc.core.service.DomainService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ public class CtcDomainServiceImpl implements DomainService {
      * @return 域列表
      */
     @Override
+    @BizMethod(name = "查询租户下的所有域", module = "z-ctc", description = "查询租户下的所有域.", operation = BizMethod.Operation.QUERY)
     public List<DomainDO> listByTenant(String tenantCode) {
         if (tenantCode == null) { return Collections.emptyList(); }
 
@@ -54,6 +56,7 @@ public class CtcDomainServiceImpl implements DomainService {
      * @return 域列表
      */
     @Override
+    @BizMethod(name = "查询所有域", module = "z-ctc", description = "查询所有域.", operation = BizMethod.Operation.QUERY)
     public List<DomainDO> listAll() {
         return domainDbService.selectAll();
     }
@@ -69,6 +72,7 @@ public class CtcDomainServiceImpl implements DomainService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建域", module = "z-ctc", description = "创建域.", operation = BizMethod.Operation.CREATE)
     public Long createDomain(DomainDO domain, String createdBy) {
         if (domain == null || domain.getDomainCode() == null || domain.getTenantCode() == null) {
             throw new IllegalArgumentException("domainCode / tenantCode 必填");
@@ -98,6 +102,7 @@ public class CtcDomainServiceImpl implements DomainService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新域信息", module = "z-ctc", description = "更新域信息.", operation = BizMethod.Operation.UPDATE)
     public boolean updateDomain(Long id, DomainDO patch, String updatedBy) {
         if (id == null || patch == null) { return false; }
 
@@ -122,6 +127,7 @@ public class CtcDomainServiceImpl implements DomainService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "删除域", module = "z-ctc", description = "删除域.", operation = BizMethod.Operation.DELETE)
     public boolean deleteDomain(Long id) {
         if (id == null) { return false; }
 
@@ -135,7 +141,11 @@ public class CtcDomainServiceImpl implements DomainService {
      * @return 域信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据ID查询域", module = "z-ctc", description = "根据ID查询域.", operation = BizMethod.Operation.QUERY)
     public Optional<DomainDO> findById(Long id) {
         return Optional.ofNullable(domainDbService.selectById(id));
     }
 }
+
+
+

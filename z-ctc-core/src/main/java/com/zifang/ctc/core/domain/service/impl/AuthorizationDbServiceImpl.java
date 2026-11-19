@@ -15,6 +15,7 @@ import com.zifang.ctc.core.domain.mapper.UserDenyMapper;
 import com.zifang.ctc.core.domain.mapper.UserGrantMapper;
 import com.zifang.ctc.core.domain.mapper.UserRoleMapper;
 import com.zifang.ctc.core.domain.service.AuthorizationDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -66,6 +67,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入角色记录", module = "z-ctc", description = "插入角色记录。", operation = BizMethod.Operation.CREATE)
     public int insertRole(RoleDO role) {
         return roleMapper.insert(role);
     }
@@ -77,6 +79,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键更新角色记录", module = "z-ctc", description = "根据主键更新角色记录。", operation = BizMethod.Operation.UPDATE)
     public int updateRoleById(RoleDO role) {
         return roleMapper.updateById(role);
     }
@@ -88,6 +91,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键删除角色记录", module = "z-ctc", description = "根据主键删除角色记录。", operation = BizMethod.Operation.DELETE)
     public int deleteRoleById(Long id) {
         return roleMapper.deleteById(id);
     }
@@ -99,6 +103,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 角色实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据主键查询角色记录", module = "z-ctc", description = "根据主键查询角色记录。", operation = BizMethod.Operation.QUERY)
     public RoleDO selectRoleById(Long id) {
         return roleMapper.selectById(id);
     }
@@ -111,6 +116,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 角色实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据角色编码和租户编码查询角色记录", module = "z-ctc", description = "根据角色编码和租户编码查询角色记录。", operation = BizMethod.Operation.QUERY)
     public RoleDO selectRoleByCode(String roleCode, String tenantCode) {
         return roleMapper.selectByRoleCode(roleCode, tenantCode);
     }
@@ -122,6 +128,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 角色实体对象列表
      */
     @Override
+    @BizMethod(name = "根据查询条件查询角色列表", module = "z-ctc", description = "根据查询条件查询角色列表。", operation = BizMethod.Operation.QUERY)
     public List<RoleDO> selectRoleList(QueryWrapper<RoleDO> wrapper) {
         return roleMapper.selectList(wrapper);
     }
@@ -134,6 +141,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 分页的角色实体对象列表
      */
     @Override
+    @BizMethod(name = "分页查询角色列表", module = "z-ctc", description = "分页查询角色列表。", operation = BizMethod.Operation.QUERY)
     public IPage<RoleDO> selectRolePage(IPage<RoleDO> page, QueryWrapper<RoleDO> wrapper) {
         return roleMapper.selectPage(page, wrapper);
     }
@@ -145,6 +153,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 角色实体对象列表
      */
     @Override
+    @BizMethod(name = "根据主键列表批量查询角色记录", module = "z-ctc", description = "根据主键列表批量查询角色记录。", operation = BizMethod.Operation.QUERY)
     public List<RoleDO> selectRoleBatchIds(List<Long> ids) {
         return roleMapper.selectBatchIds(ids);
     }
@@ -158,6 +167,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入资源记录", module = "z-ctc", description = "插入资源记录。", operation = BizMethod.Operation.CREATE)
     public int insertResource(ResourceDO resource) {
         return resourceMapper.insert(resource);
     }
@@ -169,6 +179,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键更新资源记录", module = "z-ctc", description = "根据主键更新资源记录。", operation = BizMethod.Operation.UPDATE)
     public int updateResourceById(ResourceDO resource) {
         return resourceMapper.updateById(resource);
     }
@@ -180,6 +191,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键删除资源记录", module = "z-ctc", description = "根据主键删除资源记录。", operation = BizMethod.Operation.DELETE)
     public int deleteResourceById(Long id) {
         return resourceMapper.deleteById(id);
     }
@@ -191,6 +203,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 资源实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据主键查询资源记录", module = "z-ctc", description = "根据主键查询资源记录。", operation = BizMethod.Operation.QUERY)
     public ResourceDO selectResourceById(Long id) {
         return resourceMapper.selectById(id);
     }
@@ -204,6 +217,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 资源实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据资源编码、应用编码和租户编码查询资源记录", module = "z-ctc", description = "根据资源编码、应用编码和租户编码查询资源记录。", operation = BizMethod.Operation.QUERY)
     public ResourceDO selectResourceByCode(String resourceCode, String appCode, String tenantCode) {
         return resourceMapper.selectByResourceCode(resourceCode, appCode, tenantCode);
     }
@@ -216,6 +230,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 资源实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据资源编码和租户编码查询资源记录（旧签名，委托三参版本）", module = "z-ctc", description = "根据资源编码和租户编码查询资源记录（旧签名，委托三参版本）。", operation = BizMethod.Operation.QUERY)
     public ResourceDO selectResourceByCode(String resourceCode, String tenantCode) {
         // 旧签名委托三参版本, appCode=null (admin 通用视图用, 业务侧请改用三参版本)
         return selectResourceByCode(resourceCode, null, tenantCode);
@@ -228,6 +243,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 资源实体对象列表
      */
     @Override
+    @BizMethod(name = "根据查询条件查询资源列表", module = "z-ctc", description = "根据查询条件查询资源列表。", operation = BizMethod.Operation.QUERY)
     public List<ResourceDO> selectResourceList(QueryWrapper<ResourceDO> wrapper) {
         return resourceMapper.selectList(wrapper);
     }
@@ -240,6 +256,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 分页的资源实体对象列表
      */
     @Override
+    @BizMethod(name = "分页查询资源列表", module = "z-ctc", description = "分页查询资源列表。", operation = BizMethod.Operation.QUERY)
     public IPage<ResourceDO> selectResourcePage(IPage<ResourceDO> page, QueryWrapper<ResourceDO> wrapper) {
         return resourceMapper.selectPage(page, wrapper);
     }
@@ -251,6 +268,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 资源实体对象列表
      */
     @Override
+    @BizMethod(name = "根据主键列表批量查询资源记录", module = "z-ctc", description = "根据主键列表批量查询资源记录。", operation = BizMethod.Operation.QUERY)
     public List<ResourceDO> selectResourceBatchIds(List<Long> ids) {
         return resourceMapper.selectBatchIds(ids);
     }
@@ -261,6 +279,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 应用编码列表
      */
     @Override
+    @BizMethod(name = "查询所有不同的应用编码列表", module = "z-ctc", description = "查询所有不同的应用编码列表。", operation = BizMethod.Operation.QUERY)
     public List<String> selectDistinctApps() {
         return resourceMapper.selectDistinctApps();
     }
@@ -275,6 +294,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 数量
      */
     @Override
+    @BizMethod(name = "统计用户在指定角色下的数量", module = "z-ctc", description = "统计用户在指定角色下的数量。", operation = BizMethod.Operation.QUERY)
     public Long countUserRole(Long userId, Long roleId) {
         return userRoleMapper.selectCount(new QueryWrapper<UserRoleDO>()
                 .eq("user_id", userId).eq("role_id", roleId));
@@ -287,6 +307,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 用户角色关系列表
      */
     @Override
+    @BizMethod(name = "根据用户主键查询用户角色关系列表", module = "z-ctc", description = "根据用户主键查询用户角色关系列表。", operation = BizMethod.Operation.QUERY)
     public List<UserRoleDO> selectUserRoleByUserId(Long userId) {
         return userRoleMapper.selectByUserId(userId);
     }
@@ -298,6 +319,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入用户角色关系记录", module = "z-ctc", description = "插入用户角色关系记录。", operation = BizMethod.Operation.CREATE)
     public int insertUserRole(UserRoleDO userRole) {
         return userRoleMapper.insert(userRole);
     }
@@ -310,6 +332,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "删除用户角色关系记录", module = "z-ctc", description = "删除用户角色关系记录。", operation = BizMethod.Operation.DELETE)
     public int deleteUserRole(Long userId, Long roleId) {
         return userRoleMapper.delete(new QueryWrapper<UserRoleDO>()
                 .eq("user_id", userId).eq("role_id", roleId));
@@ -322,6 +345,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据角色主键删除用户角色关系记录", module = "z-ctc", description = "根据角色主键删除用户角色关系记录。", operation = BizMethod.Operation.DELETE)
     public int deleteUserRoleByRoleId(Long roleId) {
         return userRoleMapper.delete(new QueryWrapper<UserRoleDO>().eq("role_id", roleId));
     }
@@ -333,6 +357,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 数量
      */
     @Override
+    @BizMethod(name = "根据查询条件统计用户角色关系数量", module = "z-ctc", description = "根据查询条件统计用户角色关系数量。", operation = BizMethod.Operation.QUERY)
     public Long countUserRoleByQuery(QueryWrapper<UserRoleDO> wrapper) {
         return userRoleMapper.selectCount(wrapper);
     }
@@ -347,6 +372,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 数量
      */
     @Override
+    @BizMethod(name = "统计角色资源关系数量", module = "z-ctc", description = "统计角色资源关系数量。", operation = BizMethod.Operation.QUERY)
     public Long countRoleResource(Long roleId, Long resourceId) {
         return roleResourceMapper.selectCount(new QueryWrapper<RoleResourceDO>()
                 .eq("role_id", roleId).eq("resource_id", resourceId));
@@ -359,6 +385,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 角色资源关系列表
      */
     @Override
+    @BizMethod(name = "根据角色主键查询角色资源关系列表", module = "z-ctc", description = "根据角色主键查询角色资源关系列表。", operation = BizMethod.Operation.QUERY)
     public List<RoleResourceDO> selectRoleResourceByRoleId(Long roleId) {
         return roleResourceMapper.selectByRoleId(roleId);
     }
@@ -370,6 +397,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 资源 ID 列表
      */
     @Override
+    @BizMethod(name = "根据角色 ID CSV 字符串查询资源 ID 列表", module = "z-ctc", description = "根据角色 ID CSV 字符串查询资源 ID 列表。", operation = BizMethod.Operation.QUERY)
     public List<Long> selectResourceIdsByRoleIdsCsv(String roleIdsCsv) {
         return roleResourceMapper.selectResourceIdsByRoleIds(roleIdsCsv);
     }
@@ -381,6 +409,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 角色资源关系列表
      */
     @Override
+    @BizMethod(name = "根据查询条件查询角色资源关系列表", module = "z-ctc", description = "根据查询条件查询角色资源关系列表。", operation = BizMethod.Operation.QUERY)
     public List<RoleResourceDO> selectRoleResourceByQuery(QueryWrapper<RoleResourceDO> wrapper) {
         return roleResourceMapper.selectList(wrapper);
     }
@@ -392,6 +421,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入角色资源关系记录", module = "z-ctc", description = "插入角色资源关系记录。", operation = BizMethod.Operation.CREATE)
     public int insertRoleResource(RoleResourceDO rr) {
         return roleResourceMapper.insert(rr);
     }
@@ -404,6 +434,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "删除角色资源关系记录", module = "z-ctc", description = "删除角色资源关系记录。", operation = BizMethod.Operation.DELETE)
     public int deleteRoleResource(Long roleId, Long resourceId) {
         return roleResourceMapper.delete(new QueryWrapper<RoleResourceDO>()
                 .eq("role_id", roleId).eq("resource_id", resourceId));
@@ -416,6 +447,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据角色主键删除角色资源关系记录", module = "z-ctc", description = "根据角色主键删除角色资源关系记录。", operation = BizMethod.Operation.DELETE)
     public int deleteRoleResourceByRoleId(Long roleId) {
         return roleResourceMapper.delete(new QueryWrapper<RoleResourceDO>().eq("role_id", roleId));
     }
@@ -427,6 +459,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据资源主键删除角色资源关系记录", module = "z-ctc", description = "根据资源主键删除角色资源关系记录。", operation = BizMethod.Operation.DELETE)
     public int deleteRoleResourceByResourceId(Long resourceId) {
         return roleResourceMapper.delete(new QueryWrapper<RoleResourceDO>().eq("resource_id", resourceId));
     }
@@ -440,6 +473,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入用户授权记录（白名单）", module = "z-ctc", description = "插入用户授权记录（白名单）。", operation = BizMethod.Operation.CREATE)
     public int insertUserGrant(UserGrantDO grant) {
         return userGrantMapper.insert(grant);
     }
@@ -452,6 +486,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "删除用户授权记录", module = "z-ctc", description = "删除用户授权记录。", operation = BizMethod.Operation.DELETE)
     public int deleteUserGrant(Long userId, Long resourceId) {
         return userGrantMapper.deleteByUserAndResource(userId, resourceId);
     }
@@ -463,6 +498,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据用户主键删除用户授权记录", module = "z-ctc", description = "根据用户主键删除用户授权记录。", operation = BizMethod.Operation.DELETE)
     public int deleteUserGrantByUserId(Long userId) {
         return userGrantMapper.deleteByUserId(userId);
     }
@@ -474,6 +510,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 用户授权列表
      */
     @Override
+    @BizMethod(name = "根据用户主键查询用户授权列表", module = "z-ctc", description = "根据用户主键查询用户授权列表。", operation = BizMethod.Operation.QUERY)
     public List<UserGrantDO> selectUserGrantByUserId(Long userId) {
         return userGrantMapper.selectByUserId(userId);
     }
@@ -486,6 +523,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 用户授权对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据用户主键和资源主键查询用户授权记录", module = "z-ctc", description = "根据用户主键和资源主键查询用户授权记录。", operation = BizMethod.Operation.QUERY)
     public UserGrantDO selectUserGrantByUserAndResource(Long userId, Long resourceId) {
         return userGrantMapper.selectByUserAndResource(userId, resourceId);
     }
@@ -499,6 +537,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入用户拒绝记录（黑名单）", module = "z-ctc", description = "插入用户拒绝记录（黑名单）。", operation = BizMethod.Operation.CREATE)
     public int insertUserDeny(UserDenyDO deny) {
         return userDenyMapper.insert(deny);
     }
@@ -511,6 +550,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "删除用户拒绝记录", module = "z-ctc", description = "删除用户拒绝记录。", operation = BizMethod.Operation.DELETE)
     public int deleteUserDeny(Long userId, Long resourceId) {
         return userDenyMapper.deleteByUserAndResource(userId, resourceId);
     }
@@ -522,6 +562,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据用户主键删除用户拒绝记录", module = "z-ctc", description = "根据用户主键删除用户拒绝记录。", operation = BizMethod.Operation.DELETE)
     public int deleteUserDenyByUserId(Long userId) {
         return userDenyMapper.deleteByUserId(userId);
     }
@@ -533,6 +574,7 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 用户拒绝列表
      */
     @Override
+    @BizMethod(name = "根据用户主键查询用户拒绝列表", module = "z-ctc", description = "根据用户主键查询用户拒绝列表。", operation = BizMethod.Operation.QUERY)
     public List<UserDenyDO> selectUserDenyByUserId(Long userId) {
         return userDenyMapper.selectByUserId(userId);
     }
@@ -545,7 +587,11 @@ public class AuthorizationDbServiceImpl implements AuthorizationDbService {
      * @return 用户拒绝对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据用户主键和资源主键查询用户拒绝记录", module = "z-ctc", description = "根据用户主键和资源主键查询用户拒绝记录。", operation = BizMethod.Operation.QUERY)
     public UserDenyDO selectUserDenyByUserAndResource(Long userId, Long resourceId) {
         return userDenyMapper.selectByUserAndResource(userId, resourceId);
     }
 }
+
+
+

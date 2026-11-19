@@ -2,6 +2,8 @@ package com.zifang.ctc.sso.refresh;
 
 import com.zifang.ctc.sso.JwtUtil;
 import com.zifang.ctc.sso.model.UserInfo;
+import com.zifang.util.core.lang.RandomUtil;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +12,6 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import com.zifang.util.core.lang.RandomUtil;
 
 /**
  * Refresh Token 服务.
@@ -53,6 +54,7 @@ public class TokenRefreshService {
      *
      * @return refresh token 字符串 (业务方持久化给前端, 不入 z-ctc 数据库)
      */
+    @BizMethod(name = "为用户颁发 refresh token. 内部用 JwtUtil 签发 JWT, claims 含 tokenType=refresh + refreshId (UUID)", module = "z-ctc", description = "为用户颁发 refresh token. 内部用 JwtUtil 签发 JWT, claims 含 tokenType=refresh + refreshId (UUID).", operation = BizMethod.Operation.ACTION)
     public String issueRefreshToken(UserInfo userInfo) {
         if (userInfo == null) {
             return null;
@@ -74,6 +76,7 @@ public class TokenRefreshService {
      *
      * @return RefreshResult, 业务方根据 valid 判断是否换发
      */
+    @BizMethod(name = "拿 refresh token 换新 access token. 业务方根据业务需要自行决定 access token 的 TTL/载荷", module = "z-ctc", description = "拿 refresh token 换新 access token. 业务方根据业务需要自行决定 access token 的 TTL/载荷. 本方法返回验证结果 + 解析出的 claims, 由业务方决定如何签发 access token.", operation = BizMethod.Operation.ACTION)
     public RefreshResult refresh(String refreshToken) {
         if (refreshToken == null || refreshToken.isEmpty()) {
             return RefreshResult.invalid();
@@ -112,6 +115,7 @@ public class TokenRefreshService {
     /**
      * 吊销某个 refresh token. 业务方在用户登出 / refresh 轮换时调用.
      */
+    @BizMethod(name = "吊销某个 refresh token. 业务方在用户登出 / refresh 轮换时调用", module = "z-ctc", description = "吊销某个 refresh token. 业务方在用户登出 / refresh 轮换时调用.", operation = BizMethod.Operation.ACTION)
     public void revoke(String refreshToken) {
         if (refreshToken == null) {
             return;
@@ -133,6 +137,7 @@ public class TokenRefreshService {
     /**
      * 清空吊销列表 (单元测试 / 配置热加载).
      */
+    @BizMethod(name = "清空吊销列表 (单元测试 / 配置热加载)", module = "z-ctc", description = "清空吊销列表 (单元测试 / 配置热加载).", operation = BizMethod.Operation.DELETE)
     public void clearRevoked() {
         revokedRefreshIds.clear();
     }
@@ -172,3 +177,6 @@ public class TokenRefreshService {
         }
     }
 }
+
+
+

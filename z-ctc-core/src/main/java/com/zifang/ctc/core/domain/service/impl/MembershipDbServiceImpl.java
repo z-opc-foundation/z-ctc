@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.zifang.ctc.core.domain.entity.MembershipDO;
 import com.zifang.ctc.core.domain.mapper.MembershipMapper;
 import com.zifang.ctc.core.domain.service.MembershipDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,6 +37,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入会员关系记录", module = "z-ctc", description = "插入会员关系记录。", operation = BizMethod.Operation.CREATE)
     public int insert(MembershipDO entity) {
         return membershipMapper.insert(entity);
     }
@@ -47,6 +49,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键更新会员关系记录", module = "z-ctc", description = "根据主键更新会员关系记录。", operation = BizMethod.Operation.UPDATE)
     public int updateById(MembershipDO entity) {
         return membershipMapper.updateById(entity);
     }
@@ -58,6 +61,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键删除会员关系记录", module = "z-ctc", description = "根据主键删除会员关系记录。", operation = BizMethod.Operation.DELETE)
     public int deleteById(Long id) {
         return membershipMapper.deleteById(id);
     }
@@ -69,6 +73,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 会员关系实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据主键查询会员关系记录", module = "z-ctc", description = "根据主键查询会员关系记录。", operation = BizMethod.Operation.QUERY)
     public MembershipDO selectById(Long id) {
         return membershipMapper.selectById(id);
     }
@@ -81,6 +86,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 会员关系实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据用户主键和租户编码查询会员关系记录", module = "z-ctc", description = "根据用户主键和租户编码查询会员关系记录。", operation = BizMethod.Operation.QUERY)
     public MembershipDO selectByUserAndTenant(Long userId, String tenantCode) {
         return membershipMapper.selectByUserAndTenant(userId, tenantCode);
     }
@@ -92,6 +98,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 会员关系实体对象列表
      */
     @Override
+    @BizMethod(name = "查询用户的活跃会员关系列表", module = "z-ctc", description = "查询用户的活跃会员关系列表。", operation = BizMethod.Operation.QUERY)
     public List<MembershipDO> selectActiveByUserId(Long userId) {
         return membershipMapper.selectActiveByUserId(userId);
     }
@@ -103,6 +110,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 会员关系实体对象列表
      */
     @Override
+    @BizMethod(name = "查询用户的所有会员关系列表", module = "z-ctc", description = "查询用户的所有会员关系列表。", operation = BizMethod.Operation.QUERY)
     public List<MembershipDO> selectAllByUserId(Long userId) {
         return membershipMapper.selectAllByUserId(userId);
     }
@@ -114,6 +122,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 会员关系实体对象列表
      */
     @Override
+    @BizMethod(name = "查询租户的活跃会员关系列表", module = "z-ctc", description = "查询租户的活跃会员关系列表。", operation = BizMethod.Operation.QUERY)
     public List<MembershipDO> selectActiveByTenant(String tenantCode) {
         return membershipMapper.selectActiveByTenant(tenantCode);
     }
@@ -126,6 +135,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 会员关系实体对象列表
      */
     @Override
+    @BizMethod(name = "查询租户某部门的活跃会员关系列表", module = "z-ctc", description = "查询租户某部门的活跃会员关系列表。", operation = BizMethod.Operation.QUERY)
     public List<MembershipDO> selectActiveByDept(String tenantCode, String deptCode) {
         return membershipMapper.selectActiveByDept(tenantCode, deptCode);
     }
@@ -138,6 +148,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 会员关系实体对象列表
      */
     @Override
+    @BizMethod(name = "查询租户一组部门的活跃会员关系列表", module = "z-ctc", description = "查询租户一组部门的活跃会员关系列表。", operation = BizMethod.Operation.QUERY)
     public List<MembershipDO> selectActiveByDeptCodes(String tenantCode, java.util.Collection<String> deptCodes) {
         return membershipMapper.selectActiveByDeptCodes(tenantCode, deptCodes);
     }
@@ -150,6 +161,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "清空用户在某租户的 dept_code", module = "z-ctc", description = "清空用户在某租户的 dept_code。", operation = BizMethod.Operation.DELETE)
     public int clearDeptCode(Long userId, String tenantCode) {
         return membershipMapper.clearDeptCode(userId, tenantCode);
     }
@@ -161,6 +173,7 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 数量
      */
     @Override
+    @BizMethod(name = "查询用户活跃会员关系数量", module = "z-ctc", description = "查询用户活跃会员关系数量。", operation = BizMethod.Operation.QUERY)
     public long countActiveByUserId(Long userId) {
         Long cnt = membershipMapper.countActiveByUserId(userId);
         return cnt == null ? 0L : cnt;
@@ -173,7 +186,11 @@ public class MembershipDbServiceImpl implements MembershipDbService {
      * @return 会员关系实体对象列表
      */
     @Override
+    @BizMethod(name = "根据查询条件查询会员关系列表", module = "z-ctc", description = "根据查询条件查询会员关系列表。", operation = BizMethod.Operation.QUERY)
     public List<MembershipDO> selectByQuery(QueryWrapper<MembershipDO> wrapper) {
         return membershipMapper.selectList(wrapper);
     }
 }
+
+
+

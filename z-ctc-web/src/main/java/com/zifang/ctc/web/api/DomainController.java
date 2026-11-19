@@ -9,6 +9,9 @@ import com.zifang.ctc.core.tenant.TenantContext;
 import com.zifang.ctc.core.vo.DomainVO;
 import com.zifang.util.core.meta.Result;
 import com.zifang.util.core.meta.ResultCode;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -91,8 +94,10 @@ public class DomainController {
      * @return 该租户下的域 VO 列表; 无可用租户或无权访问时返回空/403
      */
     @GetMapping("/list")
+    @BizApi(summary = "按租户编码查询该租户下所有域. 不传 tenantCode 时取当前 JWT 租户", description = "按租户编码查询该租户下所有域. 不传 tenantCode 时取当前 JWT 租户.", tags = { "z-ctc" })
     public Result<List<DomainVO>> listByTenant(
-            @RequestParam(value = "tenantCode", required = false) String tenantCode) {
+            @RequestParam(value = "tenantCode", required = false)
+            @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 可选", position = BizParam.Position.QUERY) String tenantCode) {
         // === 多租户隔离 (FEATURE049): 强制使用当前 JWT 中的 tenantCode ===
         String ctxTenant = TenantContext.getTenantCode();
         String effectiveTenant = (tenantCode != null && !tenantCode.isEmpty()) ? tenantCode : ctxTenant;
@@ -115,6 +120,7 @@ public class DomainController {
      * @return 包装为单页 (pageNum=1, pageSize=总数) 的域分页响应
      */
     @GetMapping("/list-all")
+    @BizApi(summary = "全量域列表, 不分页. 用 PageResponseVO 包装以兼容前端表格组件", description = "全量域列表, 不分页. 用 PageResponseVO 包装以兼容前端表格组件. 多租户隔离: 仅返回当前 JWT tenantCode 下的域.", tags = { "z-ctc" })
     public Result<PageResponseVO<DomainVO>> listAll() {
         String ctxTenant = TenantContext.getTenantCode();
         if (ctxTenant == null || ctxTenant.isEmpty() || !canRead(ctxTenant)) {
@@ -132,7 +138,8 @@ public class DomainController {
      * @return 域 VO; 不存在返回 404, 无权访问返回 403
      */
     @GetMapping
-    public Result<DomainVO> getById(@RequestParam("id") Long id) {
+    @BizApi(summary = "按主键查询域详情. 不存在时返回 404", description = "按主键查询域详情. 不存在时返回 404.", tags = { "z-ctc" })
+    public Result<DomainVO> getById(@RequestParam("id") @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "域主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id) {
         DomainDO domain = domainService.findById(id).orElse(null);
         if (domain == null) {
             return Result.<DomainVO>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -151,8 +158,10 @@ public class DomainController {
      * @return 成功时返回新建域主键 id ; 状态冲突 409; 参数错误 400
      */
     @PostMapping
-    public Result<Long> create(@RequestBody DomainDO domain,
-                               @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    @BizApi(summary = "新建域. 业务异常 (如编码冲突) 返回 409, 参数错误返回 400", description = "新建域. 业务异常 (如编码冲突) 返回 409, 参数错误返回 400.", tags = { "z-ctc" })
+    public Result<Long> create(@RequestBody @BizParam(name = "domain", type = BizField.FieldType.STRING, description = "域实体 (含编码/名称/租户等)", position = BizParam.Position.BODY) DomainDO domain,
+                               @RequestHeader(value = "X-User-Id", required = false)
+                               @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         if (domain == null) {
             return Result.<Long>fail("参数错误").code(ResultCode.PARAM_VALID_ERROR.getCode());
         }
@@ -182,9 +191,11 @@ public class DomainController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @PutMapping
-    public Result<Void> update(@RequestParam("id") Long id,
-                               @RequestBody DomainDO patch,
-                               @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    @BizApi(summary = "按主键更新域字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计", description = "按主键更新域字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计.", tags = { "z-ctc" })
+    public Result<Void> update(@RequestParam("id") @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "域主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id,
+                               @RequestBody @BizParam(name = "patch", type = BizField.FieldType.STRING, description = "待更新字段 (DomainDO)", position = BizParam.Position.BODY) DomainDO patch,
+                               @RequestHeader(value = "X-User-Id", required = false)
+                               @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         DomainDO domain = domainService.findById(id).orElse(null);
         if (domain == null) {
             return Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -204,7 +215,8 @@ public class DomainController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @DeleteMapping
-    public Result<Void> delete(@RequestParam("id") Long id) {
+    @BizApi(summary = "按主键删除域. 资源不存在时返回 404", description = "按主键删除域. 资源不存在时返回 404.", tags = { "z-ctc" })
+    public Result<Void> delete(@RequestParam("id") @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "域主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id) {
         DomainDO domain = domainService.findById(id).orElse(null);
         if (domain == null) {
             return Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -217,3 +229,6 @@ public class DomainController {
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
     }
 }
+
+
+

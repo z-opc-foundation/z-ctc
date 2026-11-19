@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.zifang.ctc.core.domain.entity.InvitationDO;
 import com.zifang.ctc.core.domain.mapper.InvitationMapper;
 import com.zifang.ctc.core.domain.service.InvitationDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,6 +37,7 @@ public class InvitationDbServiceImpl implements InvitationDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入邀请记录", module = "z-ctc", description = "插入邀请记录。", operation = BizMethod.Operation.CREATE)
     public int insert(InvitationDO entity) {
         return invitationMapper.insert(entity);
     }
@@ -47,6 +49,7 @@ public class InvitationDbServiceImpl implements InvitationDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键更新邀请记录", module = "z-ctc", description = "根据主键更新邀请记录。", operation = BizMethod.Operation.UPDATE)
     public int updateById(InvitationDO entity) {
         return invitationMapper.updateById(entity);
     }
@@ -58,6 +61,7 @@ public class InvitationDbServiceImpl implements InvitationDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键删除邀请记录", module = "z-ctc", description = "根据主键删除邀请记录。", operation = BizMethod.Operation.DELETE)
     public int deleteById(Long id) {
         return invitationMapper.deleteById(id);
     }
@@ -69,6 +73,7 @@ public class InvitationDbServiceImpl implements InvitationDbService {
      * @return 邀请实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据主键查询邀请记录", module = "z-ctc", description = "根据主键查询邀请记录。", operation = BizMethod.Operation.QUERY)
     public InvitationDO selectById(Long id) {
         return invitationMapper.selectById(id);
     }
@@ -80,6 +85,7 @@ public class InvitationDbServiceImpl implements InvitationDbService {
      * @return 邀请实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据令牌查询邀请记录", module = "z-ctc", description = "根据令牌查询邀请记录。", operation = BizMethod.Operation.QUERY)
     public InvitationDO selectByToken(String token) {
         return invitationMapper.selectByToken(token);
     }
@@ -91,6 +97,7 @@ public class InvitationDbServiceImpl implements InvitationDbService {
      * @return 邀请实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据邀请码查询邀请记录", module = "z-ctc", description = "根据邀请码查询邀请记录。", operation = BizMethod.Operation.QUERY)
     public InvitationDO selectByInviteCode(String code) {
         return invitationMapper.selectByInviteCode(code);
     }
@@ -102,6 +109,7 @@ public class InvitationDbServiceImpl implements InvitationDbService {
      * @return 邀请实体对象列表
      */
     @Override
+    @BizMethod(name = "根据租户编码查询邀请列表", module = "z-ctc", description = "根据租户编码查询邀请列表。", operation = BizMethod.Operation.QUERY)
     public List<InvitationDO> selectByTenant(String tenantCode) {
         return invitationMapper.selectByTenant(tenantCode);
     }
@@ -113,6 +121,7 @@ public class InvitationDbServiceImpl implements InvitationDbService {
      * @return 邀请实体对象列表
      */
     @Override
+    @BizMethod(name = "根据被邀请人邮箱查询邀请列表", module = "z-ctc", description = "根据被邀请人邮箱查询邀请列表。", operation = BizMethod.Operation.QUERY)
     public List<InvitationDO> selectByInviteeEmail(String email) {
         return invitationMapper.selectByInviteeEmail(email);
     }
@@ -124,7 +133,11 @@ public class InvitationDbServiceImpl implements InvitationDbService {
      * @return 邀请实体对象列表
      */
     @Override
+    @BizMethod(name = "根据查询条件查询邀请列表", module = "z-ctc", description = "根据查询条件查询邀请列表。", operation = BizMethod.Operation.QUERY)
     public List<InvitationDO> selectByQuery(QueryWrapper<InvitationDO> wrapper) {
         return invitationMapper.selectList(wrapper);
     }
 }
+
+
+

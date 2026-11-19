@@ -1,9 +1,12 @@
 package com.zifang.ctc.web.api;
 
-import com.zifang.util.core.meta.BaseStatusCode;
-import com.zifang.util.core.meta.Result;
 import com.zifang.ctc.core.service.DeptTreeService;
 import com.zifang.ctc.core.vo.DeptTreeVO;
+import com.zifang.util.core.meta.BaseStatusCode;
+import com.zifang.util.core.meta.Result;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -76,11 +79,16 @@ public class OscDeptController {
      * @return 部门树；无数据返回空数组
      */
     @PostMapping("/getStaffDeptTree")
+    @BizApi(summary = "获取人事架构部门树（含直属人员）", description = "获取人事架构部门树（含直属人员）。 寻址兼容性 （消费方实测口径）：调用方 {@code TeamStaffAdapter#fetchOrgTree} 的请求形态是 请求体：{@code {\"orgId\": , \"containPositionDept\": true}} 请求头：{@code Tenant-Code: } 但本仓数据按 {@code (tenant_code, domain_code)} 二元组寻址 （{@code z_ctc_ac_dept} 的唯一键就是 {@code uk_tenant_domain_dept}）， 没有 orgId 维度。 因此取租户的优先级为： query tenantCode → {@code Tenant-Code} 头 → {@code default} 。 域编码消费方不传，缺省 {@code default}（与 z-opc 侧 {@code sso.domain-overrides[*].tenantCode=default} 同源）。 这样无论消费方将来是发 orgId 还是补传 tenantCode，本端点都能工作。", tags = { "z-ctc" })
     public Result<List<DeptTreeVO>> getStaffDeptTree(
-            @RequestParam(required = false, defaultValue = "") String tenantCode,
-            @RequestParam(required = false, defaultValue = "default") String domainCode,
-            @RequestHeader(value = "Tenant-Code", required = false) String tenantCodeHeader,
-            @RequestBody(required = false) java.util.Map<String, Object> requestBody) {
+            @RequestParam(required = false, defaultValue = "")
+            @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码；缺省时读 {@code Tenant-Code} 头，再缺省 {@code default}", position = BizParam.Position.QUERY) String tenantCode,
+            @RequestParam(required = false, defaultValue = "default")
+            @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "域编码；缺省 {@code default}", position = BizParam.Position.QUERY) String domainCode,
+            @RequestHeader(value = "Tenant-Code", required = false)
+            @BizParam(name = "Tenant-Code", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.HEADER) String tenantCodeHeader,
+            @RequestBody(required = false)
+            @BizParam(name = "requestBody", type = BizField.FieldType.STRING, description = "消费方请求体（可选，含 orgId / containPositionDept）", position = BizParam.Position.BODY) java.util.Map<String, Object> requestBody) {
         try {
             String tenant = resolveTenantCode(tenantCode, tenantCodeHeader);
             List<DeptTreeVO> tree = deptTreeService.buildDeptTree(tenant, domainCode);
@@ -114,10 +122,14 @@ public class OscDeptController {
      * @return 与 {@link #getStaffDeptTree} 同一数据源，展开为深度优先的平铺序列
      */
     @PostMapping("/getStaffDeptList")
+    @BizApi(summary = "获取扁平部门列表（不组树），供只需列表不需要层级的调用方", description = "获取扁平部门列表（不组树），供只需列表不需要层级的调用方。", tags = { "z-ctc" })
     public Result<List<DeptTreeVO>> getStaffDeptList(
-            @RequestParam(required = false, defaultValue = "") String tenantCode,
-            @RequestParam(required = false, defaultValue = "default") String domainCode,
-            @RequestHeader(value = "Tenant-Code", required = false) String tenantCodeHeader) {
+            @RequestParam(required = false, defaultValue = "")
+            @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String tenantCode,
+            @RequestParam(required = false, defaultValue = "default")
+            @BizParam(name = "domainCode", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String domainCode,
+            @RequestHeader(value = "Tenant-Code", required = false)
+            @BizParam(name = "Tenant-Code", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.HEADER) String tenantCodeHeader) {
         try {
             List<DeptTreeVO> flat = new java.util.ArrayList<>();
             for (DeptTreeVO root : deptTreeService.buildDeptTree(
@@ -150,7 +162,11 @@ public class OscDeptController {
      * @return 固定字段，用于确认该前缀的 controller 已被 Spring 注册
      */
     @PostMapping("/health")
+    @BizApi(summary = "健康检查", description = "健康检查。", tags = { "z-ctc" })
     public Result<?> health() {
         return Result.success(Collections.singletonMap("module", "z-ctc-osc"));
     }
 }
+
+
+

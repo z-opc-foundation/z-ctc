@@ -6,6 +6,7 @@ import com.zifang.ctc.core.domain.entity.AuthDO;
 import com.zifang.ctc.core.domain.mapper.AccountMapper;
 import com.zifang.ctc.core.domain.mapper.AuthMapper;
 import com.zifang.ctc.core.domain.service.AuthDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 /**
@@ -40,6 +41,7 @@ public class AuthDbServiceImpl implements AuthDbService {
      * @return 认证实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据身份类型和标识符查询认证记录", module = "z-ctc", description = "根据身份类型和标识符查询认证记录。", operation = BizMethod.Operation.QUERY)
     public AuthDO selectByIdentity(int identityType, String identifier) {
         return authMapper.selectByIdentity(identityType, identifier);
     }
@@ -51,6 +53,7 @@ public class AuthDbServiceImpl implements AuthDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入认证记录", module = "z-ctc", description = "插入认证记录。", operation = BizMethod.Operation.CREATE)
     public int insert(AuthDO entity) {
         return authMapper.insert(entity);
     }
@@ -64,6 +67,7 @@ public class AuthDbServiceImpl implements AuthDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据账号主键和身份信息删除认证记录", module = "z-ctc", description = "根据账号主键和身份信息删除认证记录。", operation = BizMethod.Operation.DELETE)
     public int deleteByAccountAndIdentity(Long accountId, int identityType, String identifier) {
         return authMapper.delete(new QueryWrapper<AuthDO>()
                 .eq("user_id", accountId)
@@ -78,7 +82,11 @@ public class AuthDbServiceImpl implements AuthDbService {
      * @return 账号实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据主键查询账号记录", module = "z-ctc", description = "根据主键查询账号记录。", operation = BizMethod.Operation.QUERY)
     public AccountDO selectAccountById(Long id) {
         return accountMapper.selectById(id);
     }
 }
+
+
+

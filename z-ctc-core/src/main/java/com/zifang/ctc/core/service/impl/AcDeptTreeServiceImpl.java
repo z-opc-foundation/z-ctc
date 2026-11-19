@@ -9,6 +9,7 @@ import com.zifang.ctc.core.domain.service.MembershipDbService;
 import com.zifang.ctc.core.domain.service.UserDbService;
 import com.zifang.ctc.core.service.DeptTreeService;
 import com.zifang.ctc.core.vo.DeptTreeVO;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -62,6 +63,7 @@ public class AcDeptTreeServiceImpl implements DeptTreeService {
 
     @Override
     @Transactional(readOnly = true)
+    @BizMethod(name = "buildDeptTree", module = "z-ctc", description = "", operation = BizMethod.Operation.ACTION)
     public List<DeptTreeVO> buildDeptTree(String tenantCode, String domainCode) {
         if (isBlank(tenantCode) || isBlank(domainCode)) {
             return Collections.emptyList();
@@ -243,3 +245,6 @@ public class AcDeptTreeServiceImpl implements DeptTreeService {
         return s == null || s.trim().isEmpty();
     }
 }
+
+
+

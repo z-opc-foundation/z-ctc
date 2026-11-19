@@ -8,6 +8,9 @@ import com.zifang.ctc.core.vo.MenuVO;
 import com.zifang.ctc.web.api.response.MenuListResult;
 import com.zifang.util.core.meta.Result;
 import com.zifang.util.core.meta.ResultCode;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -68,8 +71,10 @@ public class MenuController {
      * 字段名采用 camelCase 序列化, 匹配前端 convertMenuItems 的访问.
      */
     @GetMapping("/tree")
+    @BizApi(summary = "拉取指定 app 的菜单树 (核心端点, 给前端 {@code getDynamicMenu('z-opc')} 用)", description = "拉取指定 app 的菜单树 (核心端点, 给前端 {@code getDynamicMenu('z-opc')} 用). 返回结构: [ { \"id\": 1, \"menuCode\": \"ctc\", \"menuName\": \"4A中心\", \"icon\": \"UserOutlined\", \"path\": \"/ctc\", \"sourceType\": \"CODE\", \"pageId\": null, \"component\": null, \"children\": [ { ... }, ... ] }, ... ] 字段名采用 camelCase 序列化, 匹配前端 convertMenuItems 的访问.", tags = { "z-ctc" })
     public Result<List<MenuVO>> getTree(
-            @RequestParam(value = "appCode", required = false) String appCode) {
+            @RequestParam(value = "appCode", required = false)
+            @BizParam(name = "appCode", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String appCode) {
         if (appCode == null || appCode.isEmpty()) {
             return (Result) Result.fail("参数错误").code(ResultCode.PARAM_VALID_ERROR.getCode());
         }
@@ -85,8 +90,10 @@ public class MenuController {
      * @return 含 data (扁平 MenuVO 列表) 与 total (列表长度) 的 Map
      */
     @GetMapping("/list")
+    @BizApi(summary = "扁平列表 — 菜单管理页用. 返回 { data, total } 结构 (非分页, 一次返回该 app 的全部菜单)", description = "扁平列表 — 菜单管理页用. 返回 { data, total } 结构 (非分页, 一次返回该 app 的全部菜单).", tags = { "z-ctc" })
     public Result<MenuListResult> list(
-            @RequestParam(value = "appCode", required = false) String appCode) {
+            @RequestParam(value = "appCode", required = false)
+            @BizParam(name = "appCode", type = BizField.FieldType.STRING, description = "应用编码, 必填", position = BizParam.Position.QUERY) String appCode) {
         if (appCode == null || appCode.isEmpty()) {
             return (Result) Result.fail("参数错误").code(ResultCode.PARAM_VALID_ERROR.getCode());
         }
@@ -104,7 +111,8 @@ public class MenuController {
      * @return Menu VO; 不存在返回 404
      */
     @GetMapping
-    public Result<MenuVO> getById(@RequestParam("id") Long id) {
+    @BizApi(summary = "按主键查询菜单详情. 不存在返回 404", description = "按主键查询菜单详情. 不存在返回 404.", tags = { "z-ctc" })
+    public Result<MenuVO> getById(@RequestParam("id") @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "菜单主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id) {
         return menuService.findById(id)
                 .<Result<MenuVO>>map(t -> Result.success(MenuVO.from(t)))
                 .orElse(Result.<MenuVO>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode()));
@@ -118,9 +126,11 @@ public class MenuController {
      * @return 成功返回新建菜单主键 id 
      */
     @PostMapping
+    @BizApi(summary = "创建菜单. 判重冲突返回 409, 参数错误返回 400. 操作者通过 X-User-Id 头传递", description = "创建菜单. 判重冲突返回 409, 参数错误返回 400. 操作者通过 X-User-Id 头传递.", tags = { "z-ctc" })
     public Result<Long> create(
-            @RequestBody MenuDO menu,
-            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+            @RequestBody @BizParam(name = "menu", type = BizField.FieldType.STRING, description = "菜单实体 (含 appCode/menuCode/menuName/path 等)", position = BizParam.Position.BODY) MenuDO menu,
+            @RequestHeader(value = "X-User-Id", required = false)
+            @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         try {
             Long id = menuService.createMenu(menu, userId);
             return Result.success(id);
@@ -141,10 +151,13 @@ public class MenuController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @PutMapping
+    @BizApi(summary = "按主键更新菜单字段. 操作者通过 X-User-Id 头传递, 由 Service 层写入 updatedBy 审计字段", description = "按主键更新菜单字段. 操作者通过 X-User-Id 头传递, 由 Service 层写入 updatedBy 审计字段.", tags = { "z-ctc" })
     public Result<Void> update(
-            @RequestParam("id") Long id,
-            @RequestBody MenuDO patch,
-            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+            @RequestParam("id")
+            @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "菜单主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id,
+            @RequestBody @BizParam(name = "patch", type = BizField.FieldType.STRING, description = "待更新字段 (MenuDO)", position = BizParam.Position.BODY) MenuDO patch,
+            @RequestHeader(value = "X-User-Id", required = false)
+            @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         return menuService.updateMenu(id, patch, userId)
                 ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -157,7 +170,8 @@ public class MenuController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @DeleteMapping
-    public Result<Void> delete(@RequestParam("id") Long id) {
+    @BizApi(summary = "按主键删除菜单 (级联删除子菜单). 资源不存在返回 404", description = "按主键删除菜单 (级联删除子菜单). 资源不存在返回 404.", tags = { "z-ctc" })
+    public Result<Void> delete(@RequestParam("id") @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "菜单主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id) {
         return menuService.deleteMenu(id)
                 ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -181,9 +195,12 @@ public class MenuController {
      * @return 过滤后的菜单树
      */
     @GetMapping("/tree-by-user")
+    @BizApi(summary = "按用户权限过滤的菜单树", description = "按用户权限过滤的菜单树. 逻辑: 拉取 appCode 下的全量菜单树 获取用户最终权限 (角色权限 ∪ grant - deny) 过滤: resource_id=NULL 的菜单所有人可见; 非NULL的需要用户持有该 resource_id 的权限 如果某菜单的子节点全部被过滤, 父节点也隐藏", tags = { "z-ctc" })
     public Result<List<MenuVO>> getTreeByUser(
-            @RequestParam("appCode") String appCode,
-            @RequestParam("userId") Long userId) {
+            @RequestParam("appCode")
+            @BizParam(name = "appCode", type = BizField.FieldType.STRING, description = "应用编码, 必填", position = BizParam.Position.QUERY) String appCode,
+            @RequestParam("userId")
+            @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "用户主键 id, 请求参数", position = BizParam.Position.QUERY) Long userId) {
         if (appCode == null || appCode.isEmpty() || userId == null) {
             return (Result) Result.fail("参数错误").code(ResultCode.PARAM_VALID_ERROR.getCode());
         }
@@ -231,3 +248,6 @@ public class MenuController {
         return allowedResourceIds.contains(menu.getResourceId());
     }
 }
+
+
+

@@ -2,6 +2,7 @@ package com.zifang.ctc.web.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
@@ -57,6 +58,7 @@ public class OAuthCodeStore {
             .build();
 
     /** 签发一条 code。 */
+    @BizMethod(name = "签发一条 code", module = "z-ctc", description = "签发一条 code。", operation = BizMethod.Operation.ACTION)
     public void issue(String code, CodeEntry entry) {
         codes.put(code, entry);
     }
@@ -64,6 +66,7 @@ public class OAuthCodeStore {
     /**
      * 消费一条 code —— <b>取出即焚</b>。第二次取同一 code 返回 null（一次性）。
      */
+    @BizMethod(name = "消费一条 code —— <b>取出即焚</b>。第二次取同一 code 返回 null（一次性）", module = "z-ctc", description = "消费一条 code —— 取出即焚 。第二次取同一 code 返回 null（一次性）。", operation = BizMethod.Operation.ACTION)
     public CodeEntry consume(String code) {
         // invalidate + getIfPresent 不是原子的，但 code 是 128-bit 随机数且 5 分钟过期，
         // 并发用同一条 code 的场景只可能是攻击者重放 —— 返回 null 即拒绝，方向安全。
@@ -74,3 +77,6 @@ public class OAuthCodeStore {
         return entry;
     }
 }
+
+
+

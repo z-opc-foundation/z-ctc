@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.zifang.ctc.core.domain.entity.DeptDO;
 import com.zifang.ctc.core.domain.mapper.DeptMapper;
 import com.zifang.ctc.core.domain.service.DeptDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,6 +37,7 @@ public class DeptDbServiceImpl implements DeptDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入部门记录", module = "z-ctc", description = "插入部门记录。", operation = BizMethod.Operation.CREATE)
     public int insert(DeptDO entity) {
         return deptMapper.insert(entity);
     }
@@ -47,6 +49,7 @@ public class DeptDbServiceImpl implements DeptDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键更新部门记录", module = "z-ctc", description = "根据主键更新部门记录。", operation = BizMethod.Operation.UPDATE)
     public int updateById(DeptDO entity) {
         return deptMapper.updateById(entity);
     }
@@ -58,6 +61,7 @@ public class DeptDbServiceImpl implements DeptDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键删除部门记录", module = "z-ctc", description = "根据主键删除部门记录。", operation = BizMethod.Operation.DELETE)
     public int deleteById(Long id) {
         return deptMapper.deleteById(id);
     }
@@ -71,6 +75,7 @@ public class DeptDbServiceImpl implements DeptDbService {
      * @return 部门实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据租户编码、域编码和部门编码查询部门记录", module = "z-ctc", description = "根据租户编码、域编码和部门编码查询部门记录。", operation = BizMethod.Operation.QUERY)
     public DeptDO selectByDeptCode(String tenantCode, String domainCode, String deptCode) {
         return deptMapper.selectByDeptCode(tenantCode, domainCode, deptCode);
     }
@@ -84,6 +89,7 @@ public class DeptDbServiceImpl implements DeptDbService {
      * @return 部门实体对象列表
      */
     @Override
+    @BizMethod(name = "根据租户编码、域编码和组织编码查询部门列表", module = "z-ctc", description = "根据租户编码、域编码和组织编码查询部门列表。", operation = BizMethod.Operation.QUERY)
     public List<DeptDO> selectByOrgCode(String tenantCode, String domainCode, String orgCode) {
         return deptMapper.selectByOrgCode(tenantCode, domainCode, orgCode);
     }
@@ -95,7 +101,11 @@ public class DeptDbServiceImpl implements DeptDbService {
      * @return 匹配的部门列表
      */
     @Override
+    @BizMethod(name = "按条件查询部门列表", module = "z-ctc", description = "按条件查询部门列表。", operation = BizMethod.Operation.QUERY)
     public List<DeptDO> selectByQuery(QueryWrapper<DeptDO> wrapper) {
         return deptMapper.selectList(wrapper);
     }
 }
+
+
+

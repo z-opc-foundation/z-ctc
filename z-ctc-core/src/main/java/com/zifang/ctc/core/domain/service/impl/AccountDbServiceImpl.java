@@ -8,6 +8,7 @@ import com.zifang.ctc.core.domain.mapper.AccountMapper;
 import com.zifang.ctc.core.domain.mapper.RoleMapper;
 import com.zifang.ctc.core.domain.mapper.UserRoleMapper;
 import com.zifang.ctc.core.domain.service.AccountDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -46,6 +47,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入账号记录", module = "z-ctc", description = "插入账号记录。", operation = BizMethod.Operation.CREATE)
     public int insert(AccountDO entity) {
         return accountMapper.insert(entity);
     }
@@ -57,6 +59,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键更新账号记录", module = "z-ctc", description = "根据主键更新账号记录。", operation = BizMethod.Operation.UPDATE)
     public int updateById(AccountDO entity) {
         return accountMapper.updateById(entity);
     }
@@ -68,6 +71,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键删除账号记录", module = "z-ctc", description = "根据主键删除账号记录。", operation = BizMethod.Operation.DELETE)
     public int deleteById(Long id) {
         return accountMapper.deleteById(id);
     }
@@ -79,6 +83,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 账号实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据主键查询账号记录", module = "z-ctc", description = "根据主键查询账号记录。", operation = BizMethod.Operation.QUERY)
     public AccountDO selectById(Long id) {
         return accountMapper.selectById(id);
     }
@@ -91,6 +96,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 账号实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据用户名和租户编码查询账号记录", module = "z-ctc", description = "根据用户名和租户编码查询账号记录。", operation = BizMethod.Operation.QUERY)
     public AccountDO selectByUsername(String username, String tenantCode) {
         return accountMapper.selectByUsername(username, tenantCode);
     }
@@ -102,6 +108,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 账号实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据账号编号查询账号记录", module = "z-ctc", description = "根据账号编号查询账号记录。", operation = BizMethod.Operation.QUERY)
     public AccountDO selectByAccountNo(String accountNo) {
         return accountMapper.selectByAccountNo(accountNo);
     }
@@ -113,6 +120,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 账号实体对象列表
      */
     @Override
+    @BizMethod(name = "根据查询条件查询账号列表", module = "z-ctc", description = "根据查询条件查询账号列表。", operation = BizMethod.Operation.QUERY)
     public List<AccountDO> selectByQuery(QueryWrapper<AccountDO> wrapper) {
         return accountMapper.selectList(wrapper);
     }
@@ -125,6 +133,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 分页的账号实体对象列表
      */
     @Override
+    @BizMethod(name = "分页查询账号列表", module = "z-ctc", description = "分页查询账号列表。", operation = BizMethod.Operation.QUERY)
     public IPage<AccountDO> selectPage(IPage<AccountDO> page, QueryWrapper<AccountDO> wrapper) {
         return accountMapper.selectPage(page, wrapper);
     }
@@ -137,6 +146,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "更新账号最后登录时间和 IP", module = "z-ctc", description = "更新账号最后登录时间和 IP。", operation = BizMethod.Operation.UPDATE)
     public int updateLastLogin(Long id, String ip) {
         return accountMapper.updateLastLogin(id, ip);
     }
@@ -149,6 +159,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 数量
      */
     @Override
+    @BizMethod(name = "统计用户在指定角色下的数量", module = "z-ctc", description = "统计用户在指定角色下的数量。", operation = BizMethod.Operation.QUERY)
     public Long countUserRole(Long userId, Long roleId) {
         return userRoleMapper.selectCount(new QueryWrapper<UserRoleDO>()
                 .eq("user_id", userId).eq("role_id", roleId));
@@ -161,6 +172,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入用户角色关系记录", module = "z-ctc", description = "插入用户角色关系记录。", operation = BizMethod.Operation.CREATE)
     public int insertUserRole(UserRoleDO userRole) {
         return userRoleMapper.insert(userRole);
     }
@@ -172,6 +184,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据用户主键删除用户角色关系记录", module = "z-ctc", description = "根据用户主键删除用户角色关系记录。", operation = BizMethod.Operation.DELETE)
     public int deleteUserRoleByUserId(Long userId) {
         return userRoleMapper.delete(new QueryWrapper<UserRoleDO>().eq("user_id", userId));
     }
@@ -183,6 +196,7 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 数量
      */
     @Override
+    @BizMethod(name = "根据查询条件统计用户角色关系数量", module = "z-ctc", description = "根据查询条件统计用户角色关系数量。", operation = BizMethod.Operation.QUERY)
     public int countUserRoleByQuery(QueryWrapper<UserRoleDO> wrapper) {
         return userRoleMapper.selectCount(wrapper).intValue();
     }
@@ -194,8 +208,12 @@ public class AccountDbServiceImpl implements AccountDbService {
      * @return 数量
      */
     @Override
+    @BizMethod(name = "统计角色下用户的数量", module = "z-ctc", description = "统计角色下用户的数量。", operation = BizMethod.Operation.QUERY)
     public Long countRoleById(Long roleId) {
         return roleMapper.selectCount(new QueryWrapper<com.zifang.ctc.core.domain.entity.RoleDO>()
                 .eq("id", roleId));
     }
 }
+
+
+

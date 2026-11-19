@@ -13,6 +13,9 @@ import com.zifang.ctc.web.api.response.PageResourcesResult;
 import com.zifang.ctc.web.api.response.PageRolesResult;
 import com.zifang.util.core.meta.Result;
 import com.zifang.util.core.meta.ResultCode;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -78,8 +81,10 @@ public class AuthzController {
      * @return 成功返回新建角色主键 id 
      */
     @PostMapping("/roles")
-    public Result<Long> createRole(@RequestBody RoleDO role,
-                                   @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    @BizApi(summary = "创建角色", description = "创建角色.", tags = { "z-ctc" })
+    public Result<Long> createRole(@RequestBody @BizParam(name = "role", type = BizField.FieldType.STRING, description = "角色实体 (含 roleCode/roleName/描述)", position = BizParam.Position.BODY) RoleDO role,
+                                   @RequestHeader(value = "X-User-Id", required = false)
+                                   @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         Long id = authzService.createRole(role, userId);
         return Result.success(id);
     }
@@ -92,8 +97,10 @@ public class AuthzController {
      * @return 成功返回新建资源主键 id 
      */
     @PostMapping("/resources")
-    public Result<Long> createResource(@RequestBody ResourceDO resource,
-                                       @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    @BizApi(summary = "创建资源/权限点. 资源应归属具体应用 (appCode), 后续按 appCode 维度管理", description = "创建资源/权限点. 资源应归属具体应用 (appCode), 后续按 appCode 维度管理.", tags = { "z-ctc" })
+    public Result<Long> createResource(@RequestBody @BizParam(name = "resource", type = BizField.FieldType.STRING, description = "资源实体 (含 resourceCode/resourceName/type/appCode)", position = BizParam.Position.BODY) ResourceDO resource,
+                                       @RequestHeader(value = "X-User-Id", required = false)
+                                       @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         Long id = authzService.createResource(resource, userId);
         return Result.success(id);
     }
@@ -108,11 +115,16 @@ public class AuthzController {
      * @return 成功返回空体, 参数错误返回 400
      */
     @PostMapping("/users/grant-role")
+    @BizApi(summary = "授予用户某个角色. expireAt 为可选过期时间 (ISO-8601 字符串), 不传表示长期有效", description = "授予用户某个角色. expireAt 为可选过期时间 (ISO-8601 字符串), 不传表示长期有效.", tags = { "z-ctc" })
     public Result<Void> grantUserRole(
-            @RequestParam("userId") Long userId,
-            @RequestParam("roleId") Long roleId,
-            @RequestParam(value = "expireAt", required = false) String expireAt,
-            @RequestHeader(value = "X-User-Id", required = false) String grantedBy) {
+            @RequestParam("userId")
+            @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "被授权的用户主键 id, 请求参数 (?userId=xxx)", position = BizParam.Position.QUERY) Long userId,
+            @RequestParam("roleId")
+            @BizParam(name = "roleId", type = BizField.FieldType.INTEGER, description = "角色主键 id, 请求参数 (?roleId=xxx)", position = BizParam.Position.QUERY) Long roleId,
+            @RequestParam(value = "expireAt", required = false)
+            @BizParam(name = "expireAt", type = BizField.FieldType.STRING, description = "过期时间, ISO-8601 格式 (如 2026-12-31T23:59:59), 可选", position = BizParam.Position.QUERY) String expireAt,
+            @RequestHeader(value = "X-User-Id", required = false)
+            @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "授权人账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String grantedBy) {
         LocalDateTime exp = expireAt == null ? null : LocalDateTime.parse(expireAt);
         return authzService.grantUserRole(userId, roleId, grantedBy, exp)
                 ? Result.<Void>success()
@@ -127,8 +139,10 @@ public class AuthzController {
      * @return 成功返回空体, 关系不存在返回 404
      */
     @DeleteMapping("/users/revoke-role")
-    public Result<Void> revokeUserRole(@RequestParam("userId") Long userId,
-                                         @RequestParam("roleId") Long roleId) {
+    @BizApi(summary = "撤销用户的指定角色", description = "撤销用户的指定角色.", tags = { "z-ctc" })
+    public Result<Void> revokeUserRole(@RequestParam("userId") @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "用户主键 id, 请求参数 (?userId=xxx)", position = BizParam.Position.QUERY) Long userId,
+                                         @RequestParam("roleId")
+                                         @BizParam(name = "roleId", type = BizField.FieldType.INTEGER, description = "角色主键 id, 请求参数 (?roleId=xxx)", position = BizParam.Position.QUERY) Long roleId) {
         return authzService.revokeUserRole(userId, roleId)
                 ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -144,11 +158,16 @@ public class AuthzController {
      * @return 成功返回空体, 参数错误返回 400
      */
     @PostMapping("/roles/grant-resource")
+    @BizApi(summary = "角色授权 — 把资源授予角色. 可选 dataFilter 用于行级数据过滤", description = "角色授权 — 把资源授予角色. 可选 dataFilter 用于行级数据过滤.", tags = { "z-ctc" })
     public Result<Void> grantRoleResource(
-            @RequestParam("roleId") Long roleId,
-            @RequestParam("resourceId") Long resourceId,
-            @RequestBody(required = false) GrantRoleResourceRequest body,
-            @RequestHeader(value = "X-User-Id", required = false) String grantedBy) {
+            @RequestParam("roleId")
+            @BizParam(name = "roleId", type = BizField.FieldType.INTEGER, description = "角色主键 id, 请求参数 (?roleId=xxx)", position = BizParam.Position.QUERY) Long roleId,
+            @RequestParam("resourceId")
+            @BizParam(name = "resourceId", type = BizField.FieldType.INTEGER, description = "资源主键 id, 请求参数 (?resourceId=xxx)", position = BizParam.Position.QUERY) Long resourceId,
+            @RequestBody(required = false)
+            @BizParam(name = "body", type = BizField.FieldType.STRING, description = "含 dataFilter 的请求体, 可为 null (整体授权, 不做行级过滤)", position = BizParam.Position.BODY) GrantRoleResourceRequest body,
+            @RequestHeader(value = "X-User-Id", required = false)
+            @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "授权人账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String grantedBy) {
         String dataFilter = body == null ? null : body.getDataFilter();
         return authzService.grantRoleResource(roleId, resourceId, dataFilter, grantedBy)
                 ? Result.<Void>success()
@@ -163,8 +182,10 @@ public class AuthzController {
      * @return 成功返回空体, 关系不存在返回 404
      */
     @DeleteMapping("/roles/revoke-resource")
-    public Result<Void> revokeRoleResource(@RequestParam("roleId") Long roleId,
-                                             @RequestParam("resourceId") Long resourceId) {
+    @BizApi(summary = "撤销角色对资源的授权", description = "撤销角色对资源的授权.", tags = { "z-ctc" })
+    public Result<Void> revokeRoleResource(@RequestParam("roleId") @BizParam(name = "roleId", type = BizField.FieldType.INTEGER, description = "角色主键 id, 请求参数 (?roleId=xxx)", position = BizParam.Position.QUERY) Long roleId,
+                                             @RequestParam("resourceId")
+                                             @BizParam(name = "resourceId", type = BizField.FieldType.INTEGER, description = "资源主键 id, 请求参数 (?resourceId=xxx)", position = BizParam.Position.QUERY) Long resourceId) {
         return authzService.revokeRoleResource(roleId, resourceId)
                 ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -177,7 +198,8 @@ public class AuthzController {
      * @return 该用户当前有效的 Role VO 列表
      */
     @GetMapping("/users/roles")
-    public Result<List<RoleVO>> listUserRoles(@RequestParam("userId") Long userId) {
+    @BizApi(summary = "列出用户拥有的所有角色 (含未过期判断)", description = "列出用户拥有的所有角色 (含未过期判断).", tags = { "z-ctc" })
+    public Result<List<RoleVO>> listUserRoles(@RequestParam("userId") @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "用户主键 id, 请求参数 (?userId=xxx)", position = BizParam.Position.QUERY) Long userId) {
         List<RoleVO> voList = authzService.listUserRoles(userId).stream()
                 .map(RoleVO::from)
                 .collect(Collectors.toList());
@@ -191,7 +213,8 @@ public class AuthzController {
      * @return 该用户可访问的 Resource VO 列表
      */
     @GetMapping("/users/permissions")
-    public Result<List<ResourceVO>> listUserPermissions(@RequestParam("userId") Long userId) {
+    @BizApi(summary = "列出用户通过角色间接拥有的所有资源/权限点 (展开后去重)", description = "列出用户通过角色间接拥有的所有资源/权限点 (展开后去重).", tags = { "z-ctc" })
+    public Result<List<ResourceVO>> listUserPermissions(@RequestParam("userId") @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "用户主键 id, 请求参数 (?userId=xxx)", position = BizParam.Position.QUERY) Long userId) {
         List<ResourceVO> voList = authzService.listUserPermissions(userId).stream()
                 .map(ResourceVO::from)
                 .collect(Collectors.toList());
@@ -205,7 +228,8 @@ public class AuthzController {
      * @return CheckPermissionVO { userId, resourceCode, allowed }; 必填字段缺失返回 400
      */
     @PostMapping("/check")
-    public Result<CheckPermissionVO> checkPermission(@RequestBody CheckRequest request) {
+    @BizApi(summary = "权限检查: 给定 (userId, resourceCode) 判断是否允许访问. 资源编码级的二元判断, 不解析 dataFilter", description = "权限检查: 给定 (userId, resourceCode) 判断是否允许访问. 资源编码级的二元判断, 不解析 dataFilter.", tags = { "z-ctc" })
+    public Result<CheckPermissionVO> checkPermission(@RequestBody @BizParam(name = "request", type = BizField.FieldType.STRING, description = "含 userId 与 resourceCode 的请求体", position = BizParam.Position.BODY) CheckRequest request) {
         if (request == null || request.getUserId() == null || request.getResourceCode() == null) {
             return (Result) Result.fail("参数错误").code(ResultCode.PARAM_VALID_ERROR.getCode());
         }
@@ -222,6 +246,7 @@ public class AuthzController {
      * @return 全量 Role VO 列表
      */
     @GetMapping("/roles/list")
+    @BizApi(summary = "全量角色列表, 不分页", description = "全量角色列表, 不分页.", tags = { "z-ctc" })
     public Result<List<RoleVO>> listAllRoles() {
         List<RoleVO> voList = authzService.listAllRoles().stream()
                 .map(RoleVO::from)
@@ -238,10 +263,14 @@ public class AuthzController {
      * @return 含 data 与 total 字段的 Map
      */
     @GetMapping("/roles/page")
+    @BizApi(summary = "角色分页查询: 按 roleCode/roleName 不区分大小写子串匹配, 返回当前页与过滤后的 total", description = "角色分页查询: 按 roleCode/roleName 不区分大小写子串匹配, 返回当前页与过滤后的 total.", tags = { "z-ctc" })
     public Result<PageRolesResult> pageRoles(
-            @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "pageNum", defaultValue = "1") int pageNum,
-            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize) {
+            @RequestParam(value = "keyword", required = false)
+            @BizParam(name = "keyword", type = BizField.FieldType.STRING, description = "关键字, 可选", position = BizParam.Position.QUERY) String keyword,
+            @RequestParam(value = "pageNum", defaultValue = "1")
+            @BizParam(name = "pageNum", type = BizField.FieldType.INTEGER, description = "页码, 默认 1", position = BizParam.Position.QUERY) int pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "20")
+            @BizParam(name = "pageSize", type = BizField.FieldType.INTEGER, description = "每页大小, 默认 20", position = BizParam.Position.QUERY) int pageSize) {
         List<RoleDO> data = authzService.pageRoles(keyword, pageNum, pageSize, 0);
         long total = authzService.listAllRoles().stream()
                 .filter(r -> {
@@ -263,7 +292,8 @@ public class AuthzController {
      * @return Role VO; 不存在返回 404
      */
     @GetMapping("/roles")
-    public Result<RoleVO> findRoleById(@RequestParam("id") Long id) {
+    @BizApi(summary = "按主键查询角色详情. 不存在返回 404", description = "按主键查询角色详情. 不存在返回 404.", tags = { "z-ctc" })
+    public Result<RoleVO> findRoleById(@RequestParam("id") @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "角色主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id) {
         return authzService.findRoleById(id)
                 .<Result<RoleVO>>map(t -> Result.success(RoleVO.from(t)))
                 .orElse(Result.<RoleVO>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode()));
@@ -278,10 +308,13 @@ public class AuthzController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @PutMapping("/roles")
+    @BizApi(summary = "按主键更新角色字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计", description = "按主键更新角色字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计.", tags = { "z-ctc" })
     public Result<Void> updateRole(
-            @RequestParam("id") Long id,
-            @RequestBody RoleDO patch,
-            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+            @RequestParam("id")
+            @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "角色主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id,
+            @RequestBody @BizParam(name = "patch", type = BizField.FieldType.STRING, description = "待更新字段 (RoleDO)", position = BizParam.Position.BODY) RoleDO patch,
+            @RequestHeader(value = "X-User-Id", required = false)
+            @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         return authzService.updateRole(id, patch, userId)
                 ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -294,7 +327,8 @@ public class AuthzController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @DeleteMapping("/roles")
-    public Result<Void> deleteRole(@RequestParam("id") Long id) {
+    @BizApi(summary = "按主键删除角色. 资源不存在返回 404", description = "按主键删除角色. 资源不存在返回 404.", tags = { "z-ctc" })
+    public Result<Void> deleteRole(@RequestParam("id") @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "角色主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id) {
         return authzService.deleteRole(id)
                 ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -308,6 +342,7 @@ public class AuthzController {
      * @return 全量 Resource VO 列表
      */
     @GetMapping("/resources/list")
+    @BizApi(summary = "全量资源列表, 不分页", description = "全量资源列表, 不分页.", tags = { "z-ctc" })
     public Result<List<ResourceVO>> listAllResources() {
         List<ResourceVO> voList = authzService.listAllResources().stream()
                 .map(ResourceVO::from)
@@ -324,10 +359,14 @@ public class AuthzController {
      * @return 含 data 与 total 字段的 Map
      */
     @GetMapping("/resources/page")
+    @BizApi(summary = "资源分页查询: 按 resourceCode/resourceName 不区分大小写子串匹配, 返回当前页与过滤后的 total", description = "资源分页查询: 按 resourceCode/resourceName 不区分大小写子串匹配, 返回当前页与过滤后的 total.", tags = { "z-ctc" })
     public Result<PageResourcesResult> pageResources(
-            @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "pageNum", defaultValue = "1") int pageNum,
-            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize) {
+            @RequestParam(value = "keyword", required = false)
+            @BizParam(name = "keyword", type = BizField.FieldType.STRING, description = "关键字, 可选", position = BizParam.Position.QUERY) String keyword,
+            @RequestParam(value = "pageNum", defaultValue = "1")
+            @BizParam(name = "pageNum", type = BizField.FieldType.INTEGER, description = "页码, 默认 1", position = BizParam.Position.QUERY) int pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "20")
+            @BizParam(name = "pageSize", type = BizField.FieldType.INTEGER, description = "每页大小, 默认 20", position = BizParam.Position.QUERY) int pageSize) {
         List<ResourceDO> data = authzService.pageResources(keyword, pageNum, pageSize, 0);
         long total = authzService.listAllResources().stream()
                 .filter(r -> {
@@ -349,7 +388,8 @@ public class AuthzController {
      * @return Resource VO; 不存在返回 404
      */
     @GetMapping("/resources")
-    public Result<ResourceVO> findResourceById(@RequestParam("id") Long id) {
+    @BizApi(summary = "按主键查询资源详情. 不存在返回 404", description = "按主键查询资源详情. 不存在返回 404.", tags = { "z-ctc" })
+    public Result<ResourceVO> findResourceById(@RequestParam("id") @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "资源主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id) {
         return authzService.findResourceById(id)
                 .<Result<ResourceVO>>map(t -> Result.success(ResourceVO.from(t)))
                 .orElse(Result.<ResourceVO>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode()));
@@ -364,10 +404,13 @@ public class AuthzController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @PutMapping("/resources")
+    @BizApi(summary = "按主键更新资源字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计", description = "按主键更新资源字段. 操作者通过 X-User-Id 头传递, 由 Service 层记录审计.", tags = { "z-ctc" })
     public Result<Void> updateResource(
-            @RequestParam("id") Long id,
-            @RequestBody ResourceDO patch,
-            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+            @RequestParam("id")
+            @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "资源主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id,
+            @RequestBody @BizParam(name = "patch", type = BizField.FieldType.STRING, description = "待更新字段 (ResourceDO)", position = BizParam.Position.BODY) ResourceDO patch,
+            @RequestHeader(value = "X-User-Id", required = false)
+            @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
         return authzService.updateResource(id, patch, userId)
                 ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -380,7 +423,8 @@ public class AuthzController {
      * @return 成功返回空体, 资源不存在返回 404
      */
     @DeleteMapping("/resources")
-    public Result<Void> deleteResource(@RequestParam("id") Long id) {
+    @BizApi(summary = "按主键删除资源. 资源不存在返回 404", description = "按主键删除资源. 资源不存在返回 404.", tags = { "z-ctc" })
+    public Result<Void> deleteResource(@RequestParam("id") @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "资源主键 id, 请求参数 (?id=xxx)", position = BizParam.Position.QUERY) Long id) {
         return authzService.deleteResource(id)
                 ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -399,12 +443,18 @@ public class AuthzController {
      * @return 含 data 与 total 字段的 Map (total 用同条件全量在内存里计算)
      */
     @GetMapping("/resources/page-by-app")
+    @BizApi(summary = "按 appCode 分页查询资源. 用于 FEATURE015 资源按应用维度管理", description = "按 appCode 分页查询资源. 用于 FEATURE015 资源按应用维度管理.", tags = { "z-ctc" })
     public Result<PageResourcesByAppResult> pageResourcesByApp(
-            @RequestParam(value = "appCode", required = false) String appCode,
-            @RequestParam(value = "type", required = false) Integer type,
-            @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "pageNum", defaultValue = "1") int pageNum,
-            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize) {
+            @RequestParam(value = "appCode", required = false)
+            @BizParam(name = "appCode", type = BizField.FieldType.STRING, description = "应用编码, 可选; 为空时不过滤", position = BizParam.Position.QUERY) String appCode,
+            @RequestParam(value = "type", required = false)
+            @BizParam(name = "type", type = BizField.FieldType.INTEGER, description = "资源类型, 可选; 为空时不过滤", position = BizParam.Position.QUERY) Integer type,
+            @RequestParam(value = "keyword", required = false)
+            @BizParam(name = "keyword", type = BizField.FieldType.STRING, description = "关键字, 可选; 匹配 resourceCode/resourceName", position = BizParam.Position.QUERY) String keyword,
+            @RequestParam(value = "pageNum", defaultValue = "1")
+            @BizParam(name = "pageNum", type = BizField.FieldType.INTEGER, description = "页码, 默认 1", position = BizParam.Position.QUERY) int pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "20")
+            @BizParam(name = "pageSize", type = BizField.FieldType.INTEGER, description = "每页大小, 默认 20", position = BizParam.Position.QUERY) int pageSize) {
         List<ResourceDO> data = authzService.pageResourcesByApp(appCode, type, keyword, pageNum, pageSize, 0);
         // 用同条件在内存里数 total（量级预期 < 10k，可接受）
         List<ResourceDO> all = authzService.pageResourcesByApp(appCode, type, keyword, 1, Integer.MAX_VALUE, 0);
@@ -421,6 +471,7 @@ public class AuthzController {
      * @return 去重后的 appCode 字符串列表
      */
     @GetMapping("/resources/distinct-apps")
+    @BizApi(summary = "DISTINCT 出资源表中已注册的所有 appCode 列表. 用于前端应用下拉/筛选", description = "DISTINCT 出资源表中已注册的所有 appCode 列表. 用于前端应用下拉/筛选.", tags = { "z-ctc" })
     public Result<List<String>> distinctApps() {
         return Result.success(authzService.listDistinctApps());
     }
@@ -432,7 +483,8 @@ public class AuthzController {
      * @return 持有该资源的 Role VO 列表
      */
     @GetMapping("/resources/roles")
-    public Result<List<RoleVO>> listRolesByResource(@RequestParam("resourceId") Long resourceId) {
+    @BizApi(summary = "持有指定资源的角色列表 — 资源详情抽屉「关联角色」tab 用", description = "持有指定资源的角色列表 — 资源详情抽屉「关联角色」tab 用.", tags = { "z-ctc" })
+    public Result<List<RoleVO>> listRolesByResource(@RequestParam("resourceId") @BizParam(name = "resourceId", type = BizField.FieldType.INTEGER, description = "资源主键 id, 请求参数 (?resourceId=xxx)", position = BizParam.Position.QUERY) Long resourceId) {
         List<RoleVO> voList = authzService.listRolesByResource(resourceId).stream()
                 .map(RoleVO::from)
                 .collect(Collectors.toList());
@@ -446,7 +498,8 @@ public class AuthzController {
      * @return 该角色关联的 Resource VO 列表
      */
     @GetMapping("/roles/resources")
-    public Result<List<ResourceVO>> listRolePermissions(@RequestParam("roleId") Long roleId) {
+    @BizApi(summary = "查询指定角色拥有的资源/权限点列表", description = "查询指定角色拥有的资源/权限点列表.", tags = { "z-ctc" })
+    public Result<List<ResourceVO>> listRolePermissions(@RequestParam("roleId") @BizParam(name = "roleId", type = BizField.FieldType.INTEGER, description = "角色主键 id, 请求参数 (?roleId=xxx)", position = BizParam.Position.QUERY) Long roleId) {
         List<ResourceVO> voList = authzService.listRolePermissions(roleId).stream()
                 .map(ResourceVO::from)
                 .collect(Collectors.toList());
@@ -464,11 +517,16 @@ public class AuthzController {
      * @param grantedBy  授权人, 来自 X-User-Id 头
      */
     @PostMapping("/users/grant-resource")
+    @BizApi(summary = "给用户直接授权一个资源 (白名单). 幂等: 已存在则跳过", description = "给用户直接授权一个资源 (白名单). 幂等: 已存在则跳过.", tags = { "z-ctc" })
     public Result<Void> grantUserResource(
-            @RequestParam("userId") Long userId,
-            @RequestParam("resourceId") Long resourceId,
-            @RequestParam(value = "expireAt", required = false) String expireAt,
-            @RequestHeader(value = "X-User-Id", required = false) String grantedBy) {
+            @RequestParam("userId")
+            @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "被授权用户 id, 请求参数", position = BizParam.Position.QUERY) Long userId,
+            @RequestParam("resourceId")
+            @BizParam(name = "resourceId", type = BizField.FieldType.INTEGER, description = "资源 id, 请求参数", position = BizParam.Position.QUERY) Long resourceId,
+            @RequestParam(value = "expireAt", required = false)
+            @BizParam(name = "expireAt", type = BizField.FieldType.STRING, description = "过期时间, 可选", position = BizParam.Position.QUERY) String expireAt,
+            @RequestHeader(value = "X-User-Id", required = false)
+            @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "授权人, 来自 X-User-Id 头", position = BizParam.Position.HEADER) String grantedBy) {
         LocalDateTime exp = expireAt == null ? null : LocalDateTime.parse(expireAt);
         return authzService.grantUserResource(userId, resourceId, null, grantedBy, exp)
                 ? Result.<Void>success()
@@ -479,9 +537,12 @@ public class AuthzController {
      * 撤销用户直接授权的一个资源.
      */
     @DeleteMapping("/users/revoke-resource")
+    @BizApi(summary = "撤销用户直接授权的一个资源", description = "撤销用户直接授权的一个资源.", tags = { "z-ctc" })
     public Result<Void> revokeUserResource(
-            @RequestParam("userId") Long userId,
-            @RequestParam("resourceId") Long resourceId) {
+            @RequestParam("userId")
+            @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.QUERY) Long userId,
+            @RequestParam("resourceId")
+            @BizParam(name = "resourceId", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.QUERY) Long resourceId) {
         return authzService.revokeUserResource(userId, resourceId)
                 ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -491,7 +552,8 @@ public class AuthzController {
      * 查用户的直接授权列表 (白名单).
      */
     @GetMapping("/users/grants")
-    public Result<?> listUserGrants(@RequestParam("userId") Long userId) {
+    @BizApi(summary = "查用户的直接授权列表 (白名单)", description = "查用户的直接授权列表 (白名单).", tags = { "z-ctc" })
+    public Result<?> listUserGrants(@RequestParam("userId") @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.QUERY) Long userId) {
         return Result.success(authzService.listUserGrants(userId));
     }
 
@@ -501,11 +563,16 @@ public class AuthzController {
      * 给用户设置拒绝一个资源 (黑名单). 幂等: 已存在则跳过.
      */
     @PostMapping("/users/deny-resource")
+    @BizApi(summary = "给用户设置拒绝一个资源 (黑名单). 幂等: 已存在则跳过", description = "给用户设置拒绝一个资源 (黑名单). 幂等: 已存在则跳过.", tags = { "z-ctc" })
     public Result<Void> denyUserResource(
-            @RequestParam("userId") Long userId,
-            @RequestParam("resourceId") Long resourceId,
-            @RequestParam(value = "expireAt", required = false) String expireAt,
-            @RequestHeader(value = "X-User-Id", required = false) String deniedBy) {
+            @RequestParam("userId")
+            @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.QUERY) Long userId,
+            @RequestParam("resourceId")
+            @BizParam(name = "resourceId", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.QUERY) Long resourceId,
+            @RequestParam(value = "expireAt", required = false)
+            @BizParam(name = "expireAt", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String expireAt,
+            @RequestHeader(value = "X-User-Id", required = false)
+            @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.HEADER) String deniedBy) {
         LocalDateTime exp = expireAt == null ? null : LocalDateTime.parse(expireAt);
         return authzService.denyUserResource(userId, resourceId, null, deniedBy, exp)
                 ? Result.<Void>success()
@@ -516,9 +583,12 @@ public class AuthzController {
      * 撤销用户对某资源的拒绝.
      */
     @DeleteMapping("/users/undeny-resource")
+    @BizApi(summary = "撤销用户对某资源的拒绝", description = "撤销用户对某资源的拒绝.", tags = { "z-ctc" })
     public Result<Void> undenyUserResource(
-            @RequestParam("userId") Long userId,
-            @RequestParam("resourceId") Long resourceId) {
+            @RequestParam("userId")
+            @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.QUERY) Long userId,
+            @RequestParam("resourceId")
+            @BizParam(name = "resourceId", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.QUERY) Long resourceId) {
         return authzService.undenyUserResource(userId, resourceId)
                 ? Result.<Void>success()
                 : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
@@ -528,7 +598,11 @@ public class AuthzController {
      * 查用户的直接拒绝列表 (黑名单).
      */
     @GetMapping("/users/denies")
-    public Result<?> listUserDenies(@RequestParam("userId") Long userId) {
+    @BizApi(summary = "查用户的直接拒绝列表 (黑名单)", description = "查用户的直接拒绝列表 (黑名单).", tags = { "z-ctc" })
+    public Result<?> listUserDenies(@RequestParam("userId") @BizParam(name = "userId", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.QUERY) Long userId) {
         return Result.success(authzService.listUserDenies(userId));
     }
 }
+
+
+

@@ -7,6 +7,9 @@ import com.zifang.ctc.core.init.TenantInitReport;
 import com.zifang.ctc.core.service.TenantService;
 import com.zifang.util.core.meta.Result;
 import com.zifang.util.core.meta.ResultCode;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -54,7 +57,8 @@ public class TenantInitAdminController {
      * 重跑指定租户的所有 TenantInitializer. 幂等.
      */
     @PostMapping("/reinit/{tenantCode}")
-    public Result<TenantInitReport> reinit(@PathVariable("tenantCode") String tenantCode) {
+    @BizApi(summary = "重跑指定租户的所有 TenantInitializer. 幂等", description = "重跑指定租户的所有 TenantInitializer. 幂等.", tags = { "z-ctc" })
+    public Result<TenantInitReport> reinit(@PathVariable("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.PATH) String tenantCode) {
         if (tenantCode == null || tenantCode.isEmpty()) {
             return Result.<TenantInitReport>fail("tenantCode 必填").code(ResultCode.PARAM_VALID_ERROR.getCode());
         }
@@ -75,6 +79,7 @@ public class TenantInitAdminController {
      * <p>每个租户独立 try/catch, 一个失败不影响其他.
      */
     @PostMapping("/reinit-all")
+    @BizApi(summary = "重跑所有租户. 运维场景: 加了新 Initializer 后批量补", description = "重跑所有租户. 运维场景: 加了新 Initializer 后批量补. 每个租户独立 try/catch, 一个失败不影响其他.", tags = { "z-ctc" })
     public Result<List<TenantInitReport>> reinitAll() {
         List<TenantDO> all = tenantService.listAll();
         log.info("[TenantInit-Admin] 手动重跑所有租户初始化: 总数={}", all.size());
@@ -100,6 +105,7 @@ public class TenantInitAdminController {
      * 查看已注册的 Initializer 列表 (用于排错 / 文档展示).
      */
     @org.springframework.web.bind.annotation.GetMapping("/status")
+    @BizApi(summary = "查看已注册的 Initializer 列表 (用于排错 / 文档展示)", description = "查看已注册的 Initializer 列表 (用于排错 / 文档展示).", tags = { "z-ctc" })
     public Result<List<InitializerInfo>> status() {
         List<InitializerInfo> list = tenantInitOrchestrator.listInitializers().stream()
                 .map(i -> new InitializerInfo(i.moduleName(), i.order(), i.getClass().getSimpleName()))
@@ -122,3 +128,6 @@ public class TenantInitAdminController {
         }
     }
 }
+
+
+

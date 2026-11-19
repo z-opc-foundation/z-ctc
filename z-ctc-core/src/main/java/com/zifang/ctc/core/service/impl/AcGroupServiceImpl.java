@@ -3,6 +3,7 @@ package com.zifang.ctc.core.service.impl;
 import com.zifang.ctc.core.domain.entity.GroupDO;
 import com.zifang.ctc.core.domain.service.GroupDbService;
 import com.zifang.ctc.core.service.GroupService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,7 @@ public class AcGroupServiceImpl implements GroupService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建组别", module = "z-ctc", description = "创建组别。", operation = BizMethod.Operation.CREATE)
     public Long createGroup(GroupDO group, String createdBy) {
         if (group == null) { throw new IllegalArgumentException("group 不能为空"); }
 
@@ -87,6 +89,7 @@ public class AcGroupServiceImpl implements GroupService {
      * @return 组别实体 Optional
      */
     @Override
+    @BizMethod(name = "根据编码查找组别", module = "z-ctc", description = "根据编码查找组别。", operation = BizMethod.Operation.QUERY)
     public Optional<GroupDO> findByCode(String tenantCode, String domainCode, String groupCode) {
         return Optional.ofNullable(groupDbService.selectByGroupCode(tenantCode, domainCode, groupCode));
     }
@@ -100,6 +103,7 @@ public class AcGroupServiceImpl implements GroupService {
      * @return 组别实体列表
      */
     @Override
+    @BizMethod(name = "根据部门编码查询组别列表", module = "z-ctc", description = "根据部门编码查询组别列表。", operation = BizMethod.Operation.QUERY)
     public List<GroupDO> listByDept(String tenantCode, String domainCode, String deptCode) {
         if (tenantCode == null || domainCode == null || deptCode == null) { return Collections.emptyList(); }
 
@@ -118,6 +122,7 @@ public class AcGroupServiceImpl implements GroupService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新组别", module = "z-ctc", description = "更新组别。", operation = BizMethod.Operation.UPDATE)
     public boolean updateGroup(String tenantCode, String domainCode, String groupCode, GroupDO patch, String updatedBy) {
         if (tenantCode == null || domainCode == null || groupCode == null || patch == null) { return false; }
 
@@ -147,6 +152,7 @@ public class AcGroupServiceImpl implements GroupService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "删除组别", module = "z-ctc", description = "删除组别。", operation = BizMethod.Operation.DELETE)
     public boolean deleteGroup(String tenantCode, String domainCode, String groupCode) {
         GroupDO exist = groupDbService.selectByGroupCode(tenantCode, domainCode, groupCode);
         if (exist == null) { return false; }
@@ -154,3 +160,6 @@ public class AcGroupServiceImpl implements GroupService {
         return groupDbService.deleteById(exist.getId()) > 0;
     }
 }
+
+
+

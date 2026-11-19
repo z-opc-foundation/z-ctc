@@ -65,6 +65,11 @@
             <artifactId>spring-boot-starter-validation</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>io.github.yuku123</groupId>
+            <artifactId>z-meta-api</artifactId>
+            <version>${z-meta.version}</version>
+        </dependency>
     </dependencies>
 
     <!-- 迁移删掉了本模块那条 maven-compiler-plugin 3.10.1 + <source>/<target>=${java.version} 的

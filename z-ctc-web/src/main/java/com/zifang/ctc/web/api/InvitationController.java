@@ -12,14 +12,17 @@ import com.zifang.ctc.web.api.response.InvitationAcceptResult;
 import com.zifang.ctc.web.api.response.InvitationCreateResult;
 import com.zifang.ctc.web.api.response.InvitationRedeemResult;
 import com.zifang.util.core.meta.Result;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 /**
@@ -62,7 +65,8 @@ public class InvitationController {
      */
     @Operation(summary = "发送邀请 (链接 / 码)")
     @PostMapping
-    public Result<InvitationCreateResult> create(@RequestBody CreateInvitationRequest req,
+    @BizApi(summary = "发送邀请", description = "发送邀请. 重构: 改用 InvitationService.create (业务层管状态/过期/编码生成).", tags = { "z-ctc" })
+    public Result<InvitationCreateResult> create(@RequestBody @BizParam(name = "req", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.BODY) CreateInvitationRequest req,
                                               HttpServletRequest httpRequest) {
         if (req == null || req.getTenantCode() == null) {
             return Result.<InvitationCreateResult>fail("tenantCode 必填").code(400);
@@ -103,7 +107,8 @@ public class InvitationController {
      */
     @Operation(summary = "接受邀请 (链接 token)")
     @PostMapping("/accept")
-    public Result<InvitationAcceptResult> accept(@RequestBody Map<String, String> body,
+    @BizApi(summary = "接受邀请 (token 链接模式)", description = "接受邀请 (token 链接模式). 重构: 改用 InvitationService.acceptByToken (业务层做状态校验 + membership 创建 + 邀请状态翻转).", tags = { "z-ctc" })
+    public Result<InvitationAcceptResult> accept(@RequestBody @BizParam(name = "body", type = BizField.FieldType.JSON, description = "", position = BizParam.Position.BODY) Map<String, String> body,
                                               HttpServletRequest httpRequest) {
         String token = body.get("token");
         if (token == null) { return Result.<InvitationAcceptResult>fail("token 必填").code(400); }
@@ -138,7 +143,8 @@ public class InvitationController {
      */
     @Operation(summary = "兑换邀请码")
     @PostMapping("/redeem")
-    public Result<InvitationRedeemResult> redeem(@RequestBody Map<String, String> body,
+    @BizApi(summary = "兑换邀请码", description = "兑换邀请码. 重构: 改用 InvitationService.redeemByCode.", tags = { "z-ctc" })
+    public Result<InvitationRedeemResult> redeem(@RequestBody @BizParam(name = "body", type = BizField.FieldType.JSON, description = "", position = BizParam.Position.BODY) Map<String, String> body,
                                               HttpServletRequest httpRequest) {
         String code = body.get("code");
         if (code == null) { return Result.<InvitationRedeemResult>fail("code 必填").code(400); }
@@ -173,7 +179,8 @@ public class InvitationController {
      */
     @Operation(summary = "查邀请列表")
     @GetMapping
-    public Result<Object> list(@RequestParam String tenantCode, HttpServletRequest httpRequest) {
+    @BizApi(summary = "查邀请列表 (按租户)", description = "查邀请列表 (按租户). 重构: 改用 InvitationService.listByTenant.", tags = { "z-ctc" })
+    public Result<Object> list(@RequestParam @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String tenantCode, HttpServletRequest httpRequest) {
         Long userId = extractUserId(httpRequest);
         if (userId == null) { return Result.fail("未登录").code(401); }
 
@@ -192,7 +199,8 @@ public class InvitationController {
      */
     @Operation(summary = "撤销邀请")
     @PostMapping("/{id}/revoke")
-    public Result<Void> revoke(@PathVariable Long id, @RequestParam String tenantCode,
+    @BizApi(summary = "撤销邀请", description = "撤销邀请. 重构: 改用 InvitationService.revoke.", tags = { "z-ctc" })
+    public Result<Void> revoke(@PathVariable @BizParam(name = "id", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.PATH) Long id, @RequestParam @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String tenantCode,
                                HttpServletRequest httpRequest) {
         Long userId = extractUserId(httpRequest);
         if (userId == null) { return Result.<Void>fail("未登录").code(401); }
@@ -219,7 +227,8 @@ public class InvitationController {
      */
     @Operation(summary = "查租户成员列表 (FEATURE049)")
     @GetMapping("/members")
-    public Result<Object> listMembers(@RequestParam String tenantCode, HttpServletRequest httpRequest) {
+    @BizApi(summary = "查租户成员列表 (owner/admin)", description = "查租户成员列表 (owner/admin). 重构: 改用 MembershipService.listActiveByTenant.", tags = { "z-ctc" })
+    public Result<Object> listMembers(@RequestParam @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String tenantCode, HttpServletRequest httpRequest) {
         Long userId = extractUserId(httpRequest);
         if (userId == null) { return Result.fail("未登录").code(401); }
 
@@ -239,8 +248,9 @@ public class InvitationController {
      */
     @Operation(summary = "移除成员 (FEATURE049)")
     @PostMapping("/members/{memberId}/remove")
-    public Result<Void> removeMember(@PathVariable Long memberId,
-                                     @RequestParam String tenantCode,
+    @BizApi(summary = "移除成员 (owner/admin, 不能移除 owner 也不能移除自己)", description = "移除成员 (owner/admin, 不能移除 owner 也不能移除自己). 重构: 改用 MembershipService.findById + MembershipService.remove.", tags = { "z-ctc" })
+    public Result<Void> removeMember(@PathVariable @BizParam(name = "memberId", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.PATH) Long memberId,
+                                     @RequestParam @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String tenantCode,
                                      HttpServletRequest httpRequest) {
         Long userId = extractUserId(httpRequest);
         if (userId == null) { return Result.<Void>fail("未登录").code(401); }
@@ -273,7 +283,8 @@ public class InvitationController {
      */
     @Operation(summary = "退出当前租户 (FEATURE049)")
     @PostMapping("/leave")
-    public Result<Void> leave(@RequestParam String tenantCode, HttpServletRequest httpRequest) {
+    @BizApi(summary = "退出当前租户 (成员自己退出, owner 不能退出 - 需先转让)", description = "退出当前租户 (成员自己退出, owner 不能退出 - 需先转让). 重构: 改用 MembershipService.leave (Service 内部校验 owner 约束).", tags = { "z-ctc" })
+    public Result<Void> leave(@RequestParam @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String tenantCode, HttpServletRequest httpRequest) {
         Long userId = extractUserId(httpRequest);
         if (userId == null) { return Result.<Void>fail("未登录").code(401); }
 
@@ -371,3 +382,6 @@ public class InvitationController {
         }
     }
 }
+
+
+

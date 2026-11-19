@@ -6,6 +6,7 @@ import com.zifang.ctc.core.domain.entity.UserDO;
 import com.zifang.ctc.core.domain.mapper.AuthMapper;
 import com.zifang.ctc.core.domain.service.UserDbService;
 import com.zifang.ctc.core.service.UserService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.security.crypto.bcrypt.BCrypt;
@@ -55,6 +56,7 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "注册用户（邮箱 + 密码）", module = "z-ctc", description = "注册用户（邮箱 + 密码）.", operation = BizMethod.Operation.CREATE)
     public Long register(String email, String username, String nickname, String rawPassword) {
         if (email == null || email.isEmpty()) {
             throw new IllegalArgumentException("email 必填");
@@ -105,6 +107,7 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "注册用户（手机号 + 密码）", module = "z-ctc", description = "注册用户（手机号 + 密码）.", operation = BizMethod.Operation.CREATE)
     public Long registerByPhone(String phone, String username, String nickname, String rawPassword) {
         if (phone == null || phone.isEmpty()) {
             throw new IllegalArgumentException("phone 必填");
@@ -152,6 +155,7 @@ public class UserServiceImpl implements UserService {
      * @return 用户信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据ID查询用户", module = "z-ctc", description = "根据ID查询用户.", operation = BizMethod.Operation.QUERY)
     public Optional<UserDO> findById(Long id) {
         if (id == null) { return Optional.empty(); }
 
@@ -165,6 +169,7 @@ public class UserServiceImpl implements UserService {
      * @return 用户信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据邮箱查询用户", module = "z-ctc", description = "根据邮箱查询用户.", operation = BizMethod.Operation.QUERY)
     public Optional<UserDO> findByEmail(String email) {
         if (email == null) { return Optional.empty(); }
 
@@ -178,6 +183,7 @@ public class UserServiceImpl implements UserService {
      * @return 用户信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据手机号查询用户", module = "z-ctc", description = "根据手机号查询用户.", operation = BizMethod.Operation.QUERY)
     public Optional<UserDO> findByPhone(String phone) {
         if (phone == null) { return Optional.empty(); }
 
@@ -191,6 +197,7 @@ public class UserServiceImpl implements UserService {
      * @return 用户信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据用户名查询用户", module = "z-ctc", description = "根据用户名查询用户.", operation = BizMethod.Operation.QUERY)
     public Optional<UserDO> findByUsername(String username) {
         return Optional.ofNullable(userDbService.selectByUsername(username));
     }
@@ -205,6 +212,7 @@ public class UserServiceImpl implements UserService {
      * @return 用户信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据身份类型和标识符查询用户", module = "z-ctc", description = "根据身份类型和标识符查询用户. identityType=1 时按 email 查询，identityType=2 时按 phone 查询，其他按 username 查询.", operation = BizMethod.Operation.QUERY)
     public Optional<UserDO> findByLoginIdentifier(int identityType, String identifier) {
         if (identifier == null) { return Optional.empty(); }
 
@@ -225,6 +233,7 @@ public class UserServiceImpl implements UserService {
      * @return true 更新成功，false 用户不存在或更新失败
      */
     @Override
+    @BizMethod(name = "更新用户最后登录时间和 IP", module = "z-ctc", description = "更新用户最后登录时间和 IP.", operation = BizMethod.Operation.UPDATE)
     public boolean updateLastLogin(Long userId, String ip) {
         UserDO user = userDbService.selectById(userId);
         if (user == null) { return false; }
@@ -244,6 +253,7 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新用户状态", module = "z-ctc", description = "更新用户状态.", operation = BizMethod.Operation.UPDATE)
     public boolean updateStatus(Long userId, int newStatus) {
         UserDO user = userDbService.selectById(userId);
         if (user == null) { return false; }
@@ -263,6 +273,7 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "修改密码（需验证旧密码）", module = "z-ctc", description = "修改密码（需验证旧密码）.", operation = BizMethod.Operation.UPDATE)
     public boolean changePassword(Long userId, String oldRawPassword, String newRawPassword) {
         UserDO user = userDbService.selectById(userId);
         if (user == null || user.getPasswordHash() == null) return false;
@@ -296,6 +307,7 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "重置密码（无需验证旧密码）", module = "z-ctc", description = "重置密码（无需验证旧密码）.", operation = BizMethod.Operation.ACTION)
     public boolean resetPassword(Long userId, String newRawPassword) {
         UserDO user = userDbService.selectById(userId);
         if (user == null) { return false; }
@@ -332,6 +344,7 @@ public class UserServiceImpl implements UserService {
      * @return true 密码匹配，false 不匹配或异常
      */
     @Override
+    @BizMethod(name = "验证密码是否匹配", module = "z-ctc", description = "验证密码是否匹配.", operation = BizMethod.Operation.ACTION)
     public boolean verifyPassword(String rawPassword, String passwordHash) {
         if (rawPassword == null || passwordHash == null) { return false; }
 
@@ -350,8 +363,12 @@ public class UserServiceImpl implements UserService {
      * @return 用户列表
      */
     @Override
+    @BizMethod(name = "根据 ID 列表查询用户", module = "z-ctc", description = "根据 ID 列表查询用户.", operation = BizMethod.Operation.QUERY)
     public List<UserDO> listByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) { return Collections.emptyList(); }
         return userDbService.selectByQuery(new QueryWrapper<UserDO>().in("id", ids));
     }
 }
+
+
+

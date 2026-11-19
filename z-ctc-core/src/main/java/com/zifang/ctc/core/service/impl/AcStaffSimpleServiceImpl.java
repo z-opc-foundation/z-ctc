@@ -5,6 +5,7 @@ import com.zifang.ctc.core.domain.entity.UserDO;
 import com.zifang.ctc.core.domain.service.UserDbService;
 import com.zifang.ctc.core.service.StaffSimpleService;
 import com.zifang.ctc.core.vo.StaffSimpleVO;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ public class AcStaffSimpleServiceImpl implements StaffSimpleService {
 
     @Override
     @Transactional(readOnly = true)
+    @BizMethod(name = "listSimpleStaff", module = "z-ctc", description = "", operation = BizMethod.Operation.QUERY)
     public List<StaffSimpleVO> listSimpleStaff(String tenantCode) {
         List<UserDO> users;
         try {
@@ -90,3 +92,6 @@ public class AcStaffSimpleServiceImpl implements StaffSimpleService {
         return vo;
     }
 }
+
+
+

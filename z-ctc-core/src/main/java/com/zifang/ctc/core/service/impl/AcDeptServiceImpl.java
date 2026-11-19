@@ -3,6 +3,7 @@ package com.zifang.ctc.core.service.impl;
 import com.zifang.ctc.core.domain.entity.DeptDO;
 import com.zifang.ctc.core.domain.service.DeptDbService;
 import com.zifang.ctc.core.service.DeptService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,7 @@ public class AcDeptServiceImpl implements DeptService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "创建部门", module = "z-ctc", description = "创建部门.", operation = BizMethod.Operation.CREATE)
     public Long createDept(DeptDO dept, String createdBy) {
         if (dept == null) { throw new IllegalArgumentException("dept 不能为空"); }
 
@@ -85,6 +87,7 @@ public class AcDeptServiceImpl implements DeptService {
      * @return 部门信息，不存在则返回空
      */
     @Override
+    @BizMethod(name = "根据租户/域/组织/部门编码查询部门", module = "z-ctc", description = "根据租户/域/组织/部门编码查询部门.", operation = BizMethod.Operation.QUERY)
     public Optional<DeptDO> findByCode(String tenantCode, String domainCode, String deptCode) {
         return Optional.ofNullable(deptDbService.selectByDeptCode(tenantCode, domainCode, deptCode));
     }
@@ -93,6 +96,7 @@ public class AcDeptServiceImpl implements DeptService {
      * 按 (tenant, deptCode) 查询 — membership 不带 domain 维度, 账户归属反查用.
      */
     @Override
+    @BizMethod(name = "按 (tenant, deptCode) 查询 — membership 不带 domain 维度, 账户归属反查用", module = "z-ctc", description = "按 (tenant, deptCode) 查询 — membership 不带 domain 维度, 账户归属反查用.", operation = BizMethod.Operation.QUERY)
     public Optional<DeptDO> findByTenantAndCode(String tenantCode, String deptCode) {
         if (tenantCode == null || deptCode == null || deptCode.isEmpty()) {
             return Optional.empty();
@@ -114,6 +118,7 @@ public class AcDeptServiceImpl implements DeptService {
      * @return 部门列表
      */
     @Override
+    @BizMethod(name = "查询组织下的所有部门", module = "z-ctc", description = "查询组织下的所有部门.", operation = BizMethod.Operation.QUERY)
     public List<DeptDO> listByOrg(String tenantCode, String domainCode, String orgCode) {
         if (tenantCode == null || domainCode == null || orgCode == null) { return Collections.emptyList(); }
 
@@ -132,6 +137,7 @@ public class AcDeptServiceImpl implements DeptService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "更新部门信息", module = "z-ctc", description = "更新部门信息.", operation = BizMethod.Operation.UPDATE)
     public boolean updateDept(String tenantCode, String domainCode, String deptCode, DeptDO patch, String updatedBy) {
         if (tenantCode == null || domainCode == null || deptCode == null || patch == null) { return false; }
 
@@ -161,6 +167,7 @@ public class AcDeptServiceImpl implements DeptService {
      */
     @Override
     @Transactional
+    @BizMethod(name = "删除部门", module = "z-ctc", description = "删除部门.", operation = BizMethod.Operation.DELETE)
     public boolean deleteDept(String tenantCode, String domainCode, String deptCode) {
         DeptDO exist = deptDbService.selectByDeptCode(tenantCode, domainCode, deptCode);
         if (exist == null) { return false; }
@@ -168,3 +175,6 @@ public class AcDeptServiceImpl implements DeptService {
         return deptDbService.deleteById(exist.getId()) > 0;
     }
 }
+
+
+

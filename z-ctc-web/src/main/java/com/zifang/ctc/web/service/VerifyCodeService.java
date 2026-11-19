@@ -3,6 +3,7 @@ package com.zifang.ctc.web.service;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.zifang.ctc.common.spi.CodeChannelSender;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -147,6 +148,7 @@ public class VerifyCodeService {
      * @param channel  PHONE / EMAIL
      * @param scene    LOGIN / REGISTER / RESET
      */
+    @BizMethod(name = "生成并发送验证码 (含 60s 冷却). 通道无 SPI 实现时打日志 (Mock 模式)", module = "z-ctc", description = "生成并发送验证码 (含 60s 冷却). 通道无 SPI 实现时打日志 (Mock 模式).", operation = BizMethod.Operation.ACTION)
     public SendOutcome sendCode(String receiver, String channel, String scene) {
         String key = cacheKey(scene, channel, receiver);
         long now = Instant.now().getEpochSecond();
@@ -189,6 +191,7 @@ public class VerifyCodeService {
      * @param scene    LOGIN / REGISTER / RESET
      * @param code     用户提交的验证码
      */
+    @BizMethod(name = "校验并一次性消费验证码. 不合法时抛 IllegalArgumentException (message 可直接给前端)", module = "z-ctc", description = "校验并一次性消费验证码. 不合法时抛 IllegalArgumentException (message 可直接给前端).", operation = BizMethod.Operation.ACTION)
     public void verifyCode(String receiver, String channel, String scene, String code) {
         String key = cacheKey(scene, channel, receiver);
         CodeEntry entry = codeStore.getIfPresent(key);
@@ -216,3 +219,6 @@ public class VerifyCodeService {
         return scene + ":" + channel + ":" + (receiver == null ? "" : receiver.trim());
     }
 }
+
+
+

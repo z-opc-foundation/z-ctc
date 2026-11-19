@@ -1,6 +1,7 @@
 package com.zifang.ctc.web.service;
 
 import com.zifang.ctc.web.config.OAuthClientProperties;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,6 +74,7 @@ public class OAuthAuthorizeService {
      * @param challengeMethod 请求里的 code_challenge_method
      * @param codeChallenge   请求里的 code_challenge
      */
+    @BizMethod(name = "校验授权请求。全部通过返回 null，否则返回 RFC 错误码", module = "z-ctc", description = "校验授权请求。全部通过返回 null，否则返回 RFC 错误码。", operation = BizMethod.Operation.ACTION)
     public String validateAuthorize(String clientId, String redirectUri, String responseType,
                                     String scope, String challengeMethod, String codeChallenge) {
         OAuthClientProperties.Client client = clients.find(clientId);
@@ -102,6 +104,7 @@ public class OAuthAuthorizeService {
     }
 
     /** Controller 判「能不能安全回跳」的公开门面（redirect 不合法时绝不 302）。 */
+    @BizMethod(name = "Controller 判「能不能安全回跳」的公开门面（redirect 不合法时绝不 302）", module = "z-ctc", description = "Controller 判「能不能安全回跳」的公开门面（redirect 不合法时绝不 302）。", operation = BizMethod.Operation.ACTION)
     public boolean redirectAllowedPublic(OAuthClientProperties.Client client, String redirectUri) {
         return client != null && redirectAllowed(client, redirectUri);
     }
@@ -181,6 +184,7 @@ public class OAuthAuthorizeService {
      *
      * @return 新的授权码（128-bit 随机 base64url）
      */
+    @BizMethod(name = "签发授权码并落库（四元组绑定）", module = "z-ctc", description = "签发授权码并落库（四元组绑定）。", operation = BizMethod.Operation.ACTION)
     public String issueCode(String clientId, String redirectUri, String codeChallenge,
                             String userId, String scope) {
         String code = randomToken();
@@ -196,6 +200,7 @@ public class OAuthAuthorizeService {
      * 校验换 token 请求（授权码模式）。
      * 通过返回 {@link TokenGrant}，否则返回 RFC 错误码（由 controller 转 HTTP 400）。
      */
+    @BizMethod(name = "校验换 token 请求（授权码模式）", module = "z-ctc", description = "校验换 token 请求（授权码模式）。 通过返回 {@link TokenGrant}，否则返回 RFC 错误码（由 controller 转 HTTP 400）。", operation = BizMethod.Operation.ACTION)
     public Object validateTokenRequest(String grantType, String code, String clientId,
                                        String redirectUri, String codeVerifier) {
         if (!"authorization_code".equals(grantType)) {
@@ -249,6 +254,7 @@ public class OAuthAuthorizeService {
      * ------------------------------------------------------------------ */
 
     /** 128-bit 随机 → base64url（无填充）。code 与 access_token 共用这个强度。 */
+    @BizMethod(name = "128-bit 随机 → base64url（无填充）。code 与 access_token 共用这个强度", module = "z-ctc", description = "128-bit 随机 → base64url（无填充）。code 与 access_token 共用这个强度。", operation = BizMethod.Operation.ACTION)
     public String randomToken() {
         byte[] buf = new byte[16];
         random.nextBytes(buf);
@@ -267,3 +273,6 @@ public class OAuthAuthorizeService {
         }
     }
 }
+
+
+

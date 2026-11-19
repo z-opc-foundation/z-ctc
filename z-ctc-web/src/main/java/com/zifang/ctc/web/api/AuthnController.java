@@ -1,5 +1,6 @@
 package com.zifang.ctc.web.api;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.zifang.ctc.common.vo.VerifyResponseVO;
@@ -28,18 +29,20 @@ import com.zifang.ctc.web.api.request.SwitchTenantRequest;
 import com.zifang.ctc.web.api.response.MyTenantsResult;
 import com.zifang.ctc.web.api.response.RegisterResult;
 import com.zifang.ctc.web.service.VerifyCodeService;
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.zifang.util.core.meta.Result;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -172,10 +175,12 @@ public class AuthnController {
      */
     @Operation(summary = "账号密码登录")
     @PostMapping("/login")
-    public Result<LoginResponseVO> login(@RequestBody LoginRequest request,
+    @BizApi(summary = "账号密码登录. 成功返回 token + 账号信息; 失败返回 401", description = "账号密码登录. 成功返回 token + 账号信息; 失败返回 401.", tags = { "z-ctc" })
+    public Result<LoginResponseVO> login(@RequestBody @BizParam(name = "request", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.BODY) LoginRequest request,
                                          HttpServletRequest httpRequest,
                                          HttpServletResponse response,
-                                         @RequestHeader(value = "User-Agent", required = false) String userAgent) {
+                                         @RequestHeader(value = "User-Agent", required = false)
+                                         @BizParam(name = "User-Agent", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.HEADER) String userAgent) {
         // ⚠ 客户端 IP **不再只从 `X-Client-Ip` 请求头取**（卡 TASK-20261022-001 第 2 项）：
         //   没有任何组件注入那个头时，取值**恒为 NULL**（实测 1863 行登录日志 100% 为 NULL）
         //   ⇒ 「字段存在」不等于「能按 IP 归因」。
@@ -282,7 +287,8 @@ public class AuthnController {
      */
     @Operation(summary = "验证token有效性")
     @GetMapping("/verify")
-    public Result<VerifyResponseVO> verify(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+    @BizApi(summary = "验证 token 是否有效 (兼容 z-ctc-sso 的 RemoteTokenService 调用)", description = "验证 token 是否有效 (兼容 z-ctc-sso 的 RemoteTokenService 调用).", tags = { "z-ctc" })
+    public Result<VerifyResponseVO> verify(@RequestHeader(value = "Authorization", required = false) @BizParam(name = "Authorization", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.HEADER) String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return Result.<VerifyResponseVO>fail("missing Authorization Bearer").code(401);
         }
@@ -306,6 +312,7 @@ public class AuthnController {
      */
     @Operation(summary = "当前登录用户")
     @GetMapping("/whoami")
+    @BizApi(summary = "获取当前登录用户信息", description = "获取当前登录用户信息. 适用场景: PPT 等第三方应用通过 cookie 携带 token, 主控 /api/ctc/authn/whoami 拿用户上下文. FEATURE-ZTEAM-AUTH-UNIFY: 原本走 SsoContext.getCurrentUser() 依赖 SsoInterceptor, 但 {@code /api/ctc/authn/**} 在 sso.exclude-paths 中 (不能删, login / switch-tenant 等需要免密), 导致 whoami 永远拿不到 user. 改为本方法自行从 Authorization/Cookie 解析 token, 与 SsoInterceptor 解耦.", tags = { "z-ctc" })
     public Result<UserInfo> whoami(HttpServletRequest request) {
         try {
             UserInfo user = extractUserFromRequest(request);
@@ -338,6 +345,7 @@ public class AuthnController {
      */
     @Operation(summary = "退出登录")
     @PostMapping("/logout")
+    @BizApi(summary = "退出登录 — 清浏览器 sso_token Cookie (按 sso.token-cookie-names 顺序逐个清)", description = "退出登录 — 清浏览器 sso_token Cookie (按 sso.token-cookie-names 顺序逐个清), 与 z-team 历史 TeamAuthnController.logout 行为对齐。 FEATURE-ZTEAM-AUTH-UNIFY: ctc 此前没有 logout, 业务方都自己清 cookie。 现在 4A 中心统一处理, 各产品不再需要自己的 /api/authn/logout。 鉴权: 因为 /api/ctc/authn/** 在 sso.exclude-paths, 任意调用方都能清自己的 cookie, 这是 by design — 退出登录本来就该公开。", tags = { "z-ctc" })
     public Result<Map<String, Object>> logout(HttpServletRequest request, HttpServletResponse response) {
         try {
             java.util.List<String> cookieNames = ssoProperties.getEffectiveTokenCookieNames();
@@ -416,7 +424,8 @@ public class AuthnController {
      */
     @Operation(summary = "切换租户/域")
     @PostMapping("/switch-tenant")
-    public Result<LoginResponseVO> switchTenant(@RequestBody SwitchTenantRequest request,
+    @BizApi(summary = "切换当前登录用户的租户 / 域 — 重新签发 JWT, 让后续请求带上新的 tenantCode/domainCode claim", description = "切换当前登录用户的租户 / 域 — 重新签发 JWT, 让后续请求带上新的 tenantCode/domainCode claim. FEATURE012 增量: 之前切换租户只是改了前端 localStorage.z_tenant, 后端 JWT claim 没变. 现在前端右上角切租户/域时调这个接口, 后端: 1. 从 Authorization 头 / SSO Cookie 解析当前 JWT (AuthTokenExtractor), 拿到 userId 2. 校验目标 tenantCode (允许为空字符串 = 清空当前租户) 3. 重新签发 8h JWT, 覆盖 tenantCode + 写入 domainCode claim 4. 返回新 token + 更新后的 account 视图 (含 tenantCode/domainCode) 注: 因为 /api/ctc/authn/** 在 application.properties 里是 sso.exclude-paths, 所以本接口不会经过 SsoInterceptor, 也不依赖 SsoContext — 身份从 header 里直接取.", tags = { "z-ctc" })
+    public Result<LoginResponseVO> switchTenant(@RequestBody @BizParam(name = "request", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.BODY) SwitchTenantRequest request,
                                                 HttpServletRequest httpRequest,
                                                 HttpServletResponse httpResponse) {
         if (request == null) {
@@ -484,6 +493,7 @@ public class AuthnController {
      */
     @Operation(summary = "我的租户列表 (FEATURE049)")
     @GetMapping("/my-tenants")
+    @BizApi(summary = "FEATURE049: 列出当前用户的所有 active 租户", description = "FEATURE049: 列出当前用户的所有 active 租户. 用于登录后前端展示\"租户选择器\"或\"自动进入单租户\". 返回结构: { users: [...], memberships: [{userId, tenantCode, roleCode, ...}], tenantCount: N }", tags = { "z-ctc" })
     public Result<MyTenantsResult> myTenants(HttpServletRequest httpRequest) {
         Long userId = extractUserId(httpRequest);
         if (userId == null) { return Result.<MyTenantsResult>fail("未登录或 token 缺少 userId").code(401); }
@@ -514,7 +524,8 @@ public class AuthnController {
      */
     @Operation(summary = "选择租户 (阶段二, FEATURE049)")
     @PostMapping("/select-tenant")
-    public Result<LoginResponseVO> selectTenant(@RequestBody SwitchTenantRequest request,
+    @BizApi(summary = "FEATURE049: 选择租户 (阶段二) — 校验 membership 存在, 签发带 tenantCode 的正式 token", description = "FEATURE049: 选择租户 (阶段二) — 校验 membership 存在, 签发带 tenantCode 的正式 token. 注: 阶段一登录后, 前端拿到的是临时 token (无 tenantCode). 前端调本接口锁定租户, 后端校验该 user 在该 tenant 下有 active membership, 然后签发带 tenantCode 的正式 token.", tags = { "z-ctc" })
+    public Result<LoginResponseVO> selectTenant(@RequestBody @BizParam(name = "request", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.BODY) SwitchTenantRequest request,
                                                 HttpServletRequest httpRequest,
                                                 HttpServletResponse httpResponse) {
         if (request == null || request.getTenantCode() == null) {
@@ -577,7 +588,8 @@ public class AuthnController {
      */
     @Operation(summary = "注册 (FEATURE049, 创建游离 user)")
     @PostMapping("/register")
-    public Result<RegisterResult> register(@RequestBody RegisterRequest req) {
+    @BizApi(summary = "FEATURE049: 注册接口 (创建游离 user, 不建 membership)", description = "FEATURE049: 注册接口 (创建游离 user, 不建 membership). 阶段: 用户注册后跳转 \"选择组织\" 页 (创建租户 / 输入邀请码). 重构: 改用 UserService.register, 业务层统一管 user + auth 双写, 避免反射调 token. ⚠ 卡 TASK-20261022-027: 第 3 项 · 补验证 : 改前只要 {@code email} + {@code password}(≥6 位) 就能建号 ⇒ 匿名可批量建号。现在**必须带邮箱验证码**（先调 {@code /api/ctc/authn/send-code}, {@code channel=EMAIL, scene=REGISTER}; 验证码一次性消费）。 第 4 项 · 收口签发 : 改前注册成功**无条件签发一枚 SSO 闸门认可的 token** ⇒ 匿名 → 零凭据 → 合法登录态。现在**不再签发 token**（{@code token} 字段为空）: 自助注册拿到的登录态必须由 {@code /api/ctc/authn/login} 正常登录产生 （密码凭证的 identifier 就是注册用的邮箱, 见 {@code UserServiceImpl.register}）。", tags = { "z-ctc" })
+    public Result<RegisterResult> register(@RequestBody @BizParam(name = "req", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.BODY) RegisterRequest req) {
         try {
             if (req == null || req.getEmail() == null || req.getPassword() == null) {
                 return Result.<RegisterResult>fail("email / password 必填").code(400);
@@ -686,7 +698,8 @@ public class AuthnController {
      */
     @Operation(summary = "发送验证码 (注册/登录/找回密码)")
     @PostMapping("/send-code")
-    public Result<Map<String, Object>> sendCode(@RequestBody SendCodeRequest req,
+    @BizApi(summary = "发送验证码. channel: PHONE/EMAIL; scene: LOGIN/REGISTER/RESET", description = "发送验证码. channel: PHONE/EMAIL; scene: LOGIN/REGISTER/RESET. PHONE 场景预检手机号注册态, 避免发无用短信. ⚠ 卡 TASK-20261022-027 第 3 项: 本端点 设计上必须免登录 （注册 / 手机登录 / 改密都要靠它） ⇒ 收不到 SSO 闸门的保护 ⇒ 必须自带频率限制 ，否则可被用来对任意手机号/邮箱狂发码。 两层配额： 按客户端 IP （每分钟 N 次）: 挡住「一个来源狂刷」的批量滥用； 按接收方 （每小时 N 次， 跨 scene 计数 ）: 挡住「换 scene 绕过 60s 冷却」 对同一个手机号反复发码。⚠ 这一层只在**真的要发码**时消耗（预检不通过不消耗）， 免得被人用「查未注册邮箱」的探测请求把受害者的额度打光。", tags = { "z-ctc" })
+    public Result<Map<String, Object>> sendCode(@RequestBody @BizParam(name = "req", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.BODY) SendCodeRequest req,
                                                 HttpServletRequest httpRequest) {
         if (req == null || req.getReceiver() == null || req.getChannel() == null || req.getScene() == null) {
             return Result.<Map<String, Object>>fail("receiver / channel / scene 必填").code(400);
@@ -752,10 +765,12 @@ public class AuthnController {
      */
     @Operation(summary = "手机验证码登录")
     @PostMapping("/phone-login")
-    public Result<LoginResponseVO> phoneLogin(@RequestBody PhoneLoginRequest request,
+    @BizApi(summary = "手机验证码登录. 验证码校验通过后免密登录, 签发与密码登录同构的 token + SSO cookie", description = "手机验证码登录. 验证码校验通过后免密登录, 签发与密码登录同构的 token + SSO cookie.", tags = { "z-ctc" })
+    public Result<LoginResponseVO> phoneLogin(@RequestBody @BizParam(name = "request", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.BODY) PhoneLoginRequest request,
                                               HttpServletRequest httpRequest,
                                               HttpServletResponse response,
-                                              @RequestHeader(value = "User-Agent", required = false) String userAgent) {
+                                              @RequestHeader(value = "User-Agent", required = false)
+                                              @BizParam(name = "User-Agent", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.HEADER) String userAgent) {
         // 与密码登录同源：客户端 IP 取**真实来源**（对端地址 + XFF 链），不再依赖 `X-Client-Ip` 头。
         String clientIp = SsoInterceptor.resolveClientIp(httpRequest);
         if (request == null || request.getPhone() == null || request.getCode() == null) {
@@ -824,7 +839,8 @@ public class AuthnController {
      */
     @Operation(summary = "手机号注册 (验证码)")
     @PostMapping("/register-phone")
-    public Result<RegisterResult> registerPhone(@RequestBody PhoneRegisterRequest req) {
+    @BizApi(summary = "手机号 + 验证码注册. 与邮箱注册同构: 创建游离 user + account 兼容兑底", description = "手机号 + 验证码注册. 与邮箱注册同构: 创建游离 user + account 兼容兑底. ⚠ 卡 TASK-20261022-027 第 4 项: 与邮箱注册一致， 不再签发 token （改前无条件签发一枚 SSO 闸门认可的 token ⇒ 零凭据登录态）。 手机号注册**本来就要求验证码**，所以第 3 项在邮箱注册侧补齐即可。", tags = { "z-ctc" })
+    public Result<RegisterResult> registerPhone(@RequestBody @BizParam(name = "req", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.BODY) PhoneRegisterRequest req) {
         try {
             if (req == null || req.getPhone() == null || req.getCode() == null || req.getPassword() == null) {
                 return Result.<RegisterResult>fail("phone / code / password 必填").code(400);
@@ -906,7 +922,8 @@ public class AuthnController {
      */
     @Operation(summary = "找回密码 (验证码重置)")
     @PostMapping("/reset-password")
-    public Result<Void> resetPassword(@RequestBody ResetPasswordByCodeRequest req) {
+    @BizApi(summary = "找回密码: 手机/邮箱验证码 + 新密码重置 (user + auth + account 三表同步)", description = "找回密码: 手机/邮箱验证码 + 新密码重置 (user + auth + account 三表同步). ⚠ 卡 TASK-20261022-027: 本端点 刻意不在 {@code sso.exclude-paths} 里 （匿名可改密 = 账号接管面）⇒ 匿名请求在 SSO 闸门就被 401 挡掉； 已登录用户改密仍可用，本方法再叠 验证码 + 频率限制 两层。", tags = { "z-ctc" })
+    public Result<Void> resetPassword(@RequestBody @BizParam(name = "req", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.BODY) ResetPasswordByCodeRequest req) {
         if (req == null || req.getReceiver() == null || req.getChannel() == null
                 || req.getCode() == null || req.getNewPassword() == null) {
             return Result.<Void>fail("receiver / channel / code / newPassword 必填").code(400);
@@ -1579,3 +1596,6 @@ public class AuthnController {
         }
     }
 }
+
+
+

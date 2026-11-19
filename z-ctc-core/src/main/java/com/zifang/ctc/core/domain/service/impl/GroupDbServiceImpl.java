@@ -3,6 +3,7 @@ package com.zifang.ctc.core.domain.service.impl;
 import com.zifang.ctc.core.domain.entity.GroupDO;
 import com.zifang.ctc.core.domain.mapper.GroupMapper;
 import com.zifang.ctc.core.domain.service.GroupDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -35,6 +36,7 @@ public class GroupDbServiceImpl implements GroupDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入分组记录", module = "z-ctc", description = "插入分组记录。", operation = BizMethod.Operation.CREATE)
     public int insert(GroupDO entity) {
         return groupMapper.insert(entity);
     }
@@ -46,6 +48,7 @@ public class GroupDbServiceImpl implements GroupDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键更新分组记录", module = "z-ctc", description = "根据主键更新分组记录。", operation = BizMethod.Operation.UPDATE)
     public int updateById(GroupDO entity) {
         return groupMapper.updateById(entity);
     }
@@ -57,6 +60,7 @@ public class GroupDbServiceImpl implements GroupDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键删除分组记录", module = "z-ctc", description = "根据主键删除分组记录。", operation = BizMethod.Operation.DELETE)
     public int deleteById(Long id) {
         return groupMapper.deleteById(id);
     }
@@ -70,6 +74,7 @@ public class GroupDbServiceImpl implements GroupDbService {
      * @return 分组实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据租户编码、域编码和分组编码查询分组记录", module = "z-ctc", description = "根据租户编码、域编码和分组编码查询分组记录。", operation = BizMethod.Operation.QUERY)
     public GroupDO selectByGroupCode(String tenantCode, String domainCode, String groupCode) {
         return groupMapper.selectByGroupCode(tenantCode, domainCode, groupCode);
     }
@@ -83,7 +88,11 @@ public class GroupDbServiceImpl implements GroupDbService {
      * @return 分组实体对象列表
      */
     @Override
+    @BizMethod(name = "根据租户编码、域编码和部门编码查询分组列表", module = "z-ctc", description = "根据租户编码、域编码和部门编码查询分组列表。", operation = BizMethod.Operation.QUERY)
     public List<GroupDO> selectByDeptCode(String tenantCode, String domainCode, String deptCode) {
         return groupMapper.selectByDeptCode(tenantCode, domainCode, deptCode);
     }
 }
+
+
+

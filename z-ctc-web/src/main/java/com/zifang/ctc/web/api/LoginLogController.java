@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zifang.ctc.core.domain.entity.LoginLogDO;
 import com.zifang.ctc.core.domain.mapper.LoginLogMapper;
 import com.zifang.ctc.core.tenant.TenantContext;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -56,11 +59,16 @@ public class LoginLogController {
      * @return 含 total / list / page / size 四个键的 Map
      */
     @GetMapping("/list")
+    @BizApi(summary = "条件分页查询登录日志. 按 identifier 模糊匹配、tenantCode 精确匹配, login_time 倒序", description = "条件分页查询登录日志. 按 identifier 模糊匹配、tenantCode 精确匹配, login_time 倒序.", tags = { "z-ctc" })
     public Map<String, Object> list(
-            @RequestParam(defaultValue = "1") long page,
-            @RequestParam(defaultValue = "20") long size,
-            @RequestParam(required = false) String identifier,
-            @RequestParam(required = false) String tenantCode) {
+            @RequestParam(defaultValue = "1")
+            @BizParam(name = "page", type = BizField.FieldType.INTEGER, description = "页码, 默认 1", position = BizParam.Position.QUERY) long page,
+            @RequestParam(defaultValue = "20")
+            @BizParam(name = "size", type = BizField.FieldType.INTEGER, description = "每页大小, 默认 20", position = BizParam.Position.QUERY) long size,
+            @RequestParam(required = false)
+            @BizParam(name = "identifier", type = BizField.FieldType.STRING, description = "登录标识 (用户名/手机号/邮箱 等), 可选; 非空时按 LIKE 过滤", position = BizParam.Position.QUERY) String identifier,
+            @RequestParam(required = false)
+            @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 可选; 非空时按等值过滤", position = BizParam.Position.QUERY) String tenantCode) {
         QueryWrapper<LoginLogDO> wrapper = new QueryWrapper<>();
         if (identifier != null && !identifier.isEmpty()) {
             wrapper.like("identifier", identifier);
@@ -96,6 +104,7 @@ public class LoginLogController {
      * @return 最新 10 条 LoginLogDO 列表
      */
     @GetMapping("/recent")
+    @BizApi(summary = "查询最新 10 条登录日志 (按 login_time 倒序), 用于首页/dashboard 实时活动流", description = "查询最新 10 条登录日志 (按 login_time 倒序), 用于首页/dashboard 实时活动流.", tags = { "z-ctc" })
     public List<LoginLogDO> recent() {
         // === 多租户隔离 (FEATURE049): 仅返回当前租户的最近登录日志 ===
         String ctxTenant = TenantContext.getTenantCode();
@@ -118,11 +127,19 @@ public class LoginLogController {
      * expose this thin alias to keep the makeApi pattern working.</p>
      */
     @GetMapping("/page")
+    @BizApi(summary = "RESTful alias for FE makeApi('ctc/ac/login-log').page()", description = "RESTful alias for FE makeApi('ctc/ac/login-log').page(). {@code GET /api/ctc/ac/login-log/page?pageNum=&pageSize=&identifier=&tenantCode=} FE uses {@code pageNum/pageSize}; the canonical endpoint uses {@code page/size}, so we expose this thin alias to keep the makeApi pattern working.", tags = { "z-ctc" })
     public Map<String, Object> pageAlias(
-            @RequestParam(defaultValue = "1") long pageNum,
-            @RequestParam(defaultValue = "20") long pageSize,
-            @RequestParam(required = false) String identifier,
-            @RequestParam(required = false) String tenantCode) {
+            @RequestParam(defaultValue = "1")
+            @BizParam(name = "pageNum", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.QUERY) long pageNum,
+            @RequestParam(defaultValue = "20")
+            @BizParam(name = "pageSize", type = BizField.FieldType.INTEGER, description = "", position = BizParam.Position.QUERY) long pageSize,
+            @RequestParam(required = false)
+            @BizParam(name = "identifier", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String identifier,
+            @RequestParam(required = false)
+            @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String tenantCode) {
         return list(pageNum, pageSize, identifier, tenantCode);
     }
 }
+
+
+

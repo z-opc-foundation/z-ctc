@@ -4,6 +4,7 @@ import com.zifang.ctc.core.domain.entity.RoleDO;
 import com.zifang.ctc.core.domain.entity.UserRoleDO;
 import com.zifang.ctc.core.domain.service.AuthorizationDbService;
 import com.zifang.ctc.core.service.PlatformAdminService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,7 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
     }
 
     @Override
+    @BizMethod(name = "isPlatformAdmin", module = "z-ctc", description = "", operation = BizMethod.Operation.ACTION)
     public boolean isPlatformAdmin(Long userId) {
         if (userId == null) {
             return false;
@@ -69,3 +71,6 @@ public class PlatformAdminServiceImpl implements PlatformAdminService {
                 && PLATFORM_ADMIN_ROLE_CODES.contains(role.getRoleCode());
     }
 }
+
+
+

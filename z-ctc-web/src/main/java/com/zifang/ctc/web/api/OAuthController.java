@@ -4,6 +4,11 @@ import com.zifang.ctc.sso.JwtUtil;
 import com.zifang.ctc.web.config.OAuthClientProperties;
 import com.zifang.ctc.web.service.OAuthAuthorizeService;
 import com.zifang.ctc.web.service.OAuthCodeStore;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -84,13 +87,20 @@ public class OAuthController {
      * 把用户送到一个未经验证的地址比报错更糟（开放重定向）。
      */
     @GetMapping("/authorize")
-    public void authorize(@RequestParam(value = "response_type", required = false) String responseType,
-                          @RequestParam("client_id") String clientId,
-                          @RequestParam(value = "redirect_uri", required = false) String redirectUri,
-                          @RequestParam(value = "scope", required = false) String scope,
-                          @RequestParam(value = "state", required = false) String state,
-                          @RequestParam(value = "code_challenge", required = false) String codeChallenge,
-                          @RequestParam(value = "code_challenge_method", required = false) String challengeMethod,
+    @BizApi(summary = "授权端点：校验参数 → 有登录态就发 code 并 302 回 redirect_uri，没有就跳登录页", description = "授权端点：校验参数 → 有登录态就发 code 并 302 回 redirect_uri，没有就跳登录页。 登录态的判读与 whoami 一致（cookie / Bearer 均认）——桌面端授权发生在 用户浏览器里，靠的是 ctc 登录后种下的 sso_token cookie。 错误回跳的纪律 ：只有 redirect_uri 通过白名单后才允许 302 带 {@code error=} 回去；redirect 本身不合法时渲染 400 文本页 —— 把用户送到一个未经验证的地址比报错更糟（开放重定向）。", tags = { "z-ctc" })
+    public void authorize(@RequestParam(value = "response_type", required = false) @BizParam(name = "response_type", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String responseType,
+                          @RequestParam("client_id")
+                          @BizParam(name = "client_id", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String clientId,
+                          @RequestParam(value = "redirect_uri", required = false)
+                          @BizParam(name = "redirect_uri", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String redirectUri,
+                          @RequestParam(value = "scope", required = false)
+                          @BizParam(name = "scope", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String scope,
+                          @RequestParam(value = "state", required = false)
+                          @BizParam(name = "state", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String state,
+                          @RequestParam(value = "code_challenge", required = false)
+                          @BizParam(name = "code_challenge", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String codeChallenge,
+                          @RequestParam(value = "code_challenge_method", required = false)
+                          @BizParam(name = "code_challenge_method", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String challengeMethod,
                           HttpServletRequest request,
                           HttpServletResponse response) throws IOException {
 
@@ -202,12 +212,18 @@ public class OAuthController {
      * 家族客户端发的就是 form（{@code Content-Type: application/x-www-form-urlencoded}）。
      */
     @PostMapping(value = "/token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    @BizApi(summary = "换 token。RFC 6749 §3.2 规定参数走 form-urlencoded ——", description = "换 token。RFC 6749 §3.2 规定参数走 form-urlencoded —— 家族客户端发的就是 form（{@code Content-Type: application/x-www-form-urlencoded}）。", tags = { "z-ctc" })
     public ResponseEntity<Map<String, Object>> token(
-            @RequestParam(value = "grant_type", required = false) String grantType,
-            @RequestParam(value = "code", required = false) String code,
-            @RequestParam(value = "client_id", required = false) String clientId,
-            @RequestParam(value = "redirect_uri", required = false) String redirectUri,
-            @RequestParam(value = "code_verifier", required = false) String codeVerifier) {
+            @RequestParam(value = "grant_type", required = false)
+            @BizParam(name = "grant_type", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String grantType,
+            @RequestParam(value = "code", required = false)
+            @BizParam(name = "code", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String code,
+            @RequestParam(value = "client_id", required = false)
+            @BizParam(name = "client_id", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String clientId,
+            @RequestParam(value = "redirect_uri", required = false)
+            @BizParam(name = "redirect_uri", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String redirectUri,
+            @RequestParam(value = "code_verifier", required = false)
+            @BizParam(name = "code_verifier", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.QUERY) String codeVerifier) {
 
         Object result = authorizeService.validateTokenRequest(
                 grantType, code, clientId, redirectUri, codeVerifier);
@@ -249,8 +265,10 @@ public class OAuthController {
      * ctc 的 user.id（唯一且稳定），name 用 nickname。
      */
     @GetMapping("/userinfo")
+    @BizApi(summary = "OIDC userinfo：按 access_token 返回用户身份", description = "OIDC userinfo：按 access_token 返回用户身份。 字段名是契约 ：家族客户端 {@code toSsoUser} 认 {@code sub / name / email / preferred_username}。这里 {@code sub} 用 ctc 的 user.id（唯一且稳定），name 用 nickname。", tags = { "z-ctc" })
     public ResponseEntity<Map<String, Object>> userinfo(
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = "Authorization", required = false)
+            @BizParam(name = "Authorization", type = BizField.FieldType.STRING, description = "", position = BizParam.Position.HEADER) String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).body(Map.of("error", "invalid_token"));
         }
@@ -268,3 +286,6 @@ public class OAuthController {
         return ResponseEntity.ok(body);
     }
 }
+
+
+

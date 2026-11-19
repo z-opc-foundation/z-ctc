@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizModel;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -11,51 +13,66 @@ import java.time.LocalDateTime;
 /**
  * 组别实体 (挂在部门下).
  */
+@BizModel(name = "组别实体 (挂在部门下)", module = "z-ctc", description = "组别实体 (挂在部门下).")
 @TableName("z_ctc_ac_group")
 public class GroupDO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "id", type = IdType.AUTO)
+    @BizField(name = "主键", type = BizField.FieldType.INTEGER)
     private Long id;
 
     @TableField("tenant_code")
+    @BizField(name = "租户编码", type = BizField.FieldType.STRING)
     private String tenantCode;
 
     @TableField("domain_code")
+    @BizField(name = "域编码", type = BizField.FieldType.STRING)
     private String domainCode;
 
     @TableField("org_code")
+    @BizField(name = "所属组织编码", type = BizField.FieldType.STRING)
     private String orgCode;
 
     @TableField("dept_code")
+    @BizField(name = "所属部门编码", type = BizField.FieldType.STRING)
     private String deptCode;
 
     @TableField("group_code")
+    @BizField(name = "组别编码 (租户域内唯一)", type = BizField.FieldType.STRING)
     private String groupCode;
 
     @TableField("group_name")
+    @BizField(name = "组别名称", type = BizField.FieldType.STRING)
     private String groupName;
 
     @TableField("status")
+    @BizField(name = "状态: 0=停用 1=正常", type = BizField.FieldType.INTEGER)
     private Integer status;
 
     @TableField("description")
+    @BizField(name = "描述", type = BizField.FieldType.STRING)
     private String description;
 
     @TableField("ext_config")
+    @BizField(name = "扩展配置 (JSON 字符串)", type = BizField.FieldType.STRING)
     private String extConfig;
 
     @TableField("created_at")
+    @BizField(name = "创建时间", type = BizField.FieldType.DATETIME)
     private LocalDateTime createdAt;
 
     @TableField("created_by")
+    @BizField(name = "创建人 userId", type = BizField.FieldType.STRING)
     private String createdBy;
 
     @TableField("updated_at")
+    @BizField(name = "更新时间", type = BizField.FieldType.DATETIME)
     private LocalDateTime updatedAt;
 
     @TableField("updated_by")
+    @BizField(name = "更新人 userId", type = BizField.FieldType.STRING)
     private String updatedBy;
 
     public Long getId() {
@@ -170,3 +187,4 @@ public class GroupDO implements Serializable {
         this.updatedBy = updatedBy;
     }
 }
+

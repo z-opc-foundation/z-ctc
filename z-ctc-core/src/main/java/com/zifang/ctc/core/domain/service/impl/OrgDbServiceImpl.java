@@ -3,6 +3,7 @@ package com.zifang.ctc.core.domain.service.impl;
 import com.zifang.ctc.core.domain.entity.OrgDO;
 import com.zifang.ctc.core.domain.mapper.OrgMapper;
 import com.zifang.ctc.core.domain.service.OrgDbService;
+import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -35,6 +36,7 @@ public class OrgDbServiceImpl implements OrgDbService {
      * @return 插入成功的记录数
      */
     @Override
+    @BizMethod(name = "插入组织记录", module = "z-ctc", description = "插入组织记录。", operation = BizMethod.Operation.CREATE)
     public int insert(OrgDO entity) {
         return orgMapper.insert(entity);
     }
@@ -46,6 +48,7 @@ public class OrgDbServiceImpl implements OrgDbService {
      * @return 更新成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键更新组织记录", module = "z-ctc", description = "根据主键更新组织记录。", operation = BizMethod.Operation.UPDATE)
     public int updateById(OrgDO entity) {
         return orgMapper.updateById(entity);
     }
@@ -57,6 +60,7 @@ public class OrgDbServiceImpl implements OrgDbService {
      * @return 删除成功的记录数
      */
     @Override
+    @BizMethod(name = "根据主键删除组织记录", module = "z-ctc", description = "根据主键删除组织记录。", operation = BizMethod.Operation.DELETE)
     public int deleteById(Long id) {
         return orgMapper.deleteById(id);
     }
@@ -70,6 +74,7 @@ public class OrgDbServiceImpl implements OrgDbService {
      * @return 组织实体对象，不存在则返回 null
      */
     @Override
+    @BizMethod(name = "根据租户编码、域编码和组织编码查询组织记录", module = "z-ctc", description = "根据租户编码、域编码和组织编码查询组织记录。", operation = BizMethod.Operation.QUERY)
     public OrgDO selectByOrgCode(String tenantCode, String domainCode, String orgCode) {
         return orgMapper.selectByOrgCode(tenantCode, domainCode, orgCode);
     }
@@ -82,7 +87,11 @@ public class OrgDbServiceImpl implements OrgDbService {
      * @return 组织实体对象列表
      */
     @Override
+    @BizMethod(name = "根据租户编码和域编码查询组织列表", module = "z-ctc", description = "根据租户编码和域编码查询组织列表。", operation = BizMethod.Operation.QUERY)
     public List<OrgDO> selectByDomainCode(String tenantCode, String domainCode) {
         return orgMapper.selectByDomainCode(tenantCode, domainCode);
     }
 }
+
+
+

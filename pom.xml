@@ -83,6 +83,7 @@
     </modules>
 
     <properties>
+        <z-meta.version>1.0.2</z-meta.version>
         <!-- 项目自身版本（CI-friendly versions 根，发版改这一处即可）。
              1.0.6: **SB3 火车全量迁移**（2026-10-30）——
              parent 抬到 z-boot-parent 1.2.0（Boot 3.3.13 地板）、javax.* → jakarta.*、
@@ -219,6 +220,11 @@
                  z-util-core / z-util-http（原 1.0.13）—— fleet 同坐标同值；
                  mybatis-plus-boot-starter 3.5.7、druid-spring-boot-starter 1.2.23、
                  knife4j-openapi3-spring-boot-starter 4.1.0 —— 三条与地板直接条目面值逐字相同。 -->
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-meta-api</artifactId>
+                <version>${z-meta.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
