@@ -5,6 +5,7 @@ import com.zifang.ctc.core.domain.entity.DictEntryDO;
 import com.zifang.ctc.core.domain.service.DictCategoryDbService;
 import com.zifang.ctc.core.domain.service.DictEntryDbService;
 import com.zifang.ctc.core.service.DictService;
+import com.zifang.ctc.core.tenant.TenantContext;
 import com.zifang.z.meta.api.annotation.BizMethod;
 import org.springframework.stereotype.Service;
 
@@ -138,7 +139,11 @@ public class CtcDictServiceImpl implements DictService {
     @Override
     @BizMethod(name = "createEntry", module = "z-ctc", description = "", operation = BizMethod.Operation.CREATE)
     public Long createEntry(DictEntryDO entry, String operator) {
-        DictCategoryDO category = resolveCategoryDefinition(entry.getCategory(), entry.getTenantCode());
+        // 条目不显式给租户时按登录上下文找分类定义, 否则租户分类解析成 null,
+        // 作用域继承被跳过 ⇒ 条目落库 tenant_code=NULL, lookup 永远查不到。
+        String tenantHint = entry.getTenantCode() != null && !entry.getTenantCode().isEmpty()
+                ? entry.getTenantCode() : TenantContext.getTenantCode();
+        DictCategoryDO category = resolveCategoryDefinition(entry.getCategory(), tenantHint);
         normalizeEntryScope(entry, category);
         validateParentKey(entry, category);
         entry.setCreatedAt(LocalDateTime.now());

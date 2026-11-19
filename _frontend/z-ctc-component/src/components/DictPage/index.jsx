@@ -1,189 +1,196 @@
 import {useEffect, useState} from 'react'
-import {Button, Card, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Tag} from 'antd'
+import {Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Tag} from 'antd'
 import {PlusOutlined, ReloadOutlined} from '@ant-design/icons'
+import {ListTable} from '@yuku123/z-frontend-common/ui'
 import {dictApi} from '../_api/dict'
-import { ListTable } from '@yuku123/z-frontend-common/ui'
+
 /**
- * 元典管理 — 字典类型 + 字典项 树形管理
+ * 灵活字典管理页（承接自 z-meta 字典能力）。
  *
  * 后端:
- *   GET  /api/dict/type/list?pageNum=&pageSize=&dictCode=&dictName=&status=
- *   GET  /api/dict/type/get?id=
- *   POST /api/dict/type
- *   PUT  /api/dict/type/{id}
- *   DEL  /api/dict/type/{id}
- *   GET  /api/dict/item/list?dictId=
- *   GET  /api/dict/items/get?dictCode=
- *   POST /api/dict/item
- *   PUT  /api/dict/item/{id}
- *   DEL  /api/dict/item/{id}
+ *   GET  /api/ctc/ac/dict/categories/list          可见分类列表
+ *   POST /api/ctc/ac/dict/categories               新建分类
+ *   PUT  /api/ctc/ac/dict/categories/{id}          改分类
+ *   DEL  /api/ctc/ac/dict/categories/{id}          删分类
+ *   GET  /api/ctc/ac/dict/entries/list?category=   列生效条目
+ *   POST /api/ctc/ac/dict/entries                  新建条目
+ *   PUT  /api/ctc/ac/dict/entries/{id}             改条目
+ *   DEL  /api/ctc/ac/dict/entries/{id}             删条目
  */
-// 原签名带一个未使用的 apiBaseURL 形参：noImplicitAny 下被推成必填 props，
-// 而 SystemShell 渲染 <DictPage/> 不传它 → TS2741。该形参在函数体内从未被读取，
-// 直接删除，不影响任何行为。
 export default function DictPage() {
-    const [types, setTypes] = useState([])
-    const [typesLoading, setTypesLoading] = useState(false)
-    const [selectedType, setSelectedType] = useState(null)
-    const [items, setItems] = useState([])
-    const [itemsLoading, setItemsLoading] = useState(false)
+    const [categories, setCategories] = useState([])
+    const [categoriesLoading, setCategoriesLoading] = useState(false)
+    const [selectedCategory, setSelectedCategory] = useState(null)
+    const [entries, setEntries] = useState([])
+    const [entriesLoading, setEntriesLoading] = useState(false)
 
-    const [typeFormOpen, setTypeFormOpen] = useState(false)
-    const [editingType, setEditingType] = useState(null)
-    const [typeForm] = Form.useForm()
+    const [categoryFormOpen, setCategoryFormOpen] = useState(false)
+    const [editingCategory, setEditingCategory] = useState(null)
+    const [categoryForm] = Form.useForm()
 
-    const [itemFormOpen, setItemFormOpen] = useState(false)
-    const [editingItem, setEditingItem] = useState(null)
-    const [itemForm] = Form.useForm()
+    const [entryFormOpen, setEntryFormOpen] = useState(false)
+    const [editingEntry, setEditingEntry] = useState(null)
+    const [entryForm] = Form.useForm()
 
-    const loadTypes = async () => {
-        setTypesLoading(true)
+    const loadCategories = async () => {
+        setCategoriesLoading(true)
         try {
-            const res = await dictApi.listDictType({pageNum: 1, pageSize: 200})
-            const list = res?.records || res?.data || res || []
-            setTypes(Array.isArray(list) ? list : [])
+            const res = await dictApi.listCategories()
+            setCategories(Array.isArray(res) ? res : [])
         } catch (e) {
-            message.error('加载字典类型失败：' + (e?.message || '未知错误'))
-            setTypes([])
+            message.error('加载字典分类失败：' + (e?.message || '未知错误'))
+            setCategories([])
         } finally {
-            setTypesLoading(false)
+            setCategoriesLoading(false)
         }
     }
 
     useEffect(() => {
-        loadTypes()
+        loadCategories()
     }, [])
 
-    const loadItems = async (typeId) => {
-        if (!typeId) {
-            setItems([])
+    const loadEntries = async (catCode) => {
+        if (!catCode) {
+            setEntries([])
             return
         }
-        setItemsLoading(true)
+        setEntriesLoading(true)
         try {
-            const res = await dictApi.listDictItem(typeId)
-            setItems(Array.isArray(res) ? res : [])
+            const res = await dictApi.listEntries(catCode)
+            setEntries(Array.isArray(res) ? res : [])
         } catch (e) {
-            message.error('加载字典项失败：' + (e?.message || '未知错误'))
-            setItems([])
+            message.error('加载字典条目失败：' + (e?.message || '未知错误'))
+            setEntries([])
         } finally {
-            setItemsLoading(false)
+            setEntriesLoading(false)
         }
     }
 
     useEffect(() => {
-        if (selectedType?.id) {
-            loadItems(selectedType.id)
+        if (selectedCategory?.catCode) {
+            loadEntries(selectedCategory.catCode)
         } else {
-            setItems([])
+            setEntries([])
         }
-    }, [selectedType?.id])
+    }, [selectedCategory?.catCode])
 
-    // === 字典类型 CRUD ===
-    const openCreateType = () => {
-        setEditingType(null)
-        typeForm.resetFields()
-        setTypeFormOpen(true)
+    // === 字典分类 CRUD ===
+    const openCreateCategory = () => {
+        setEditingCategory(null)
+        categoryForm.resetFields()
+        setCategoryFormOpen(true)
     }
-    const openEditType = (t) => {
-        setEditingType(t)
-        typeForm.setFieldsValue({
-            dictCode: t.dictCode,
-            dictName: t.dictName,
-            status: t.status ?? 1,
-            remark: t.remark,
+    const openEditCategory = (c) => {
+        setEditingCategory(c)
+        categoryForm.setFieldsValue({
+            catCode: c.catCode,
+            catName: c.catName,
+            scope: c.scope || 'TENANT',
+            valueType: c.valueType || 'string',
+            entryShape: c.entryShape || 'flat',
+            status: c.status ?? 1,
+            sortOrder: c.sortOrder ?? 0,
+            description: c.description,
         })
-        setTypeFormOpen(true)
+        setCategoryFormOpen(true)
     }
-    const handleTypeOk = async () => {
+    const handleCategoryOk = async () => {
         try {
-            const v = await typeForm.validateFields()
-            if (editingType) {
-                await dictApi.updateDictType(editingType.id, v)
+            const v = await categoryForm.validateFields()
+            if (editingCategory) {
+                await dictApi.updateCategory(editingCategory.id, v)
                 message.success('更新成功')
             } else {
-                await dictApi.createDictType(v)
+                await dictApi.createCategory(v)
                 message.success('创建成功')
             }
-            setTypeFormOpen(false)
-            setEditingType(null)
-            typeForm.resetFields()
-            loadTypes()
+            setCategoryFormOpen(false)
+            setEditingCategory(null)
+            categoryForm.resetFields()
+            loadCategories()
         } catch (e) {
             if (e?.errorFields) return
-            message.error((editingType ? '更新失败：' : '创建失败：') + (e?.message || '未知错误'))
+            message.error((editingCategory ? '更新失败：' : '创建失败：') + (e?.message || '未知错误'))
         }
     }
-    const handleDeleteType = async (id) => {
+    const handleDeleteCategory = async (id) => {
         try {
-            await dictApi.deleteDictType(id)
+            await dictApi.deleteCategory(id)
             message.success('已删除')
-            if (selectedType?.id === id) setSelectedType(null)
-            loadTypes()
+            if (selectedCategory?.id === id) setSelectedCategory(null)
+            loadCategories()
         } catch (e) {
             message.error('删除失败：' + (e?.message || '未知错误'))
         }
     }
 
-    // === 字典项 CRUD ===
-    const openCreateItem = () => {
-        if (!selectedType) {
-            message.warning('请先选择左侧的字典类型')
+    // === 字典条目 CRUD ===
+    const openCreateEntry = () => {
+        if (!selectedCategory) {
+            message.warning('请先选择左侧的字典分类')
             return
         }
-        setEditingItem(null)
-        itemForm.resetFields()
-        setItemFormOpen(true)
+        setEditingEntry(null)
+        entryForm.resetFields()
+        setEntryFormOpen(true)
     }
-    const openEditItem = (it) => {
-        setEditingItem(it)
-        itemForm.setFieldsValue({
-            itemCode: it.itemCode,
-            itemName: it.itemName,
-            sortOrder: it.sortOrder ?? 0,
-            status: it.status ?? 1,
+    const openEditEntry = (entry) => {
+        setEditingEntry(entry)
+        entryForm.setFieldsValue({
+            dictKey: entry.dictKey,
+            dictValue: entry.dictValue,
+            dataValue: entry.dataValue,
+            parentKey: entry.parentKey,
+            sortOrder: entry.sortOrder ?? 0,
+            status: entry.status ?? 1,
         })
-        setItemFormOpen(true)
+        setEntryFormOpen(true)
     }
-    const handleItemOk = async () => {
+    const handleEntryOk = async () => {
         try {
-            const v = await itemForm.validateFields()
-            const payload = {...v, dictId: selectedType.id}
-            if (editingItem) {
-                await dictApi.updateDictItem(editingItem.id, payload)
+            const v = await entryForm.validateFields()
+            const payload = {...v, category: selectedCategory.catCode}
+            if (editingEntry) {
+                await dictApi.updateEntry(editingEntry.id, payload)
                 message.success('更新成功')
             } else {
-                await dictApi.createDictItem(payload)
+                await dictApi.createEntry(payload)
                 message.success('创建成功')
             }
-            setItemFormOpen(false)
-            setEditingItem(null)
-            itemForm.resetFields()
-            loadItems(selectedType.id)
+            setEntryFormOpen(false)
+            setEditingEntry(null)
+            entryForm.resetFields()
+            loadEntries(selectedCategory.catCode)
         } catch (e) {
             if (e?.errorFields) return
-            message.error((editingItem ? '更新失败：' : '创建失败：') + (e?.message || '未知错误'))
+            message.error((editingEntry ? '更新失败：' : '创建失败：') + (e?.message || '未知错误'))
         }
     }
-    const handleDeleteItem = async (id) => {
+    const handleDeleteEntry = async (id) => {
         try {
-            await dictApi.deleteDictItem(id)
+            await dictApi.deleteEntry(id)
             message.success('已删除')
-            loadItems(selectedType.id)
+            loadEntries(selectedCategory.catCode)
         } catch (e) {
             message.error('删除失败：' + (e?.message || '未知错误'))
         }
     }
 
-    const itemColumns = [
+    const scopeTag = (scope) => {
+        const colorMap = {GLOBAL: 'purple', TENANT: 'blue', DOMAIN: 'cyan'}
+        return <Tag color={colorMap[scope] || 'default'}>{scope || 'TENANT'}</Tag>
+    }
+
+    const entryColumns = [
         {
-            title: '项编码',
-            dataIndex: 'itemCode',
+            title: '条目键',
+            dataIndex: 'dictKey',
             width: 160,
             render: v => <span style={{fontFamily: 'monospace'}}>{v}</span>
         },
-        {title: '项名称', dataIndex: 'itemName', width: 160},
-        {title: '排序', dataIndex: 'sortOrder', width: 80},
+        {title: '显示值', dataIndex: 'dictValue', width: 180},
+        {title: '标签', dataIndex: 'tags', width: 120, render: v => v || '-'},
+        {title: '排序', dataIndex: 'sortOrder', width: 70},
         {
             title: '状态', dataIndex: 'status', width: 80,
             render: v => <Tag color={v === 1 ? 'success' : 'default'}>{v === 1 ? '启用' : '禁用'}</Tag>,
@@ -193,9 +200,9 @@ export default function DictPage() {
             render: (_, r) => (
                 <Space>
                     <Button type="link" size="small"
-                            onClick={() => openEditItem(r)}>编辑</Button>
-                    <Popconfirm title="删除该字典项?" okText="删除" cancelText="取消" okButtonProps={{danger: true}}
-                                onConfirm={() => handleDeleteItem(r.id)}>
+                            onClick={() => openEditEntry(r)}>编辑</Button>
+                    <Popconfirm title="删除该字典条目?" okText="删除" cancelText="取消" okButtonProps={{danger: true}}
+                                onConfirm={() => handleDeleteEntry(r.id)}>
                         <Button type="link" size="small" danger>删除</Button>
                     </Popconfirm>
                 </Space>
@@ -206,36 +213,40 @@ export default function DictPage() {
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
             <div style={{display: 'grid', gridTemplateColumns: '380px 1fr', gap: 16}}>
-                {/* 左栏字典类型：搜索框与「新增/刷新」并排在 cardExtra（lead 008 §2），
+                {/* 左栏字典分类：搜索框与「新增/刷新」并排在 cardExtra（lead 008 §2），
                     过滤交给基座 useListFilter，口径与全库一致。 */}
                 <ListTable
-                    cardTitle={`字典类型 (${types.length})`}
+                    cardTitle={`字典分类 (${categories.length})`}
                     cardExtra={
                         <Space>
-                            <Button size="small" icon={<PlusOutlined/>} onClick={openCreateType}>新增</Button>
-                            <Button size="small" icon={<ReloadOutlined/>} onClick={loadTypes}/>
+                            <Button size="small" icon={<PlusOutlined/>} onClick={openCreateCategory}>新增</Button>
+                            <Button size="small" icon={<ReloadOutlined/>} onClick={loadCategories}/>
                         </Space>
                     }
-                    rows={types}
+                    rows={categories}
                     rowKey="id"
-                    searchKeys={['dictCode', 'dictName']}
+                    searchKeys={['catCode', 'catName']}
                     searchPlaceholder="搜索编码 / 名称"
-                    cardProps={{size: 'small', loading: typesLoading}}
+                    cardProps={{size: 'small', loading: categoriesLoading}}
                     tableProps={{
                         onRow: (r) => ({
-                            onClick: () => setSelectedType(r),
+                            onClick: () => setSelectedCategory(r),
                             style: {
                                 cursor: 'pointer',
-                                background: selectedType?.id === r.id ? '#e6f4ff' : undefined,
+                                background: selectedCategory?.id === r.id ? '#e6f4ff' : undefined,
                             },
                         }),
                     }}
                     columns={[
                         {
-                            title: '编码', dataIndex: 'dictCode', width: 100, ellipsis: true,
+                            title: '编码', dataIndex: 'catCode', width: 110, ellipsis: true,
                             render: v => <span style={{fontFamily: 'monospace'}}>{v}</span>
                         },
-                        {title: '名称', dataIndex: 'dictName', width: 110, ellipsis: true},
+                        {title: '名称', dataIndex: 'catName', width: 110, ellipsis: true},
+                        {
+                            title: '作用域', dataIndex: 'scope', width: 80,
+                            render: v => scopeTag(v),
+                        },
                         {
                             title: '状态', dataIndex: 'status', width: 60,
                             render: v => <Tag color={v === 1 ? 'success' : 'default'}>
@@ -247,10 +258,10 @@ export default function DictPage() {
                             render: (_, r) => (
                                 <Space onClick={e => e.stopPropagation()}>
                                     <Button type="link" size="small"
-                                            onClick={() => openEditType(r)}>编辑</Button>
-                                    <Popconfirm title="删除该类型?" okText="删除" cancelText="取消"
+                                            onClick={() => openEditCategory(r)}>编辑</Button>
+                                    <Popconfirm title="删除该分类?" okText="删除" cancelText="取消"
                                                 okButtonProps={{danger: true}}
-                                                onConfirm={() => handleDeleteType(r.id)}>
+                                                onConfirm={() => handleDeleteCategory(r.id)}>
                                         <Button type="link" size="small" danger>删除</Button>
                                     </Popconfirm>
                                 </Space>
@@ -259,83 +270,117 @@ export default function DictPage() {
                     ]}
                 />
 
-                {!selectedType ? (
-                    <Card size="small" title="字典项">
+                {!selectedCategory ? (
+                    <Card size="small" title="字典条目">
                         <div style={{padding: 40, textAlign: 'center', color: '#999'}}>
-                            请在左侧选择一个字典类型以查看其字典项
+                            请在左侧选择一个字典分类以查看其条目
                         </div>
                     </Card>
                 ) : (
                     <ListTable
-                        cardTitle={`字典项 — ${selectedType.dictName} (${items.length})`}
+                        cardTitle={`字典条目 — ${selectedCategory.catName} (${entries.length})`}
                         cardExtra={
                             <Space>
-                                <Button size="small" icon={<PlusOutlined/>} onClick={openCreateItem}
-                                        disabled={!selectedType}>新增项</Button>
+                                <Button size="small" icon={<PlusOutlined/>} onClick={openCreateEntry}
+                                        disabled={!selectedCategory}>新增条目</Button>
                                 <Button size="small" icon={<ReloadOutlined/>}
-                                        disabled={!selectedType}
-                                        onClick={() => selectedType && loadItems(selectedType.id)}/>
+                                        disabled={!selectedCategory}
+                                        onClick={() => selectedCategory && loadEntries(selectedCategory.catCode)}/>
                             </Space>
                         }
-                        rows={items}
+                        rows={entries}
                         rowKey="id"
-                        loading={itemsLoading}
-                        searchKeys={['itemCode', 'itemName']}
-                        searchPlaceholder="按项编码 / 项名称过滤"
+                        loading={entriesLoading}
+                        searchKeys={['dictKey', 'dictValue']}
+                        searchPlaceholder="按条目键 / 显示值过滤"
                         cardProps={{size: 'small'}}
-                        columns={itemColumns}
+                        columns={entryColumns}
                     />
                 )}
             </div>
 
             <Modal
-                title={editingType ? '编辑字典类型' : '新建字典类型'}
-                open={typeFormOpen}
-                onOk={handleTypeOk}
+                title={editingCategory ? '编辑字典分类' : '新建字典分类'}
+                open={categoryFormOpen}
+                onOk={handleCategoryOk}
                 onCancel={() => {
-                    setTypeFormOpen(false);
-                    setEditingType(null);
-                    typeForm.resetFields()
+                    setCategoryFormOpen(false);
+                    setEditingCategory(null);
+                    categoryForm.resetFields()
                 }}
                 destroyOnHidden
                 size="large"
             >
-                <Form form={typeForm} layout="vertical" style={{marginTop: 16}}>
-                    <Form.Item name="dictCode" label="字典编码" rules={[{required: true, max: 64}]}
-                               extra="业务唯一，如 user_status">
-                        <Input disabled={!!editingType} placeholder="如 user_status"/>
+                <Form form={categoryForm} layout="vertical" style={{marginTop: 16}}>
+                    <Form.Item name="catCode" label="分类编码" rules={[{required: true, max: 64}]}
+                               extra="业务引用键，全局唯一，如 user_status">
+                        <Input disabled={!!editingCategory} placeholder="如 user_status"/>
                     </Form.Item>
-                    <Form.Item name="dictName" label="字典名称" rules={[{required: true, max: 128}]}>
+                    <Form.Item name="catName" label="分类名称" rules={[{required: true, max: 128}]}>
                         <Input placeholder="如 用户状态"/>
+                    </Form.Item>
+                    <Form.Item name="scope" label="作用域" initialValue="TENANT"
+                               extra="GLOBAL 全平台共享；TENANT 租户内；DOMAIN 租户 + 域内">
+                        <Select options={[
+                            {value: 'GLOBAL', label: 'GLOBAL（全平台）'},
+                            {value: 'TENANT', label: 'TENANT（租户）'},
+                            {value: 'DOMAIN', label: 'DOMAIN（租户+域）'},
+                        ]}/>
+                    </Form.Item>
+                    <Form.Item name="valueType" label="条目值类型" initialValue="string">
+                        <Select options={[
+                            {value: 'string', label: 'string'},
+                            {value: 'number', label: 'number'},
+                            {value: 'boolean', label: 'boolean'},
+                            {value: 'json', label: 'json'},
+                        ]}/>
+                    </Form.Item>
+                    <Form.Item name="entryShape" label="条目形状" initialValue="flat"
+                               extra="tree 形状的分类下条目可用父键成树">
+                        <Select options={[
+                            {value: 'flat', label: 'flat（平铺）'},
+                            {value: 'tree', label: 'tree（树形）'},
+                        ]}/>
+                    </Form.Item>
+                    <Form.Item name="sortOrder" label="排序" initialValue={0}>
+                        <InputNumber min={0} max={9999} style={{width: '100%'}}/>
                     </Form.Item>
                     <Form.Item name="status" label="状态" initialValue={1}>
                         <Select options={[{value: 1, label: '启用'}, {value: 0, label: '禁用'}]}/>
                     </Form.Item>
-                    <Form.Item name="remark" label="备注">
+                    <Form.Item name="description" label="描述">
                         <Input.TextArea rows={2} maxLength={512}/>
                     </Form.Item>
                 </Form>
             </Modal>
 
             <Modal
-                title={editingItem ? `编辑字典项 — ${selectedType?.dictName || ''}` : `新建字典项 — ${selectedType?.dictName || ''}`}
-                open={itemFormOpen}
-                onOk={handleItemOk}
+                title={editingEntry ? `编辑字典条目 — ${selectedCategory?.catName || ''}` : `新建字典条目 — ${selectedCategory?.catName || ''}`}
+                open={entryFormOpen}
+                onOk={handleEntryOk}
                 onCancel={() => {
-                    setItemFormOpen(false);
-                    setEditingItem(null);
-                    itemForm.resetFields()
+                    setEntryFormOpen(false);
+                    setEditingEntry(null);
+                    entryForm.resetFields()
                 }}
                 destroyOnHidden
                 size="large"
             >
-                <Form form={itemForm} layout="vertical" style={{marginTop: 16}}>
-                    <Form.Item name="itemCode" label="项编码" rules={[{required: true, max: 64}]}
-                               extra="业务唯一">
+                <Form form={entryForm} layout="vertical" style={{marginTop: 16}}>
+                    <Form.Item name="dictKey" label="条目键" rules={[{required: true, max: 64}]}
+                               extra="分类内业务唯一，如 enabled">
                         <Input placeholder="如 enabled"/>
                     </Form.Item>
-                    <Form.Item name="itemName" label="项名称" rules={[{required: true, max: 128}]}>
+                    <Form.Item name="dictValue" label="显示值" rules={[{required: true, max: 128}]}>
                         <Input placeholder="如 启用"/>
+                    </Form.Item>
+                    <Form.Item name="dataValue" label="数据值"
+                               extra="值类型为 number/boolean/json 时的载荷（JSON 字符串）">
+                        <Input.TextArea rows={2} placeholder='如 {"min": 0, "max": 100}'/>
+                    </Form.Item>
+                    <Form.Item name="parentKey" label="父条目键"
+                               extra="仅 tree 形状的分类生效，填父条目的条目键">
+                        <Input placeholder="tree 分类下成树，留空为顶层"/>
                     </Form.Item>
                     <Form.Item name="sortOrder" label="排序" initialValue={0}>
                         <InputNumber min={0} max={9999} style={{width: '100%'}}/>

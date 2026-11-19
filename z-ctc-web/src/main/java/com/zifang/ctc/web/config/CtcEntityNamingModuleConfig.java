@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.zifang.ctc.core.domain.entity.AccountDO;
 import com.zifang.ctc.core.domain.entity.DeptDO;
+import com.zifang.ctc.core.domain.entity.DictCategoryDO;
+import com.zifang.ctc.core.domain.entity.DictEntryDO;
 import com.zifang.ctc.core.domain.entity.DomainDO;
 import com.zifang.ctc.core.domain.entity.GroupDO;
 import com.zifang.ctc.core.domain.entity.MenuDO;
@@ -67,6 +69,7 @@ public class CtcEntityNamingModuleConfig implements WebMvcConfigurer {
             Class<?>[] entities = {
                     AccountDO.class, DeptDO.class, DomainDO.class, GroupDO.class,
                     MenuDO.class, OrgDO.class, ResourceDO.class, RoleDO.class, TenantDO.class,
+                    DictCategoryDO.class, DictEntryDO.class,
             };
             for (Class<?> entity : entities) {
                 context.setMixInAnnotations(entity, CamelNamingMixin.class);
