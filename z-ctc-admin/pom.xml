@@ -208,14 +208,19 @@
     <dependency>
         <groupId>io.github.yuku123</groupId>
         <artifactId>z-ext-spring-boot-starter</artifactId>
-        <version>1.1.0</version>
+        <version>1.2.1</version>
 </dependency>
     <dependency>
         <groupId>io.github.yuku123</groupId>
         <artifactId>z-config-spring-boot-starter</artifactId>
         <version>1.0.12</version>
     </dependency>
-    </dependencies>
+        <dependency>
+            <groupId>io.github.yuku123</groupId>
+            <artifactId>z-meta-starter</artifactId>
+            <version>${z-meta.version}</version>
+        </dependency>
+</dependencies>
 
     <build>
         <plugins>
