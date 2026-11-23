@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {Button, Card, Empty, Input, List, Select, Space, Tag, Tree, Typography} from 'antd'
 import {ReloadOutlined} from '@ant-design/icons'
 import {userPermissionApi} from '../_api/userPermission'
@@ -26,53 +26,84 @@ export default function UserPermissionPage({apiBaseURL}) {
     const [activeRoleId, setActiveRoleId] = useState(null)
     const [roleResourcesLoading, setRoleResourcesLoading] = useState(false)
 
+    const accountsRequest = useRef(0)
+    // 选择变化时立即失效旧请求，避免等 effect 清理前的响应写入新上下文。
+    const userSelection = useRef(0)
+    const roleSelection = useRef(0)
+
+    const selectUser = useCallback(id => {
+        ++userSelection.current
+        ++roleSelection.current
+        setSelectedUserId(id ?? null)
+        setRoles([])
+        setPermissions([])
+        setActiveRoleId(null)
+        setResourceTree([])
+        setRolesLoading(false)
+        setPermissionsLoading(false)
+        setRoleResourcesLoading(false)
+    }, [])
+
+    const selectRole = id => {
+        ++roleSelection.current
+        setActiveRoleId(id)
+        setResourceTree([])
+        setRoleResourcesLoading(true)
+    }
+
     const loadAccounts = async () => {
+        const request = ++accountsRequest.current
+        const selection = userSelection.current
         setAccountLoading(true)
         try {
             const res = await userPermissionApi.listAccounts({pageNum: 1, pageSize: 200})
+            if (request !== accountsRequest.current) return
             const list = Array.isArray(res) ? res : (res?.records || res?.data || [])
             setAccounts(list)
-            if (list.length > 0 && !selectedUserId) {
-                setSelectedUserId(list[0].id)
+            if (list.length > 0 && !selectedUserId && selection === userSelection.current) {
+                selectUser(list[0].id)
             }
         } catch {
-            setAccounts([])
+            if (request === accountsRequest.current) setAccounts([])
         } finally {
-            setAccountLoading(false)
+            if (request === accountsRequest.current) setAccountLoading(false)
         }
     }
 
     useEffect(() => {
         loadAccounts()
+        return () => { ++accountsRequest.current }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     useEffect(() => {
-        if (!selectedUserId) {
-            setRoles([])
-            setPermissions([])
-            return
-        }
+        if (!selectedUserId) return
+        let active = true
+        const selection = userSelection.current
+        const isCurrent = () => active && selection === userSelection.current
         setRolesLoading(true)
         setPermissionsLoading(true)
         userPermissionApi.listUserRoles(selectedUserId)
-            .then(res => setRoles(Array.isArray(res) ? res : []))
-            .catch(() => setRoles([]))
-            .finally(() => setRolesLoading(false))
+            .then(res => { if (isCurrent()) setRoles(Array.isArray(res) ? res : []) })
+            .catch(() => { if (isCurrent()) setRoles([]) })
+            .finally(() => { if (isCurrent()) setRolesLoading(false) })
         userPermissionApi.listUserPermissions(selectedUserId)
-            .then(res => setPermissions(Array.isArray(res) ? res : []))
-            .catch(() => setPermissions([]))
-            .finally(() => setPermissionsLoading(false))
+            .then(res => { if (isCurrent()) setPermissions(Array.isArray(res) ? res : []) })
+            .catch(() => { if (isCurrent()) setPermissions([]) })
+            .finally(() => { if (isCurrent()) setPermissionsLoading(false) })
+        return () => { active = false }
     }, [selectedUserId])
 
     useEffect(() => {
-        if (!activeRoleId) {
-            setResourceTree([])
-            return
-        }
+        if (!selectedUserId || !activeRoleId) return
+        let active = true
+        const user = userSelection.current
+        const role = roleSelection.current
+        const isCurrent = () => active && user === userSelection.current && role === roleSelection.current
         setRoleResourcesLoading(true)
         userPermissionApi.listRoleResources(activeRoleId)
             .then(res => {
+                if (!isCurrent()) return
                 const list = Array.isArray(res) ? res : []
                 // 按 resourceType 分组
                 const groups = {}
@@ -92,9 +123,10 @@ export default function UserPermissionPage({apiBaseURL}) {
                 }))
                 setResourceTree(tree)
             })
-            .catch(() => setResourceTree([]))
-            .finally(() => setRoleResourcesLoading(false))
-    }, [activeRoleId])
+            .catch(() => { if (isCurrent()) setResourceTree([]) })
+            .finally(() => { if (isCurrent()) setRoleResourcesLoading(false) })
+        return () => { active = false }
+    }, [selectedUserId, activeRoleId])
 
     const accountOptions = accounts.map(a => ({
         value: a.id,
@@ -119,10 +151,11 @@ export default function UserPermissionPage({apiBaseURL}) {
                 left={
                     <Select
                         showSearch
+                        allowClear
                         placeholder="选择用户"
                         style={{width: 320}}
                         value={selectedUserId}
-                        onChange={setSelectedUserId}
+                        onChange={selectUser}
                         loading={accountLoading}
                         options={accountOptions}
                         filterOption={(input, opt) => opt.label.toLowerCase().includes(input.toLowerCase())}
@@ -151,7 +184,7 @@ export default function UserPermissionPage({apiBaseURL}) {
                                 <List.Item
                                     actions={[
                                         <Button key="res" type="link" size="small"
-                                                onClick={() => setActiveRoleId(r.id)}
+                                                onClick={() => selectRole(r.id)}
                                                 disabled={r.id === activeRoleId}>
                                             {r.id === activeRoleId ? '查看中' : '查看资源'}
                                         </Button>,
