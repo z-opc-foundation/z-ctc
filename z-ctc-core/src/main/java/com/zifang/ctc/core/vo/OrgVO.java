@@ -14,6 +14,10 @@ public class OrgVO implements Serializable {
     private String orgName;
     private Integer status;
     private String description;
+    /**
+     * 扩展配置 (JSON 字符串, 组织树右面板 K-V 编辑器的落库载体)。
+     */
+    private String extConfig;
     private LocalDateTime createdAt;
     private String createdBy;
 
@@ -28,6 +32,7 @@ public class OrgVO implements Serializable {
         v.orgName = d.getOrgName();
         v.status = d.getStatus();
         v.description = d.getDescription();
+        v.extConfig = d.getExtConfig();
         v.createdAt = d.getCreatedAt();
         v.createdBy = d.getCreatedBy();
         return v;
@@ -87,6 +92,14 @@ public class OrgVO implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getExtConfig() {
+        return extConfig;
+    }
+
+    public void setExtConfig(String extConfig) {
+        this.extConfig = extConfig;
     }
 
     public LocalDateTime getCreatedAt() {

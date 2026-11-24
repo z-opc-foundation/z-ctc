@@ -41,7 +41,6 @@ import {ctcAcAccountApi} from '../_api/ctcAcAccount'
  *   - selectedTenant: string                            当前租户 (必填, 来自登录态)
  *   - selectedDomain: string                            当前域 (必填, 来自登录态)
  *   - apiBaseURL: string                                后端 baseURL, 默认 '/api'
- *   - extConfigStorageKey: string                       K-V 扩展配置 localStorage key, 默认 'z_org_ext_config'
  *
  * 租户/域不设页内选择器：顶栏 TenantSwitcher 是唯一切换入口，
  * 本面板只渲染登录租户/域下的组织树。
@@ -50,10 +49,9 @@ import {ctcAcAccountApi} from '../_api/ctcAcAccount'
  *   - /orgs  POST / GET(list) / GET(code) / PUT(code) / DELETE(code)
  *   - /depts /groups 同上
  *
- * K-V 扩展配置: 暂走 localStorage, 未落库.
+ * K-V 扩展配置: 落库在条目自身的 ext_config 列 (JSON 数组 [{key,value}]),
+ * 保存/删除走 PUT /orgs|/depts|/groups 更新接口, 不另开表。
  */
-
-const EXT_CONFIG_KEY_DEFAULT = 'z_org_ext_config'
 
 const STATUS_MAP = {
     1: {text: '正常', color: 'success'},
@@ -86,27 +84,20 @@ function detectType(r) {
     return 'org'
 }
 
-// localStorage K-V 配置 (暂留前端, 后续落库)
-function loadExtConfig(key, storageKey) {
+// extConfig 落库形态: 实体 ext_config 列存 JSON 数组 [{key,value}] 字符串
+function parseExtConfig(raw) {
     try {
-        const all = JSON.parse(localStorage.getItem(storageKey) || '{}')
-        return all[key] || []
+        const arr = typeof raw === 'string' ? JSON.parse(raw) : (raw || [])
+        return Array.isArray(arr) ? arr : []
     } catch {
         return []
     }
-}
-
-function saveExtConfig(key, list, storageKey) {
-    const all = JSON.parse(localStorage.getItem(storageKey) || '{}')
-    all[key] = list
-    localStorage.setItem(storageKey, JSON.stringify(all))
 }
 
 export default function OrgManagement({
                                           selectedTenant = null,
                                           selectedDomain = null,
                                           apiBaseURL,
-                                          extConfigStorageKey = EXT_CONFIG_KEY_DEFAULT,
                                       }) {
     // 配置 baseURL (组件 mount 时生效)
     useEffect(() => {
@@ -340,7 +331,7 @@ export default function OrgManagement({
         setSelectedKey([k])
         const meta = info.node.data
         setSelectedNode(meta)
-        setConfigData(loadExtConfig(k, extConfigStorageKey))
+        setConfigData(parseExtConfig(meta.data?.extConfig))
         if (meta.type === 'org') {
             setChildList(deptMap[meta.data.orgCode] || [])
         } else if (meta.type === 'dept') {
@@ -348,6 +339,37 @@ export default function OrgManagement({
         } else {
             setChildList([])
         }
+    }
+
+    // ── K-V 落库: 写实体自身的 ext_config 列 (PUT 更新接口), 并同步本地缓存 ──
+    const persistExtConfig = async (node, nextList) => {
+        const {type, data} = node
+        const tenantCode = data.tenantCode || selectedTenant
+        const domainCode = data.domainCode || selectedDomain
+        const extConfig = JSON.stringify(nextList)
+        if (type === 'org') {
+            await ctcAcOrgApi.update(tenantCode, domainCode, data.orgCode, {extConfig})
+        } else if (type === 'dept') {
+            await ctcAcDeptApi.update(tenantCode, domainCode, data.deptCode, {extConfig})
+        } else if (type === 'group') {
+            await ctcAcGroupApi.update(tenantCode, domainCode, data.deptCode, data.groupCode, {extConfig})
+        } else {
+            throw new Error('未知节点类型')
+        }
+        // 同步树数据源 (orgMap/deptMap/groupMap) 与下级列表, 避免切走再切回读到旧值
+        const code = codeOf(data, type)
+        const patchRecord = (r) => codeOf(r, type) === code ? {...r, extConfig} : r
+        if (type === 'org') {
+            setOrgMap(prev => ({...prev, [domainCode]: (prev[domainCode] || []).map(patchRecord)}))
+        } else if (type === 'dept') {
+            setDeptMap(prev => ({...prev, [data.orgCode]: (prev[data.orgCode] || []).map(patchRecord)}))
+        } else {
+            setGroupMap(prev => ({...prev, [data.deptCode]: (prev[data.deptCode] || []).map(patchRecord)}))
+        }
+        setChildList(prev => (Array.isArray(prev) ? prev.map(patchRecord) : prev))
+        setSelectedNode(prev => (prev && prev.type === type && codeOf(prev.data, type) === code)
+            ? {...prev, data: {...prev.data, extConfig}}
+            : prev)
     }
 
     // ── 树节点操作按钮 ──
@@ -504,8 +526,7 @@ export default function OrgManagement({
                 }
                 next = [...configData, {key: values.dataId, value: values.content}]
             }
-            const nk = nodeKey(selectedNode.type, codeOf(selectedNode.data, selectedNode.type))
-            saveExtConfig(nk, next, extConfigStorageKey)
+            await persistExtConfig(selectedNode, next)
             setConfigData(next)
             setKvModalOpen(false)
             setEditingKv(null)
@@ -513,17 +534,20 @@ export default function OrgManagement({
             message.success('保存成功')
         } catch (e) {
             if (e?.errorFields) return
-            message.error('保存失败')
+            message.error('保存失败：' + (e?.message || '未知错误'))
         }
     }
 
-    const handleDeleteKv = (record) => {
+    const handleDeleteKv = async (record) => {
         if (!selectedNode) return
-        const nk = nodeKey(selectedNode.type, codeOf(selectedNode.data, selectedNode.type))
-        const next = configData.filter(r => r.key !== record.key)
-        saveExtConfig(nk, next, extConfigStorageKey)
-        setConfigData(next)
-        message.success('删除成功')
+        try {
+            const next = configData.filter(r => r.key !== record.key)
+            await persistExtConfig(selectedNode, next)
+            setConfigData(next)
+            message.success('删除成功')
+        } catch (e) {
+            message.error('删除失败：' + (e?.message || '未知错误'))
+        }
     }
 
     // ── 子列表点击切换 ──
@@ -531,7 +555,7 @@ export default function OrgManagement({
         const code = codeOf(record, type)
         setSelectedKey([nodeKey(type, code)])
         setSelectedNode({type, data: record})
-        setConfigData(loadExtConfig(nodeKey(type, code), extConfigStorageKey))
+        setConfigData(parseExtConfig(record.extConfig))
         if (type === 'org') setChildList(deptMap[record.orgCode] || [])
         else if (type === 'dept') setChildList(groupMap[record.deptCode] || [])
         else setChildList([])
