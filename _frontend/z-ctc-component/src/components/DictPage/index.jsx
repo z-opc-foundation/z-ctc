@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react'
 import {Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Tag} from 'antd'
-import {PlusOutlined, ReloadOutlined} from '@ant-design/icons'
+import {ArrowLeftOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import {ListTable} from '@yuku123/z-frontend-common/ui'
 import {dictApi} from '../_api/dict'
 
@@ -211,10 +211,47 @@ export default function DictPage() {
     ]
 
     return (
-        <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
-            <div style={{display: 'grid', gridTemplateColumns: '380px 1fr', gap: 16}}>
-                {/* 左栏字典分类：搜索框与「新增/刷新」并排在 cardExtra（lead 008 §2），
-                    过滤交给基座 useListFilter，口径与全库一致。 */}
+        // flex:1 + minWidth:0 —— 宿主的内容区是 flex 容器，页面根节点不撑满就会被
+        // 挤成内容宽（曾把右侧「字典条目」压成 120px，列表列也被裁掉）。
+        <div style={{display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0, width: '100%'}}>
+            {/* 两步走（CEO 2026-11-11）：第一步是字典分类列表，点进去才是这个字典的条目。
+                原先是左右并列，右侧长期挂一个「请在左侧选择…」的空面板，且两栏被挤。 */}
+            {selectedCategory ? (
+                <>
+                    <div style={{display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap'}}>
+                        <Button size="small" icon={<ArrowLeftOutlined/>} onClick={() => setSelectedCategory(null)}>
+                            返回字典分类
+                        </Button>
+                        <span style={{fontSize: 13, color: 'var(--text-secondary, #595959)'}}>
+                            字典条目 — {selectedCategory.catName || selectedCategory.catCode}
+                        </span>
+                        {scopeTag(selectedCategory.scope)}
+                    </div>
+                    <ListTable
+                        cardTitle={`字典条目 (${entries.length})`}
+                        cardExtra={
+                            <Space>
+                                <Button size="small" icon={<PlusOutlined/>} onClick={openCreateEntry}
+                                        disabled={!selectedCategory}>新增条目</Button>
+                                <Button size="small" icon={<ReloadOutlined/>}
+                                        disabled={!selectedCategory}
+                                        onClick={() => selectedCategory && loadEntries(selectedCategory.catCode)}/>
+                            </Space>
+                        }
+                        rows={entries}
+                        rowKey="id"
+                        loading={entriesLoading}
+                        searchKeys={['dictKey', 'dictValue']}
+                        searchPlaceholder="按条目键 / 显示值过滤"
+                        cardProps={{size: 'small'}}
+                        columns={entryColumns}
+                        emptyTitle="这个字典还没有条目"
+                        emptyDescription="条目是字典的取值明细（例如 启用 / 停用）。"
+                        emptyActionText="新建条目"
+                        emptyOnAction={openCreateEntry}
+                    />
+                </>
+            ) : (
                 <ListTable
                     cardTitle={`字典分类 (${categories.length})`}
                     cardExtra={
@@ -228,13 +265,14 @@ export default function DictPage() {
                     searchKeys={['catCode', 'catName']}
                     searchPlaceholder="搜索编码 / 名称"
                     cardProps={{size: 'small', loading: categoriesLoading}}
+                    emptyTitle="还没有字典分类"
+                    emptyDescription="字典分类是条目的容器：先建一个分类，再往里录条目。"
+                    emptyActionText="新建字典分类"
+                    emptyOnAction={openCreateCategory}
                     tableProps={{
                         onRow: (r) => ({
                             onClick: () => setSelectedCategory(r),
-                            style: {
-                                cursor: 'pointer',
-                                background: selectedCategory?.id === r.id ? '#e6f4ff' : undefined,
-                            },
+                            style: {cursor: 'pointer'},
                         }),
                     }}
                     columns={[
@@ -270,34 +308,7 @@ export default function DictPage() {
                     ]}
                 />
 
-                {!selectedCategory ? (
-                    <Card size="small" title="字典条目">
-                        <div style={{padding: 40, textAlign: 'center', color: '#999'}}>
-                            请在左侧选择一个字典分类以查看其条目
-                        </div>
-                    </Card>
-                ) : (
-                    <ListTable
-                        cardTitle={`字典条目 — ${selectedCategory.catName} (${entries.length})`}
-                        cardExtra={
-                            <Space>
-                                <Button size="small" icon={<PlusOutlined/>} onClick={openCreateEntry}
-                                        disabled={!selectedCategory}>新增条目</Button>
-                                <Button size="small" icon={<ReloadOutlined/>}
-                                        disabled={!selectedCategory}
-                                        onClick={() => selectedCategory && loadEntries(selectedCategory.catCode)}/>
-                            </Space>
-                        }
-                        rows={entries}
-                        rowKey="id"
-                        loading={entriesLoading}
-                        searchKeys={['dictKey', 'dictValue']}
-                        searchPlaceholder="按条目键 / 显示值过滤"
-                        cardProps={{size: 'small'}}
-                        columns={entryColumns}
-                    />
-                )}
-            </div>
+            )}
 
             <Modal
                 title={editingCategory ? '编辑字典分类' : '新建字典分类'}
