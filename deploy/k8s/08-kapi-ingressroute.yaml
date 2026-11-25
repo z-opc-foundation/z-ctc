@@ -70,3 +70,16 @@ spec:
       services:
         - name: z-ctc-admin
           port: 8888
+    # 2026-11-25: 4A 组件页（@yuku123/z-ctc-component 的 OrgManagement / TenantManagement 等）
+    # 组件内建的 api base 是 '/api' ⇒ 浏览器打的是 /api/ctc/ac/**，而这条路径在集群里
+    # 原本没有归属 ⇒ 落到主壳 z-opc-main（它只内嵌 z-ctc-sso/client/common，**没有
+    # z-ctc-web**）⇒ 生产上 4A 页面拿不到数据，实测报
+    # 「No static resource api/ctc/ac/depts/list」。
+    # 这里补一条**原样透传**（不剥前缀）的规则：z-ctc-admin 自己就映射 @RequestMapping("/api/ctc/ac")，
+    # 逐字对上，不需要中间件。鉴权靠 Authorization: Bearer（与 z-ctc-admin 同一个 SSO 密钥）。
+    # 只覆盖 /api/ctc/ac，不动主壳其它 /api/** 路由。
+    - kind: Rule
+      match: Host(`opc.zopc.top`) && PathPrefix(`/api/ctc/ac`)
+      services:
+        - name: z-ctc-admin
+          port: 8888
