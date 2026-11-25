@@ -76,7 +76,7 @@ export default function OrgPage({apiBaseURL}) {
             <OrgManagement
                 selectedTenant={tenantCode}
                 selectedDomain={domainCode}
-                apiBaseURL="/api"
+                apiBaseURL={apiBaseURL || '/api'}
             />
         </div>
     )

@@ -36,6 +36,7 @@ import {
 } from '@ant-design/icons'
 import {useSearchParams} from 'react-router-dom'
 import {ctcAuthorizationApi, ctcAcAccountApi} from './api'
+import {configureApiBaseURL} from '../_api/base'
 
 /**
  * 权限管理（4A AUTHZ 域）— 角色 / 权限点 / 权限树 三视图合一
@@ -178,6 +179,10 @@ function collectResourceIds(tree) {
 }
 
 export default function PermissionManagement({apiBaseURL}) {
+    useEffect(() => {
+        if (apiBaseURL) configureApiBaseURL(apiBaseURL)
+    }, [apiBaseURL])
+
     const [searchParams, setSearchParams] = useSearchParams()
     const view = ['roles', 'points', 'tree', 'auth'].includes(searchParams.get('view'))
         ? searchParams.get('view')

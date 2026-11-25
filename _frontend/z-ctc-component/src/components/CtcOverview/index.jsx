@@ -2,8 +2,10 @@ import {useEffect, useState} from 'react'
 import {Card, Col, Row, Statistic} from 'antd'
 import {AppstoreOutlined, LinkOutlined, SafetyCertificateOutlined, TeamOutlined} from '@ant-design/icons'
 import {createRequest} from '@yuku123/z-frontend-common'
+import {getApiBaseURL, configureApiBaseURL} from '../_api/base'
 
-const request = createRequest({baseURL: '/api', timeout: 10000})
+// base 随调用方变化（主壳传 /kapi/z-ctc/api）⇒ 请求实例按当前 base 现取
+const request = () => createRequest({baseURL: getApiBaseURL(), timeout: 10000})
 
 const extractTotal = (r) => {
     if (!r) return 0
@@ -13,17 +15,21 @@ const extractTotal = (r) => {
     return 0
 }
 
-export default function CtcOverview() {
+export default function CtcOverview({apiBaseURL}) {
+    useEffect(() => {
+        if (apiBaseURL) configureApiBaseURL(apiBaseURL)
+    }, [apiBaseURL])
+
     const [stats, setStats] = useState({account: null, role: null, tenant: null, surl: null})
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         let mounted = true
         Promise.all([
-            request.get('/ctc/ac/accounts', {params: {pageSize: 1}}).then(r => extractTotal(r)).catch(() => 0),
-            request.get('/ctc/authz/roles/list').then(r => extractTotal(r)).catch(() => 0),
-            request.get('/ctc/ac/tenants/list').then(r => r && Array.isArray(r) ? r.length : 0).catch(() => 0),
-            request.get('/ctc/surl/list', {params: {pageSize: 1}}).then(r => extractTotal(r)).catch(() => 0),
+            request().get('/ctc/ac/accounts', {params: {pageSize: 1}}).then(r => extractTotal(r)).catch(() => 0),
+            request().get('/ctc/authz/roles/list').then(r => extractTotal(r)).catch(() => 0),
+            request().get('/ctc/ac/tenants/list').then(r => r && Array.isArray(r) ? r.length : 0).catch(() => 0),
+            request().get('/ctc/surl/list', {params: {pageSize: 1}}).then(r => extractTotal(r)).catch(() => 0),
         ]).then(([account, role, tenant, surl]) => {
             if (mounted) {
                 setStats({account, role, tenant, surl})

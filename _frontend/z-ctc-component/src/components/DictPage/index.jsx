@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react'
 import {Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Tag} from 'antd'
 import {ArrowLeftOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
 import {ListTable} from '@yuku123/z-frontend-common/ui'
-import {dictApi} from '../_api/dict'
+import {dictApi, configureApiBaseURL} from '../_api/dict'
 
 /**
  * 灵活字典管理页（承接自 z-meta 字典能力）。
@@ -17,7 +17,11 @@ import {dictApi} from '../_api/dict'
  *   PUT  /api/ctc/ac/dict/entries/{id}             改条目
  *   DEL  /api/ctc/ac/dict/entries/{id}             删条目
  */
-export default function DictPage() {
+export default function DictPage({apiBaseURL}) {
+    useEffect(() => {
+        if (apiBaseURL) configureApiBaseURL(apiBaseURL)
+    }, [apiBaseURL])
+
     const [categories, setCategories] = useState([])
     const [categoriesLoading, setCategoriesLoading] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState(null)

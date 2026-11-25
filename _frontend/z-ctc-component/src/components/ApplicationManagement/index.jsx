@@ -1,4 +1,4 @@
-import {useCallback, useRef, useState} from 'react'
+import {useCallback, useEffect, useRef, useState} from 'react'
 import {ProTable} from '@ant-design/pro-components'
 import {Button, Card, Drawer, Form, Input, message, Modal, Popconfirm, Select, Space, Table, Tabs, Tag, Tooltip} from 'antd'
 import {
@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {ctcAuthorizationApi, metaAppApi} from './api'
+import {configureApiBaseURL} from '../_api/base'
 import { EmptyState } from '@yuku123/z-frontend-common/ui'
 /**
  * 应用管理 (4A-AUTHZ) — split-panel 布局
@@ -49,6 +50,10 @@ const STATUS_MAP = {
 }
 
 export default function ApplicationManagement({apiBaseURL}) {
+    useEffect(() => {
+        if (apiBaseURL) configureApiBaseURL(apiBaseURL)
+    }, [apiBaseURL])
+
     const actionRef = useRef(undefined)
     const [searchForm] = Form.useForm()
     const [searchParams, setSearchParams] = useState({})

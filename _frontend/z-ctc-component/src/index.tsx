@@ -59,3 +59,8 @@ export {default as CtcOverview} from './components/CtcOverview'
 
 // FEATURE016: 暴露 z-ctc-ac 的 API client (供 App.jsx 顶栏 租户/域 下拉调用)
 export {ctcAcTenantApi, ctcAcDomainApi} from './components/TenantManagement/api'
+
+// 4A 组件统一后端 base（2026-11-25）：主壳把 4A 页面挂在自己的域下时调一次
+// configureApiBaseURL('/kapi/z-ctc/api') ⇒ 全部 4A api 走 kapi 统一网关；
+// 独立 z-ctc-admin UI 不调 ⇒ 保持默认 '/api'。
+export {configureApiBaseURL, getApiBaseURL} from './components/_api/base'

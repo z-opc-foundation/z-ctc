@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react'
 import {Card, Col, Row, Select, Space, Statistic, Table, Tabs, Tag, Tooltip} from 'antd'
 import {LoginOutlined, ReloadOutlined, SearchOutlined} from '@ant-design/icons'
 import dayjs from 'dayjs'
-import {loginLogApi} from '../_api/loginLog'
+import {loginLogApi, configureApiBaseURL} from '../_api/loginLog'
 import { SearchInput } from '@yuku123/z-frontend-common/ui'
 /**
  * 审计中心 — 按类型 Tabs 隔离日志
@@ -22,7 +22,11 @@ import { SearchInput } from '@yuku123/z-frontend-common/ui'
 // 原签名带一个未使用的 apiBaseURL 形参（全文件仅签名处出现一次，函数体内从未读取）：
 // noImplicitAny 下被推成必填 props，而 SystemShell 渲染 <CtcAuditPage/> 不传它 → TS2741。
 // 删除该形参，不影响任何行为。
-export default function AuditPage() {
+export default function AuditPage({apiBaseURL}) {
+    useEffect(() => {
+        if (apiBaseURL) configureApiBaseURL(apiBaseURL)
+    }, [apiBaseURL])
+
     return (
         <div>
             <Tabs

@@ -10,14 +10,12 @@
 
 import {createRequest} from '@yuku123/z-frontend-common'
 
-let _baseURL = '/api'
+import {getApiBaseURL} from './base'
 
-export function configureApiBaseURL(baseURL) {
-    _baseURL = baseURL || '/api'
-}
+export {configureApiBaseURL} from './base'
 
 function makeRequest() {
-    return createRequest({baseURL: _baseURL, timeout: 15000})
+    return createRequest({baseURL: getApiBaseURL(), timeout: 15000})
 }
 
 export const metaAppApi = {

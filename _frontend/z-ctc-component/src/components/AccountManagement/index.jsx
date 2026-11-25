@@ -1,4 +1,4 @@
-import {useCallback, useRef, useState} from 'react'
+import {useCallback, useEffect, useRef, useState} from 'react'
 import {ProTable} from '@ant-design/pro-components'
 import {
     Button,
@@ -28,7 +28,7 @@ import {
     UndoOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import {ctcAcAccountApi, ctcAcLoginLogApi} from './api'
+import {ctcAcAccountApi, ctcAcLoginLogApi, configureApiBaseURL} from './api'
 import {userPermissionApi} from '../_api/userPermission'
 import { ListTable, SearchInput } from '@yuku123/z-frontend-common/ui'
 
@@ -90,6 +90,11 @@ function EllipsisCell({value}) {
 }
 
 export default function AccountManagement({apiBaseURL}) {
+    // 统一 base（主壳传 /kapi/z-ctc/api；独立 UI 走默认 /api）
+    useEffect(() => {
+        if (apiBaseURL) configureApiBaseURL(apiBaseURL)
+    }, [apiBaseURL])
+
     const actionRef = useRef(undefined)
     const [searchForm] = Form.useForm()
     const [searchParams, setSearchParams] = useState({})
