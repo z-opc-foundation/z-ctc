@@ -1,8 +1,9 @@
 import {useEffect, useState} from 'react'
-import {Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Tag} from 'antd'
-import {ArrowLeftOutlined, PlusOutlined, ReloadOutlined} from '@ant-design/icons'
+import {Button, Card, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Tag} from 'antd'
+import {ArrowLeftOutlined, PlusOutlined, ReloadOutlined, TagsOutlined} from '@ant-design/icons'
 import {ListTable} from '@yuku123/z-frontend-common/ui'
 import {dictApi, configureApiBaseURL} from '../_api/dict'
+import {ensureDictStyles} from './style'
 
 /**
  * 灵活字典管理页（承接自 z-meta 字典能力）。
@@ -19,6 +20,10 @@ import {dictApi, configureApiBaseURL} from '../_api/dict'
  */
 export default function DictPage({apiBaseURL}) {
     useEffect(() => {
+        ensureDictStyles()
+    }, [])
+
+    useEffect(() => {
         if (apiBaseURL) configureApiBaseURL(apiBaseURL)
     }, [apiBaseURL])
 
@@ -30,10 +35,12 @@ export default function DictPage({apiBaseURL}) {
 
     const [categoryFormOpen, setCategoryFormOpen] = useState(false)
     const [editingCategory, setEditingCategory] = useState(null)
+    const [categorySubmitting, setCategorySubmitting] = useState(false)
     const [categoryForm] = Form.useForm()
 
     const [entryFormOpen, setEntryFormOpen] = useState(false)
     const [editingEntry, setEditingEntry] = useState(null)
+    const [entrySubmitting, setEntrySubmitting] = useState(false)
     const [entryForm] = Form.useForm()
 
     const loadCategories = async () => {
@@ -99,13 +106,21 @@ export default function DictPage({apiBaseURL}) {
         setCategoryFormOpen(true)
     }
     const handleCategoryOk = async () => {
+        let values
         try {
-            const v = await categoryForm.validateFields()
+            values = await categoryForm.validateFields()
+        } catch (e) {
+            if (e?.errorFields) return
+            message.error('表单校验异常：' + (e?.message || '未知错误'))
+            return
+        }
+        setCategorySubmitting(true)
+        try {
             if (editingCategory) {
-                await dictApi.updateCategory(editingCategory.id, v)
+                await dictApi.updateCategory(editingCategory.id, values)
                 message.success('更新成功')
             } else {
-                await dictApi.createCategory(v)
+                await dictApi.createCategory(values)
                 message.success('创建成功')
             }
             setCategoryFormOpen(false)
@@ -113,8 +128,9 @@ export default function DictPage({apiBaseURL}) {
             categoryForm.resetFields()
             loadCategories()
         } catch (e) {
-            if (e?.errorFields) return
             message.error((editingCategory ? '更新失败：' : '创建失败：') + (e?.message || '未知错误'))
+        } finally {
+            setCategorySubmitting(false)
         }
     }
     const handleDeleteCategory = async (id) => {
@@ -151,9 +167,17 @@ export default function DictPage({apiBaseURL}) {
         setEntryFormOpen(true)
     }
     const handleEntryOk = async () => {
+        let values
         try {
-            const v = await entryForm.validateFields()
-            const payload = {...v, category: selectedCategory.catCode}
+            values = await entryForm.validateFields()
+        } catch (e) {
+            if (e?.errorFields) return
+            message.error('表单校验异常：' + (e?.message || '未知错误'))
+            return
+        }
+        setEntrySubmitting(true)
+        try {
+            const payload = {...values, category: selectedCategory.catCode}
             if (editingEntry) {
                 await dictApi.updateEntry(editingEntry.id, payload)
                 message.success('更新成功')
@@ -166,8 +190,9 @@ export default function DictPage({apiBaseURL}) {
             entryForm.resetFields()
             loadEntries(selectedCategory.catCode)
         } catch (e) {
-            if (e?.errorFields) return
             message.error((editingEntry ? '更新失败：' : '创建失败：') + (e?.message || '未知错误'))
+        } finally {
+            setEntrySubmitting(false)
         }
     }
     const handleDeleteEntry = async (id) => {
@@ -315,94 +340,131 @@ export default function DictPage({apiBaseURL}) {
             )}
 
             <Modal
-                title={editingCategory ? '编辑字典分类' : '新建字典分类'}
+                className="zdict-modal"
+                title={
+                    <span className="zdict-title">
+                        <span className="zdict-title-ic"><TagsOutlined/></span>
+                        {editingCategory ? '编辑字典分类' : '新建字典分类'}
+                    </span>
+                }
                 open={categoryFormOpen}
                 onOk={handleCategoryOk}
+                confirmLoading={categorySubmitting}
+                okText="确定"
+                cancelText="取消"
                 onCancel={() => {
                     setCategoryFormOpen(false);
                     setEditingCategory(null);
                     categoryForm.resetFields()
                 }}
                 destroyOnHidden
-                size="large"
+                width={680}
             >
-                <Form form={categoryForm} layout="vertical" style={{marginTop: 16}}>
-                    <Form.Item name="catCode" label="分类编码" rules={[{required: true, max: 64}]}
-                               extra="业务引用键，全局唯一，如 user_status">
-                        <Input disabled={!!editingCategory} placeholder="如 user_status"/>
-                    </Form.Item>
-                    <Form.Item name="catName" label="分类名称" rules={[{required: true, max: 128}]}>
-                        <Input placeholder="如 用户状态"/>
-                    </Form.Item>
-                    <Form.Item name="scope" label="作用域" initialValue="TENANT"
-                               extra="GLOBAL 全平台共享；TENANT 租户内；DOMAIN 租户 + 域内">
-                        <Select options={[
-                            {value: 'GLOBAL', label: 'GLOBAL（全平台）'},
-                            {value: 'TENANT', label: 'TENANT（租户）'},
-                            {value: 'DOMAIN', label: 'DOMAIN（租户+域）'},
-                        ]}/>
-                    </Form.Item>
-                    <Form.Item name="valueType" label="条目值类型" initialValue="string">
-                        <Select options={[
-                            {value: 'string', label: 'string'},
-                            {value: 'number', label: 'number'},
-                            {value: 'boolean', label: 'boolean'},
-                            {value: 'json', label: 'json'},
-                        ]}/>
-                    </Form.Item>
-                    <Form.Item name="entryShape" label="条目形状" initialValue="flat"
-                               extra="tree 形状的分类下条目可用父键成树">
-                        <Select options={[
-                            {value: 'flat', label: 'flat（平铺）'},
-                            {value: 'tree', label: 'tree（树形）'},
-                        ]}/>
-                    </Form.Item>
-                    <Form.Item name="sortOrder" label="排序" initialValue={0}>
-                        <InputNumber min={0} max={9999} style={{width: '100%'}}/>
-                    </Form.Item>
-                    <Form.Item name="status" label="状态" initialValue={1}>
-                        <Select options={[{value: 1, label: '启用'}, {value: 0, label: '禁用'}]}/>
-                    </Form.Item>
-                    <Form.Item name="description" label="描述">
-                        <Input.TextArea rows={2} maxLength={512}/>
-                    </Form.Item>
+                <Form form={categoryForm} layout="vertical" className="zdict-form" requiredMark={false}>
+                    <div className="zdict-grid">
+                        <div className="zdict-section">基本信息</div>
+                        <Form.Item name="catCode" label="分类编码" className="zdict-code"
+                                   rules={[{required: true, message: '请填分类编码'}, {max: 64}]}
+                                   extra="业务引用键，全局唯一，如 user_status">
+                            <Input disabled={!!editingCategory} placeholder="如 user_status" autoFocus/>
+                        </Form.Item>
+                        <Form.Item name="catName" label="分类名称"
+                                   rules={[{required: true, message: '请填分类名称'}, {max: 128}]}>
+                            <Input placeholder="如 用户状态"/>
+                        </Form.Item>
+
+                        <div className="zdict-section">取值与形状</div>
+                        <Form.Item name="scope" label="作用域" initialValue="TENANT"
+                                   extra="GLOBAL 全平台共享；TENANT 租户内；DOMAIN 租户 + 域内">
+                            <Select options={[
+                                {value: 'GLOBAL', label: 'GLOBAL（全平台）'},
+                                {value: 'TENANT', label: 'TENANT（租户）'},
+                                {value: 'DOMAIN', label: 'DOMAIN（租户+域）'},
+                            ]}/>
+                        </Form.Item>
+                        <Form.Item name="valueType" label="条目值类型" initialValue="string">
+                            <Select options={[
+                                {value: 'string', label: 'string（文本）'},
+                                {value: 'number', label: 'number（数值）'},
+                                {value: 'boolean', label: 'boolean（布尔）'},
+                                {value: 'json', label: 'json（JSON）'},
+                            ]}/>
+                        </Form.Item>
+                        <Form.Item name="entryShape" label="条目形状" initialValue="flat"
+                                   extra="tree 形状的分类下条目可用父键成树">
+                            <Select options={[
+                                {value: 'flat', label: 'flat（平铺）'},
+                                {value: 'tree', label: 'tree（树形）'},
+                            ]}/>
+                        </Form.Item>
+                        <Form.Item name="sortOrder" label="排序" initialValue={0}
+                                   extra="数字越小越靠前">
+                            <InputNumber min={0} max={9999} style={{width: '100%'}}/>
+                        </Form.Item>
+
+                        <div className="zdict-section">状态与说明</div>
+                        <Form.Item name="status" label="状态" initialValue={1}>
+                            <Select options={[{value: 1, label: '启用'}, {value: 0, label: '禁用'}]}/>
+                        </Form.Item>
+                        <Form.Item name="description" label="描述" className="zdict-full">
+                            <Input.TextArea rows={2} maxLength={512} placeholder="这个字典的用途，一句话说明"/>
+                        </Form.Item>
+                    </div>
                 </Form>
             </Modal>
 
             <Modal
-                title={editingEntry ? `编辑字典条目 — ${selectedCategory?.catName || ''}` : `新建字典条目 — ${selectedCategory?.catName || ''}`}
+                className="zdict-modal"
+                title={
+                    <span className="zdict-title">
+                        <span className="zdict-title-ic"><TagsOutlined/></span>
+                        {editingEntry ? `编辑字典条目 — ${selectedCategory?.catName || ''}` : `新建字典条目 — ${selectedCategory?.catName || ''}`}
+                    </span>
+                }
                 open={entryFormOpen}
                 onOk={handleEntryOk}
+                confirmLoading={entrySubmitting}
+                okText="确定"
+                cancelText="取消"
                 onCancel={() => {
                     setEntryFormOpen(false);
                     setEditingEntry(null);
                     entryForm.resetFields()
                 }}
                 destroyOnHidden
-                size="large"
+                width={640}
             >
-                <Form form={entryForm} layout="vertical" style={{marginTop: 16}}>
-                    <Form.Item name="dictKey" label="条目键" rules={[{required: true, max: 64}]}
-                               extra="分类内业务唯一，如 enabled">
-                        <Input placeholder="如 enabled"/>
-                    </Form.Item>
-                    <Form.Item name="dictValue" label="显示值" rules={[{required: true, max: 128}]}>
-                        <Input placeholder="如 启用"/>
-                    </Form.Item>
-                    <Form.Item name="dataValue" label="数据值"
-                               extra="值类型为 number/boolean/json 时的载荷（JSON 字符串）">
-                        <Input.TextArea rows={2} placeholder='如 {"min": 0, "max": 100}'/>
-                    </Form.Item>
-                    <Form.Item name="parentKey" label="父条目键"
-                               extra="仅 tree 形状的分类生效，填父条目的条目键">
-                        <Input placeholder="tree 分类下成树，留空为顶层"/>
-                    </Form.Item>
-                    <Form.Item name="sortOrder" label="排序" initialValue={0}>
-                        <InputNumber min={0} max={9999} style={{width: '100%'}}/>
-                    </Form.Item>
-                    <Form.Item name="status" label="状态" initialValue={1}>
-                        <Select options={[{value: 1, label: '启用'}, {value: 0, label: '禁用'}]}/>
-                    </Form.Item>
+                <Form form={entryForm} layout="vertical" className="zdict-form" requiredMark={false}>
+                    <div className="zdict-grid">
+                        <div className="zdict-section">条目标识</div>
+                        <Form.Item name="dictKey" label="条目键" className="zdict-code"
+                                   rules={[{required: true, message: '请填条目键'}, {max: 64}]}
+                                   extra="分类内业务唯一，如 enabled">
+                            <Input placeholder="如 enabled" autoFocus/>
+                        </Form.Item>
+                        <Form.Item name="dictValue" label="显示值"
+                                   rules={[{required: true, message: '请填显示值'}, {max: 128}]}>
+                            <Input placeholder="如 启用"/>
+                        </Form.Item>
+
+                        <div className="zdict-section">载荷与结构</div>
+                        <Form.Item name="dataValue" label="数据值" className="zdict-full"
+                                   extra="值类型为 number/boolean/json 时的载荷（JSON 字符串）">
+                            <Input.TextArea rows={2} placeholder='如 {"min": 0, "max": 100}'/>
+                        </Form.Item>
+                        <Form.Item name="parentKey" label="父条目键"
+                                   extra="仅 tree 形状的分类生效，填父条目的条目键">
+                            <Input placeholder="tree 分类下成树，留空为顶层"/>
+                        </Form.Item>
+                        <Form.Item name="sortOrder" label="排序" initialValue={0}>
+                            <InputNumber min={0} max={9999} style={{width: '100%'}}/>
+                        </Form.Item>
+
+                        <div className="zdict-section">状态</div>
+                        <Form.Item name="status" label="状态" initialValue={1} className="zdict-full">
+                            <Select options={[{value: 1, label: '启用'}, {value: 0, label: '禁用'}]}/>
+                        </Form.Item>
+                    </div>
                 </Form>
             </Modal>
         </div>
