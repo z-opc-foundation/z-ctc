@@ -47,6 +47,11 @@ public interface DictCategoryMapper extends BaseMapper<DictCategoryDO> {
     /**
      * 按作用域取单个分类。
      *
+     * ⚠ 不能用 selectOne：库里可能存在同 (catCode, tenant) 的重复行
+     * （2026-11-25 实测：前端提示崩溃期间用户连点 21 次，建出 21 行同编码分类）
+     * ⇒ selectOne 直接抛 TooManyResultsException ⇒ 条目列表 500。
+     * 这里改为「取 id 最小的一行」，重复行由数据清理/查重兜底，不让读路径炸。
+     *
      * @param tenantCode 租户编码（空=全局）
      * @param domainCode 域编码
      * @param catCode    分类编码
@@ -61,8 +66,11 @@ public interface DictCategoryMapper extends BaseMapper<DictCategoryDO> {
                     } else {
                         w.eq(DictCategoryDO::getTenantCode, tenantCode);
                     }
-                });
-        return selectOne(qw);
+                })
+                .orderByAsc(DictCategoryDO::getId)
+                .last("LIMIT 1");
+        List<DictCategoryDO> rows = selectList(qw);
+        return rows.isEmpty() ? null : rows.get(0);
     }
 
     /**

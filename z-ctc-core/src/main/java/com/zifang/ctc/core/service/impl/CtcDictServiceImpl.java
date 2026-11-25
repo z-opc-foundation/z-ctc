@@ -67,6 +67,14 @@ public class CtcDictServiceImpl implements DictService {
     public Long createCategory(DictCategoryDO category, String operator) {
         normalizeCategoryScope(category);
         validateCategory(category);
+        // 同 (编码, 租户, 域) 只允许一个分类：2026-11-25 实测前端提示崩溃期间用户连点，
+        // 静默插出 21 行同编码分类 ⇒ 之后 selectByScope 撞多行 ⇒ 条目列表 500。
+        // 这里直接拒掉重复创建，让前端拿到明确报错而不是建出一堆脏行。
+        DictCategoryDO sameCode = categoryDbService.selectByScope(
+                category.getTenantCode(), category.getDomainCode(), category.getCatCode());
+        if (sameCode != null) {
+            throw new IllegalStateException("分类编码已存在：" + category.getCatCode());
+        }
         category.setCreatedAt(LocalDateTime.now());
         category.setUpdatedAt(LocalDateTime.now());
         category.setCreatedBy(operator);

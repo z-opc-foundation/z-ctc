@@ -49,6 +49,9 @@ public interface DictEntryMapper extends BaseMapper<DictEntryDO> {
     /**
      * 按作用域取单个条目。
      *
+     * ⚠ 同分类的 selectByScope：不能用 selectOne（重复行 ⇒ TooManyResults ⇒ 500），
+     * 改为取 id 最小的一行（见 DictCategoryMapper.selectByScope 同款处理）。
+     *
      * @param tenantCode 租户编码（空=全局）
      * @param domainCode 域编码
      * @param category   分类编码
@@ -65,7 +68,10 @@ public interface DictEntryMapper extends BaseMapper<DictEntryDO> {
                     } else {
                         w.eq(DictEntryDO::getTenantCode, tenantCode);
                     }
-                });
-        return selectOne(qw);
+                })
+                .orderByAsc(DictEntryDO::getId)
+                .last("LIMIT 1");
+        List<DictEntryDO> rows = selectList(qw);
+        return rows.isEmpty() ? null : rows.get(0);
     }
 }
