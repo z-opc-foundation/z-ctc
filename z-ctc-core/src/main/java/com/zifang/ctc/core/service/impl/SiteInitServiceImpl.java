@@ -152,4 +152,22 @@ public class SiteInitServiceImpl implements SiteInitService {
         }
         return page.getRecords();
     }
+
+    @Override
+    public List<SiteInitTaskDO> latestTraceTasks(String tenantCode) {
+        if (tenantCode == null || tenantCode.isEmpty()) {
+            return List.of();
+        }
+        SiteInitTaskDO latest = taskMapper.selectOne(new QueryWrapper<SiteInitTaskDO>()
+                .eq("tenant_code", tenantCode)
+                .orderByDesc("id")
+                .last("LIMIT 1"));
+        if (latest == null) {
+            return List.of();
+        }
+        return taskMapper.selectList(new QueryWrapper<SiteInitTaskDO>()
+                .eq("tenant_code", tenantCode)
+                .eq("trace_id", latest.getTraceId())
+                .orderByAsc("id"));
+    }
 }

@@ -31,10 +31,11 @@ import java.util.Map;
  *
  * <p>端点:
  * <ul>
- *   <li>POST /api/ctc/site-init/runs          - 对某站点跑全量域初始化</li>
+ *   <li>POST /api/ctc/site-init/runs          - 对某站点跑全量域初始化 (补齐入口; 建租户时已自动跑过)</li>
  *   <li>POST /api/ctc/site-init/runs/domain   - 只跑某域 (单域重跑)</li>
  *   <li>GET  /api/ctc/site-init/runs/page     - 任务记录分页</li>
  *   <li>GET  /api/ctc/site-init/runs/{id}     - 任务详情</li>
+ *   <li>GET  /api/ctc/site-init/tenants/status - 站点就绪状态聚合</li>
  *   <li>GET  /api/ctc/site-init/manifest/{domainCode} - 某注册域的能力清单</li>
  * </ul>
  */
@@ -143,6 +144,82 @@ public class SiteInitRunController {
             return Result.<SiteInitManifest>fail("域未注册: " + domainCode).code(ResultCode.NOT_FOUND.getCode());
         }
         return Result.success(manifest);
+    }
+
+    /**
+     * 站点就绪状态聚合: 每个站点按「最近一轮任务」对照「启用注册域数」给出就绪度.
+     *
+     * <p>状态: uninitialized 未初始化 / running 初始化中 / failed 需补齐 /
+     * incomplete 域未跑全 (注册域比最近一轮任务多, 有域漏跑) / ready 可用.
+     * 建站板块定位是补齐能力: 非可用站点的「全量补齐」即控制台主操作 (全链幂等).
+     */
+    @GetMapping("/tenants/status")
+    @BizApi(summary = "站点建站初始化就绪状态聚合", description = "按最近一轮任务聚合每个站点的就绪状态.", tags = { "z-ctc" })
+    public Result<List<Map<String, Object>>> tenantStatus() {
+        if (!isPlatformAdmin()) {
+            return Result.<List<Map<String, Object>>>fail("需要平台管理员权限").code(ResultCode.REQ_REJECT.getCode());
+        }
+        int expected = siteInitService.listActive().size();
+        List<TenantDO> tenants = tenantService.listAll();
+        List<Map<String, Object>> rows = new java.util.ArrayList<>();
+        for (TenantDO t : tenants) {
+            List<SiteInitTaskDO> tasks = siteInitService.latestTraceTasks(t.getTenantCode());
+            int success = 0;
+            int failed = 0;
+            int running = 0;
+            String traceId = null;
+            java.time.LocalDateTime lastRunAt = null;
+            for (SiteInitTaskDO task : tasks) {
+                Integer s = task.getStatus();
+                if (s == null) {
+                    continue;
+                }
+                if (s == SiteInitTaskDO.STATUS_SUCCESS) {
+                    success++;
+                } else if (s == SiteInitTaskDO.STATUS_FAILED) {
+                    failed++;
+                } else if (s == SiteInitTaskDO.STATUS_RUNNING || s == SiteInitTaskDO.STATUS_PENDING) {
+                    running++;
+                }
+                if (traceId == null) {
+                    traceId = task.getTraceId();
+                }
+                java.time.LocalDateTime at = task.getUpdatedAt() != null ? task.getUpdatedAt() : task.getCreatedAt();
+                if (at != null && (lastRunAt == null || at.isAfter(lastRunAt))) {
+                    lastRunAt = at;
+                }
+            }
+            String status;
+            String statusText;
+            if (tasks.isEmpty()) {
+                status = "uninitialized";
+                statusText = "未初始化";
+            } else if (running > 0) {
+                status = "running";
+                statusText = "初始化中";
+            } else if (failed > 0) {
+                status = "failed";
+                statusText = "需补齐";
+            } else if (expected > 0 && success < expected) {
+                status = "incomplete";
+                statusText = "域未跑全";
+            } else {
+                status = "ready";
+                statusText = "可用";
+            }
+            Map<String, Object> row = new HashMap<>();
+            row.put("tenantCode", t.getTenantCode());
+            row.put("tenantName", t.getTenantName());
+            row.put("status", status);
+            row.put("statusText", statusText);
+            row.put("successDomains", success);
+            row.put("failedDomains", failed);
+            row.put("expectedDomains", expected);
+            row.put("traceId", traceId);
+            row.put("lastRunAt", lastRunAt == null ? null : lastRunAt.toString());
+            rows.add(row);
+        }
+        return Result.success(rows);
     }
 
     private boolean isPlatformAdmin() {

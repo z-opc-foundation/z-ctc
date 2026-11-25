@@ -42,4 +42,7 @@ public interface SiteInitService {
 
     /** 任务分页 (tenantCode / domainCode 可空) */
     List<SiteInitTaskDO> pageTasks(String tenantCode, String domainCode, int pageNum, int pageSize, long[] totalOut);
+
+    /** 某站点最近一轮 (最新 traceId) 的全部任务记录; 从未跑过返回空表 */
+    List<SiteInitTaskDO> latestTraceTasks(String tenantCode);
 }

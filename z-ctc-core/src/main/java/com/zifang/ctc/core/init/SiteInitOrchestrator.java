@@ -102,6 +102,30 @@ public class SiteInitOrchestrator {
     }
 
     /**
+     * 自动路径: 租户创建成功后异步跑全量域初始化, 不阻塞建站请求.
+     *
+     * <p>建站板块分自动 / 非自动两条路 (2026-11-25 CEO 裁定「一般是自动」):
+     * 一般走本自动路径 (建租户即初始化); 建站管理控制台的「执行」按钮是非自动的
+     * <strong>补齐入口</strong> —— 失败域重跑、漏跑补跑, 全链幂等可重复。
+     *
+     * @return 执行线程 (测试可 join; 生产路径无需等待)
+     */
+    public Thread runAsync(String tenantCode, Long tenantId, Map<String, Object> params,
+                           String operator, String traceId) {
+        Thread t = new Thread(() -> {
+            try {
+                run(tenantCode, tenantId, params, operator, traceId);
+            } catch (Exception e) {
+                log.warn("[SiteInit] 自动建站初始化失败 (可在建站管理控制台补齐): tenantCode={} err={}",
+                        tenantCode, e.getMessage(), e);
+            }
+        }, "site-init-auto-" + tenantCode);
+        t.setDaemon(true);
+        t.start();
+        return t;
+    }
+
+    /**
      * 只跑一个域 (建站管理页上「单独重跑某域」用).
      */
     public SiteInitRunResult runDomain(String tenantCode, Long tenantId, String domainCode,

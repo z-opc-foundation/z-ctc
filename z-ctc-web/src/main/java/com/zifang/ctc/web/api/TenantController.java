@@ -3,6 +3,7 @@ package com.zifang.ctc.web.api;
 import com.zifang.ctc.common.vo.PageResponseVO;
 import com.zifang.ctc.core.domain.entity.MembershipDO;
 import com.zifang.ctc.core.domain.entity.TenantDO;
+import com.zifang.ctc.core.init.SiteInitOrchestrator;
 import com.zifang.ctc.core.init.TenantInitContext;
 import com.zifang.ctc.core.init.TenantInitOrchestrator;
 import com.zifang.ctc.core.init.TenantInitReport;
@@ -60,15 +61,17 @@ public class TenantController {
     private final TenantService tenantService;
     private final TenantInitOrchestrator tenantInitOrchestrator;
     private final PlatformAdminService platformAdminService;
+    private final SiteInitOrchestrator siteInitOrchestrator;
 
     @org.springframework.beans.factory.annotation.Autowired
     private MembershipService membershipService;
 
     public TenantController(TenantService tenantService, TenantInitOrchestrator tenantInitOrchestrator,
-                            PlatformAdminService platformAdminService) {
+                            PlatformAdminService platformAdminService, SiteInitOrchestrator siteInitOrchestrator) {
         this.tenantService = tenantService;
         this.tenantInitOrchestrator = tenantInitOrchestrator;
         this.platformAdminService = platformAdminService;
+        this.siteInitOrchestrator = siteInitOrchestrator;
     }
 
     /**
@@ -129,6 +132,19 @@ public class TenantController {
                     tenant.getTenantCode(), report.getSuccessCount(), report.getFailureCount());
         } catch (Exception e) {
             log.error("TenantController.create TenantInit 编排异常 (不影响租户创建): tenantCode={}, err={}",
+                    tenant.getTenantCode(), e.getMessage(), e);
+        }
+
+        // 建站板块 · 自动路径 (2026-11-25 CEO 裁定「一般是自动」): 本地初始化完成后,
+        // 已注册的远程域 (z-meta=100 / z-kb=200 / …) 异步跟上, 不阻塞建站请求,
+        // 失败不影响租户创建 —— 建站管理控制台的「执行」按钮是非自动的补齐入口。
+        try {
+            java.util.Map<String, Object> initParams = new java.util.HashMap<>();
+            initParams.put("tenantName", tenant.getTenantName());
+            siteInitOrchestrator.runAsync(tenant.getTenantCode(), id, initParams, userId, null);
+            log.info("TenantController.create 建站初始化 (远程域) 已异步触发: tenantCode={}", tenant.getTenantCode());
+        } catch (Exception e) {
+            log.error("TenantController.create 建站初始化触发异常 (不影响租户创建): tenantCode={}, err={}",
                     tenant.getTenantCode(), e.getMessage(), e);
         }
 

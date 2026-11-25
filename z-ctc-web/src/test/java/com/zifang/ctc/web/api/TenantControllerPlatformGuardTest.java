@@ -52,12 +52,14 @@ class TenantControllerPlatformGuardTest {
     private PlatformAdminService platformAdminService;
     @Mock
     private MembershipService membershipService;
+    @Mock
+    private com.zifang.ctc.core.init.SiteInitOrchestrator siteInitOrchestrator;
 
     private TenantController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new TenantController(tenantService, tenantInitOrchestrator, platformAdminService);
+        controller = new TenantController(tenantService, tenantInitOrchestrator, platformAdminService, siteInitOrchestrator);
         // membershipService 是 @Autowired 字段注入, @InjectMocks 不管它 — 手动注入
         org.springframework.test.util.ReflectionTestUtils.setField(controller, "membershipService", membershipService);
     }

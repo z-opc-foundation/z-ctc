@@ -85,6 +85,13 @@ public class SiteInitOrchestratorTest {
         SiteInitRunResult one = orchestrator.runDomain("t-002", null, "z-fake-a", null, "admin-1", null);
         eq("单域重跑成功 1", 1, one.getSuccessCount());
 
+        // ── 自动路径: runAsync 异步全量 (租户创建事件驱动, 不阻塞) ──
+        svc.tasks.clear();
+        Thread autoThread = orchestrator.runAsync("t-003", 9L, Map.of(), "admin-1", null);
+        autoThread.join(10_000);
+        eq("自动路径线程已收尾", false, autoThread.isAlive());
+        eq("自动路径两域都落任务", 2, svc.tasks.size());
+
         server.stop(0);
         report();
     }
@@ -168,6 +175,11 @@ public class SiteInitOrchestratorTest {
         @Override
         public boolean disable(String domainCode) {
             return false;
+        }
+
+        @Override
+        public List<SiteInitTaskDO> latestTraceTasks(String tenantCode) {
+            throw new UnsupportedOperationException();
         }
 
         @Override
