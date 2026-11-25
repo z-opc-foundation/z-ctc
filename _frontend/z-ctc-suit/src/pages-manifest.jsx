@@ -12,6 +12,7 @@ import {
     LockOutlined,
     ReadOutlined,
     SafetyCertificateOutlined,
+    CloudServerOutlined,
     SolutionOutlined,
     TeamOutlined,
     UserOutlined,
@@ -31,6 +32,7 @@ const AuthzPage = lazy(() => import('./pages/AuthzPage'))
 const ResourcePage = lazy(() => import('./pages/ResourcePage'))
 const UserPermissionPage = lazy(() => import('./pages/UserPermissionPage'))
 const DictPage = lazy(() => import('./pages/DictPage'))
+const SiteInitPage = lazy(() => import('./pages/SiteInitPage'))
 const SurlPage = lazy(() => import('./pages/SurlPage'))
 const AuditPage = lazy(() => import('./pages/AuditPage'))
 const AuthnPage = lazy(() => import('./pages/AuthnPage'))
@@ -52,6 +54,8 @@ export const menuItems = [
     //   租户管理 = 谁登录就看谁自己所属的租户（/tenants/list，通常只有一个，不画左树）
     { key: at('/system-tenants'), label: '系统租户', icon: <BankOutlined />, platformOnly: true, desc: '全平台租户与域（平台管理员）' },
     { key: at('/tenants'), label: '租户管理', icon: <ClusterOutlined />, desc: '我的租户与域' },
+    // 建站管理 = 系统初造时的建站体系主控台: 站点台账 + 各域登记的初始化能力 + 执行记录
+    { key: at('/site-init'), label: '建站管理', icon: <CloudServerOutlined />, platformOnly: true, desc: '站点建站与各域初始化编排' },
     { key: at('/applications'), label: '应用管理', icon: <AppstoreOutlined />, desc: '应用与 API 资产 / 菜单 / 按钮' },
     { key: at('/roles'), label: '角色管理', icon: <TeamOutlined />, desc: '角色增删改查' },
     { key: at('/permissions'), label: '权限管理', icon: <SafetyCertificateOutlined />, desc: '资源 × 角色的授权配置' },
@@ -73,6 +77,7 @@ export const routes = [
     { path: at('/orgs'), Component: OrgPage },
     { path: at('/system-tenants'), Component: SystemTenantPage },
     { path: at('/tenants'), Component: TenantPage },
+    { path: at('/site-init'), Component: SiteInitPage },
     { path: at('/applications'), Component: ApplicationPage },
     { path: at('/roles'), Component: RolePage },
     { path: at('/permissions'), Component: AuthzPage },

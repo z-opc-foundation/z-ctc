@@ -54,6 +54,7 @@ export {default as SurlManagement} from './components/SurlManagement'
 
 // 4A 中心补齐 FEATURE015+ 后未迁入的页面
 export {default as DictPage} from './components/DictPage'
+export {default as SiteInitManagement} from './components/SiteInitManagement'
 export {default as AuditPage} from './components/AuditPage'
 export {default as CtcOverview} from './components/CtcOverview'
 
