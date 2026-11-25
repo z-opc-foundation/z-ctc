@@ -7,7 +7,6 @@ import com.zifang.ctc.core.domain.entity.SiteInitRegistrationDO;
 import com.zifang.ctc.core.domain.entity.SiteInitTaskDO;
 import com.zifang.ctc.core.service.SiteInitService;
 
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -43,17 +42,14 @@ public class SiteInitOrchestratorTest {
     }
 
     private static void run() throws Exception {
-        // ── 假域: 两个域, 一个成功一个失败 ──
+        // ── 假域: 两个域, 一个成功一个失败; 端点按 domainCode 分路径 (协议口径) ──
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        server.createContext("/api/site-init/manifest", ex -> respondManifest(ex, "z-fake-a", "能力A"));
-        server.createContext("/api/site-init/invoke", ex -> {
-            String body = read(ex.getRequestBody());
-            if (body.contains("z-fake-b")) {
-                respond(ex, 500, "{\"success\":false,\"code\":1,\"message\":\"域内部故障\"}");
-            } else {
-                respond(ex, 200, "{\"success\":true,\"code\":0,\"message\":\"ok\",\"items\":[{\"code\":\"a.x\",\"name\":\"能力A\",\"success\":true}]}");
-            }
-        });
+        server.createContext("/api/site-init/z-fake-a/manifest", ex -> respondManifest(ex, "z-fake-a", "能力A"));
+        server.createContext("/api/site-init/z-fake-b/manifest", ex -> respondManifest(ex, "z-fake-b", "能力B"));
+        server.createContext("/api/site-init/z-fake-a/invoke", ex ->
+                respond(ex, 200, "{\"success\":true,\"code\":0,\"message\":\"ok\",\"items\":[{\"code\":\"a.x\",\"name\":\"能力A\",\"success\":true}]}"));
+        server.createContext("/api/site-init/z-fake-b/invoke", ex ->
+                respond(ex, 500, "{\"success\":false,\"code\":1,\"message\":\"域内部故障\"}"));
         server.start();
         String base = "http://127.0.0.1:" + server.getAddress().getPort();
 
@@ -116,10 +112,6 @@ public class SiteInitOrchestratorTest {
         try (OutputStream out = ex.getResponseBody()) {
             out.write(bytes);
         }
-    }
-
-    private static String read(InputStream in) throws java.io.IOException {
-        return new String(in.readAllBytes(), StandardCharsets.UTF_8);
     }
 
     private static void eq(String name, Object expected, Object actual) {

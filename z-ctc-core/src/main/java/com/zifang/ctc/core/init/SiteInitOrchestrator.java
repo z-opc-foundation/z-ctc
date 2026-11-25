@@ -82,7 +82,7 @@ public class SiteInitOrchestrator {
                 SiteInitTaskDO task = siteInitService.startTask(tenantCode, reg.getDomainCode(), null,
                         req.getIdempotencyKey(), requestJson, trace);
 
-                SiteInitInvokeResult invokeResult = remoteClient.invoke(reg.getEndpoint(), req);
+                SiteInitInvokeResult invokeResult = remoteClient.invoke(reg.getEndpoint(), reg.getDomainCode(), req);
                 long cost = System.currentTimeMillis() - t0;
                 String responseJson = objectMapper.writeValueAsString(invokeResult);
                 int status = invokeResult.isSuccess() ? SiteInitTaskDO.STATUS_SUCCESS : SiteInitTaskDO.STATUS_FAILED;
@@ -136,7 +136,7 @@ public class SiteInitOrchestrator {
             String requestJson = objectMapper.writeValueAsString(req);
             SiteInitTaskDO task = siteInitService.startTask(tenantCode, domainCode, null,
                     req.getIdempotencyKey(), requestJson, trace);
-            SiteInitInvokeResult invokeResult = remoteClient.invoke(reg.getEndpoint(), req);
+            SiteInitInvokeResult invokeResult = remoteClient.invoke(reg.getEndpoint(), domainCode, req);
             long cost = System.currentTimeMillis() - t0;
             siteInitService.finishTask(task.getId(),
                     invokeResult.isSuccess() ? SiteInitTaskDO.STATUS_SUCCESS : SiteInitTaskDO.STATUS_FAILED,
@@ -154,7 +154,7 @@ public class SiteInitOrchestrator {
     public SiteInitManifest manifestOf(String domainCode) {
         for (SiteInitRegistrationDO r : siteInitService.listAll()) {
             if (domainCode.equals(r.getDomainCode())) {
-                SiteInitManifest m = remoteClient.fetchManifest(r.getEndpoint());
+                SiteInitManifest m = remoteClient.fetchManifest(r.getEndpoint(), domainCode);
                 return m == null ? new SiteInitManifest(r.getDomainCode(), r.getDomainName(), null) : m;
             }
         }

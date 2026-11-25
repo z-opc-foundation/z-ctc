@@ -16,10 +16,10 @@ import java.nio.charset.StandardCharsets;
 /**
  * 远程域初始化客户端: 按标准协议调注册域.
  *
- * <p>标准协议:
+ * <p>标准协议 (端点按 domainCode 分路径 —— 一个宿主 JVM 可同时宿主多个域, 各域同路径会撞):
  * <ul>
- *   <li>GET  {endpoint}/api/site-init/manifest → SiteInitManifest</li>
- *   <li>POST {endpoint}/api/site-init/invoke   → SiteInitInvokeResult</li>
+ *   <li>GET  {endpoint}/api/site-init/{domainCode}/manifest → SiteInitManifest</li>
+ *   <li>POST {endpoint}/api/site-init/{domainCode}/invoke   → SiteInitInvokeResult</li>
  * </ul>
  *
  * <p>用 HttpURLConnection 而非 RestTemplate: core 模块不引 web 客户端栈, 与 z-ctc-client
@@ -28,11 +28,6 @@ import java.nio.charset.StandardCharsets;
 public class RemoteSiteInitClient {
 
     private static final Logger log = LogManager.getLogger(RemoteSiteInitClient.class);
-
-    /** 协议路径: 能力清单 */
-    public static final String MANIFEST_PATH = "/api/site-init/manifest";
-    /** 协议路径: 执行初始化 */
-    public static final String INVOKE_PATH = "/api/site-init/invoke";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final int connectTimeoutMs;
@@ -47,18 +42,29 @@ public class RemoteSiteInitClient {
         this.readTimeoutMs = readTimeoutMs;
     }
 
+    /** {domainCode} 段路径: 能力清单 */
+    public static String manifestPath(String domainCode) {
+        return "/api/site-init/" + domainCode + "/manifest";
+    }
+
+    /** {domainCode} 段路径: 执行初始化 */
+    public static String invokePath(String domainCode) {
+        return "/api/site-init/" + domainCode + "/invoke";
+    }
+
     /**
      * 拉取域的能力清单.
      *
-     * @param endpoint 域的初始化服务根地址
+     * @param endpoint   域宿主的初始化服务根地址
+     * @param domainCode 域编码 (端点按域分路径)
      * @return 清单; 拉取失败返回 null (调用方自行决定是否降级)
      */
-    public SiteInitManifest fetchManifest(String endpoint) {
+    public SiteInitManifest fetchManifest(String endpoint, String domainCode) {
         try {
-            String body = doGet(endpoint + MANIFEST_PATH);
+            String body = doGet(endpoint + manifestPath(domainCode));
             return objectMapper.readValue(body, SiteInitManifest.class);
         } catch (Exception e) {
-            log.warn("[SiteInit] 拉取能力清单失败: endpoint={} err={}", endpoint, e.getMessage());
+            log.warn("[SiteInit] 拉取能力清单失败: endpoint={} domain={} err={}", endpoint, domainCode, e.getMessage());
             return null;
         }
     }
@@ -66,16 +72,17 @@ public class RemoteSiteInitClient {
     /**
      * 调用域执行初始化.
      *
-     * @param endpoint 域的初始化服务根地址
-     * @param request 调用请求
+     * @param endpoint   域宿主的初始化服务根地址
+     * @param domainCode 域编码 (端点按域分路径)
+     * @param request    调用请求
      * @return 执行结果; 传输层异常时返回 success=false 的结果对象 (不抛)
      */
-    public SiteInitInvokeResult invoke(String endpoint, SiteInitInvokeRequest request) {
+    public SiteInitInvokeResult invoke(String endpoint, String domainCode, SiteInitInvokeRequest request) {
         try {
-            String body = doPost(endpoint + INVOKE_PATH, objectMapper.writeValueAsString(request));
+            String body = doPost(endpoint + invokePath(domainCode), objectMapper.writeValueAsString(request));
             return objectMapper.readValue(body, SiteInitInvokeResult.class);
         } catch (Exception e) {
-            log.warn("[SiteInit] 调用域初始化失败: endpoint={} err={}", endpoint, e.getMessage());
+            log.warn("[SiteInit] 调用域初始化失败: endpoint={} domain={} err={}", endpoint, domainCode, e.getMessage());
             return SiteInitInvokeResult.fail("调用失败: " + e.getMessage());
         }
     }
