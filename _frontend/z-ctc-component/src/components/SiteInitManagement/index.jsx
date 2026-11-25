@@ -10,11 +10,16 @@ import TenantManagement from '../TenantManagement'
 /**
  * 建站管理 —— 系统初造时的建站体系主控台。
  *
- * 三段:
+ * 建站板块分自动 / 非自动两条路 (2026-11-25 CEO 裁定「一般是自动」):
+ * 自动路径 = 建租户时后端自动跑本地 + 远程域初始化, 不经本页;
+ * 本页是非自动的补齐入口 —— 站点状态看哪些站没就绪, 全量补齐/单域重跑兜底。
+ *
+ * 四段:
  *   ① 站点台账   平台管理员视角的站点(租户)列表 (左树右表, 复用 TenantManagement)
- *   ② 初始化能力 ctc 感知到的域注册表: 各域实现 SiteInitProvider 后自登记到 ctc,
+ *   ② 站点状态   每站点按最近一轮初始化任务聚合的就绪度, 未就绪可一键全量补齐
+ *   ③ 初始化能力 ctc 感知到的域注册表: 各域实现 SiteInitProvider 后自登记到 ctc,
  *                 这里列出域/能力/回调地址, 可实时拉某域的能力清单, 可停用某域
- *   ③ 执行记录   一次建站初始化的逐域执行明细, 可对某站点触发建站 / 单域重跑
+ *   ④ 执行记录   一次建站初始化的逐域执行明细
  *
  * 后端:
  *   GET  /api/ctc/site-init/registrations
@@ -22,6 +27,7 @@ import TenantManagement from '../TenantManagement'
  *   POST /api/ctc/site-init/runs
  *   POST /api/ctc/site-init/runs/domain
  *   GET  /api/ctc/site-init/runs/page
+ *   GET  /api/ctc/site-init/tenants/status
  *   GET  /api/ctc/site-init/manifest/{domainCode}
  */
 
@@ -31,6 +37,14 @@ const TASK_STATUS = {
     2: {text: '成功', color: 'success'},
     3: {text: '失败', color: 'error'},
     4: {text: '跳过', color: 'warning'},
+}
+
+const READY_STATUS = {
+    uninitialized: {text: '未初始化', color: 'default'},
+    running: {text: '初始化中', color: 'processing'},
+    failed: {text: '需补齐', color: 'error'},
+    incomplete: {text: '域未跑全', color: 'warning'},
+    ready: {text: '可用', color: 'success'},
 }
 
 export default function SiteInitManagement({apiBaseURL}) {
@@ -43,6 +57,9 @@ export default function SiteInitManagement({apiBaseURL}) {
     const [running, setRunning] = useState(false)
     const [manifestDomain, setManifestDomain] = useState(null)
     const [manifest, setManifest] = useState(null)
+    const [statusRows, setStatusRows] = useState([])
+    const [statusLoading, setStatusLoading] = useState(false)
+    const [repairing, setRepairing] = useState(null)
 
     useEffect(() => {
         if (apiBaseURL) configureApiBaseURL(apiBaseURL)
@@ -85,10 +102,24 @@ export default function SiteInitManagement({apiBaseURL}) {
         }
     }
 
+    const loadTenantStatus = async () => {
+        setStatusLoading(true)
+        try {
+            const res = await siteInitApi.tenantStatus()
+            setStatusRows(Array.isArray(res) ? res : [])
+        } catch (e) {
+            message.error('加载站点状态失败：' + (e?.message || '未知错误'))
+            setStatusRows([])
+        } finally {
+            setStatusLoading(false)
+        }
+    }
+
     useEffect(() => {
         loadRegistrations()
         loadTasks()
         loadTenants()
+        loadTenantStatus()
     }, [])
 
     const runAll = async () => {
@@ -131,6 +162,25 @@ export default function SiteInitManagement({apiBaseURL}) {
             message.error('域初始化失败：' + (e?.message || '未知错误'))
         } finally {
             setRunning(false)
+        }
+    }
+
+    const repairSite = async (code) => {
+        setRepairing(code)
+        try {
+            const res = await siteInitApi.run(code, {})
+            const failed = res?.failureCount || 0
+            if (failed > 0) {
+                message.warning(`站点 ${code} 补齐完成，但有 ${failed} 个域失败`)
+            } else {
+                message.success(`站点 ${code} 补齐完成，成功 ${res?.successCount || 0} 个域`)
+            }
+            loadTenantStatus()
+            loadTasks()
+        } catch (e) {
+            message.error('补齐失败：' + (e?.message || '未知错误'))
+        } finally {
+            setRepairing(null)
         }
     }
 
@@ -200,6 +250,36 @@ export default function SiteInitManagement({apiBaseURL}) {
         {title: '耗时', dataIndex: 'costMs', width: 90, render: v => (v == null ? '—' : `${v} ms`)},
     ]
 
+    const statusColumns = [
+        {title: '站点', dataIndex: 'tenantCode', width: 130, ellipsis: true},
+        {title: '名称', dataIndex: 'tenantName', width: 150, ellipsis: true},
+        {
+            title: '状态', dataIndex: 'statusText', width: 100,
+            render: (v, r) => {
+                const s = READY_STATUS[r.status] || {text: v || String(r.status), color: 'default'}
+                return <Tag color={s.color}>{s.text}</Tag>
+            },
+        },
+        {title: '已成功域', dataIndex: 'successDomains', width: 90},
+        {title: '失败域', dataIndex: 'failedDomains', width: 80},
+        {title: '注册域', dataIndex: 'expectedDomains', width: 80},
+        {
+            title: '最近初始化', dataIndex: 'lastRunAt', width: 170,
+            render: v => (v ? String(v).replace('T', ' ').slice(0, 19) : '—'),
+        },
+        {
+            title: '操作', width: 110,
+            render: (_, r) => (
+                <Space onClick={e => e.stopPropagation()}>
+                    {r.status !== 'ready' && (
+                        <Button type="link" size="small" loading={repairing === r.tenantCode}
+                                onClick={() => repairSite(r.tenantCode)}>全量补齐</Button>
+                    )}
+                </Space>
+            ),
+        },
+    ]
+
     const capabilityTab = (
         <ListTable
             cardTitle={`初始化能力 (${registrations.length})`}
@@ -238,6 +318,23 @@ export default function SiteInitManagement({apiBaseURL}) {
             cardProps={{size: 'small', loading: tasksLoading}}
             emptyTitle="还没有建站初始化记录"
             emptyDescription="在「初始化能力」里选站点执行一次，这里就会出现逐域明细。"
+        />
+    )
+
+    const statusTab = (
+        <ListTable
+            cardTitle={`站点状态 (${statusRows.length})`}
+            cardExtra={
+                <Space>
+                    <Button size="small" icon={<ReloadOutlined/>} onClick={loadTenantStatus}>刷新</Button>
+                </Space>
+            }
+            rows={statusRows}
+            rowKey="tenantCode"
+            columns={statusColumns}
+            cardProps={{size: 'small', loading: statusLoading}}
+            emptyTitle="还没有站点"
+            emptyDescription="建租户时建站初始化自动执行（自动路径）；这里看每个站点是否就绪，未就绪的站点可全量补齐。"
         />
     )
 
@@ -281,9 +378,10 @@ export default function SiteInitManagement({apiBaseURL}) {
     return (
         <>
             <Tabs
-                defaultActiveKey="capabilities"
+                defaultActiveKey="status"
                 items={[
                     {key: 'sites', label: '站点台账', children: <TenantManagement platformView/>},
+                    {key: 'status', label: '站点状态', children: statusTab},
                     {key: 'capabilities', label: '初始化能力', children: capabilityTab},
                     {key: 'tasks', label: '执行记录', children: taskTab},
                 ]}

@@ -41,6 +41,9 @@ export const siteInitApi = {
     /** GET /api/ctc/site-init/runs/page — 任务记录分页 */
     pageRuns: (params) => makeRequest().get('/ctc/site-init/runs/page', {params}),
 
+    /** GET /api/ctc/site-init/tenants/status — 站点就绪状态聚合 */
+    tenantStatus: () => makeRequest().get('/ctc/site-init/tenants/status'),
+
     /** GET /api/ctc/site-init/manifest/{domainCode} — 某域能力清单 */
     manifest: (domainCode) => makeRequest().get(`/ctc/site-init/manifest/${domainCode}`),
 }
