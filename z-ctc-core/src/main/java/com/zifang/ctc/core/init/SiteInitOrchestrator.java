@@ -9,6 +9,7 @@ import com.zifang.ctc.core.domain.entity.SiteInitTaskDO;
 import com.zifang.ctc.core.service.SiteInitService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -34,6 +35,9 @@ public class SiteInitOrchestrator {
     private final RemoteSiteInitClient remoteClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // 双构造器时 Spring 6 不会自动选定, 只找默认构造 ⇒ 启动即崩 (No default constructor found);
+    // 必须显式指认注入入口, RemoteSiteInitClient 走源码 new, 不是 bean.
+    @Autowired
     public SiteInitOrchestrator(SiteInitService siteInitService) {
         this(siteInitService, new RemoteSiteInitClient());
     }
