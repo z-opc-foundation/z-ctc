@@ -74,6 +74,12 @@
         -->
         <module>z-ctc-spring-boot-starter</module>
         <!--
+            z-ctc-site-init-starter: 建站初始化协议的域侧装配层。
+            域实现 z-ctc-common 的 SiteInitProvider 并引本依赖后, 自动暴露标准协议端点
+            并把自己登记到 4A 中心 (ctc 感知注册表并按协议编排初始化)。
+        -->
+        <module>z-ctc-site-init-starter</module>
+        <!--
             z-ctc-admin: 留 reactor 以享受统一构建，但 maven.deploy.skip=true，
             永远不上 Maven Central（产物仅作 docker 镜像源 / 本地 java -jar 演示）。
             详见 lead/005_技术架构/005_前端工程与中间件部署架构规范.md §2

@@ -139,6 +139,9 @@ parts.append(strip_db(read(f"{ZCTC_ROOT}/_doc/002_deploy/init/z-ctc-authz-overri
 parts.append("-- ==== 5. user/membership/invitation (依赖 1、2) ====")
 parts.append(strip_db(read(f"{ZOPC_ROOT}/_doc/004_sql/feature049-membership-migration.sql")))
 
+parts.append("-- ==== 6. 建站初始化域注册 + 任务表 ====")
+parts.append(strip_db(read(f"{ZCTC_ROOT}/_doc/002_deploy/init/z-ctc-site-init.sql")))
+
 body = "\n\n".join(parts)
 body = fix_mysql8(body)
 body = make_idempotent(body)
