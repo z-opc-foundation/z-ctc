@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.yuku123</groupId>
+        <artifactId>z-ctc</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>z-ctc-admin</artifactId>
+    <name>z-ctc :: admin</name>
+    <description>4A 中心 - admin 入口：依赖 z-ctc-web, 复用其自动装配; 同时作为独立 Spring Boot 启动模块
+        (z-ctc-admin-*-exec.jar) 供 Docker 部署
+    </description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!--
+            admin 是 standalone demo + docker 镜像源，永远不上 Maven Central。
+            保留在 reactor 以享受统一构建（mvn package / install / -pl admin -am 都能用），
+            但 deploy 阶段自动跳过。
+            详见 lead/005_技术架构/005_前端工程与中间件部署架构规范.md §2
+        -->
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <!-- 原来这里还有一份 <z-ctc.version>${revision}</z-ctc.version>：子 pom 的 property 会遮蔽
+             父 pom 的同名键，而根 pom 那份已随迁移删掉（自家坐标改由根 DM 的 ${project.version}
+             下发），留着它只会让下面那条 z-ctc-web 引用点解析到一个没人维护的键上。 -->
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!--
+                FEATURE034 T4: 锁定 mybatis-plus 全套 3.5.3.1 + jsqlparser 4.4.
+
+                原来是 3.5.3.1 配 jsqlparser 4.6, 而且 **starter 没钉** ——
+                地板把它发到 3.5.7, 于是运行期是 starter/autoconfigure 3.5.7 +
+                core/extension 3.5.3.1 + jsqlparser 4.6 的三方错配。
+                后果落在 TenantLineInnerInterceptor: 它经 JsqlParserSupport.parserMulti
+                把每条 SQL 喂给 jsqlparser 重新解析一遍再拼 tenant_code, 而
+                3.5.3.1 的解析调用序列是照 jsqlparser 4.4 的语法表生成的, 撞上 4.6
+                就 CCJSqlParser.ParseException:
+                  Encountered unexpected token: "\n\n\n" <ST_SEMICOLON> at line 8, column 8
+                栈尾是 RelObjectNameList -> Column -> Insert, 看着像"INSERT 语句本身
+                写坏了", 其实是解析器版本错配 —— 同一条 INSERT 手写 jdbc 直连是好的。
+                任何走 MyBatis-Plus 拦截器的写操作都会炸, 注册用户这种基础路径直接 500。
+
+                对齐到 3.5.3.1 实际编译时的那一套: starter 与 autoconfigure 一并钉
+                3.5.3.1, jsqlparser 钉 4.4。三个坐标同版本, 错配消失。
+            -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>3.5.7</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot-autoconfigure</artifactId>
+                <version>3.5.7</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus</artifactId>
+                <version>3.5.7</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-core</artifactId>
+                <version>3.5.7</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-extension</artifactId>
+                <version>3.5.7</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-annotation</artifactId>
+                <version>3.5.7</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.jsqlparser</groupId>
+                <artifactId>jsqlparser</artifactId>
+                <version>4.9</version>
+            </dependency>
+            <!-- mybatis / mybatis-spring 不再在本模块钉版本。
+                 历史：01c99b8 时地板（1.0.19, SB2）钉 mybatis 3.5.16 / mybatis-spring 2.0.6，
+                 而当时 admin 的 mybatis-plus 还是 3.5.3.1，其配套是 mybatis 3.5.10 /
+                 mybatis-spring 2.1.2，故写直接条目顶住 —— 那是 SB2 栈内部的配套对齐。
+                 db6d126 SB3 迁移后 starter 换成 mybatis-plus-spring-boot3-starter:3.5.7
+                 （自带 mybatis-spring 3.0.3 配套），这里若继续拽回 2.1.2（SB2 配套），
+                 Boot 3.3 下 Mapper 扫描直接炸
+                 BeanDefinitionStoreException: Invalid value type for attribute
+                 'factoryBeanObjectType': java.lang.String（2026-11-01 本地起 1.0.6 exec
+                 jar 实测）。现地板 1.2.0 已是 SB3 火车：mybatis=3.5.16 /
+                 mybatis-spring=3.0.4 / mybatis-plus=3.5.7 / jsqlparser=4.9，全套配套
+                 由地板下发，本模块不再与地板分歧。 -->
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- admin 引用 z-ctc 同仓 web starter（与 z-schedule-admin 不同，z-ctc 没有独立的
+             z-ctc-spring-boot-starter，admin 直接依赖 z-ctc-web）。版本由根 DM 的
+             ${project.version} 下发，不在这里写字面值。 -->
+        <dependency>
+            <groupId>io.github.yuku123</groupId>
+            <artifactId>z-ctc-web</artifactId>
+        </dependency>
+
+        <!--
+            Spring Boot Web + Log4j2. 排除 spring-boot-starter-logging (默认 Logback)
+            强制走 log4j2, 与 z-meta-admin / z-mist-admin 保持一致 (FEATURE012 / FEATURE034 T4).
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-log4j2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid-spring-boot-3-starter</artifactId>
+        </dependency>
+
+        <!-- knife4j 版本由地板下发（z-boot-dependencies 的直接条目 4.1.0，与本仓迁移前那份根 DM
+             面值逐字相同），原来这里的字面 <version> 顶得过一切 DM，删掉。 -->
+        <dependency>
+            <groupId>com.github.xiaoymin</groupId>
+            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.github.jsqlparser</groupId>
+                    <artifactId>jsqlparser</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+        </dependency>
+
+        <!-- 这里原来字面钉 z-boot-datasource-starter 1.0.17：模块 pom 的 <version> 顶得过一切 DM，
+             根 pom 跟不跟父链抬到 1.0.19 都会被这一行拽回去（本仓唯一一处 z-boot 字面量）。删掉后
+             由 parent 按坐标下发 1.0.19。 -->
+        <dependency>
+            <groupId>io.github.yuku123</groupId>
+            <artifactId>z-boot-datasource-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.yuku123</groupId>
+            <artifactId>z-util-core</artifactId>
+        </dependency>
+
+        <!-- FEATURE: AuthnController 校验密码需要 spring-security-crypto 的 BCrypt -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
+        <!-- FEATURE034 T4: 健康检查 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!--
+            Dev profile: H2 内存数据库 + dev profile 用 DevDataSourceConfig 绕过
+            z-boot-datasource-starter 强制 MySQL. 生产用真 MySQL, 不引入 H2 也行。
+        -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+    <dependency>
+        <groupId>io.github.yuku123</groupId>
+        <artifactId>z-ext-spring-boot-starter</artifactId>
+        <version>1.2.6</version>
+</dependency>
+    <dependency>
+        <groupId>io.github.yuku123</groupId>
+        <artifactId>z-config-spring-boot-starter</artifactId>
+        <version>1.0.12</version>
+    </dependency>
+        <dependency>
+            <groupId>io.github.yuku123</groupId>
+            <artifactId>z-meta-starter</artifactId>
+            <version>${z-meta.version}</version>
+        </dependency>
+</dependencies>
+
+    <build>
+        <plugins>
+            <!-- 这里原来是一条字面 maven-compiler-plugin 3.10.1 声明（与 sso/web 同形，模块 pom 的
+                 <version> 顶得过一切 DM），删掉后统一由 z-boot-parent 的 pluginManagement 下发 3.11.0。 -->
+            <!--
+                V2 改造：frontend-maven-plugin 在 generate-resources 阶段跑 npm build
+                workingDirectory 指向 _frontend/z-ctc-suit/（仓根下，不在 reactor 内）
+                产物 dist/ → 由下面 maven-resources-plugin 复制到 src/main/resources/static/
+                详见 lead/005_技术架构/005_前端工程与中间件部署架构规范.md §1.2 / §6.1 V2
+            -->
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.15.0</version>
+                <configuration>
+                    <workingDirectory>${project.basedir}/../_frontend/z-ctc-suit</workingDirectory>
+                    <installDirectory>${project.build.directory}/frontend</installDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install-node-and-npm</id>
+                        <goals>
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <nodeVersion>v18.17.0</nodeVersion>
+                            <npmVersion>9.6.7</npmVersion>
+                        </configuration>
+                    </execution>
+                    <!--
+                        兄弟包 z-ctc-component 必须先构建出 dist/。
+                        它不在 reactor 里（无 pom 引用它），此前没有任何一步会构建它，
+                        而消费端 package.json 依赖 "file:../z-ctc-component"、
+                        该包 main/module 都指向 ./dist ⇒ 干净机器上 dist 根本不存在，
+                        消费端 vite build 报
+                        "Failed to resolve entry for package @yuku123/z-ctc-component"，
+                        整个 mvn install 挂在这里（表现为一堆 [ERROR]，与 javac 无关）。
+
+                        同 phase 内的执行顺序按声明顺序，故这两个 execution 必须排在
+                        下面 npm-install / npm-run-build 之前。
+                    -->
+                    <execution>
+                        <id>npm-install-component</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <workingDirectory>${project.basedir}/../_frontend/z-ctc-component</workingDirectory>
+                            <arguments>install --no-audit --no-fund</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-run-build-component</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <workingDirectory>${project.basedir}/../_frontend/z-ctc-component</workingDirectory>
+                            <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-install</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <arguments>install --install-links</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-run-build</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                V2 改造：把 _frontend/z-ctc-suit/dist/ 复制到 target/classes/static/
+                （不复制到 src/main/resources/static/，避免污染源码目录 + git 噪声）
+                必须在 frontend-maven-plugin 跑完之后（process-resources > generate-resources）
+                且在默认 maven-resources-plugin 之后（process-resources 阶段默认 src/main/resources -> target/classes）
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-frontend-dist</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+                            <overwrite>true</overwrite>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../_frontend/z-ctc-suit/dist</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                与 z-meta-admin 一致: repackage 产出 *-exec.jar (Spring Boot 可执行 fat jar)
+                普通 jar 仍作为 library 暴露, 不影响 z-opc-main-starter 通过 spring.factories
+                加载 ZCompanyCtcWebAutoConfiguration / SsoAutoConfiguration.
+            -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <!-- 不写版本时 Maven 会去解析"最新可用"版本(实测抓到 4.2.0-M2,其 mojo 是 class 61,
+                     JDK 8 上直接跑不起来)。钉回本仓的 Boot 线。 -->
+                <version>${spring-boot.version}</version>
+                <configuration>
+                    <mainClass>com.zifang.z.ctc.admin.ZCtcAdminApplication</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>exec</classifier>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

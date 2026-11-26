@@ -1,0 +1,365 @@
+package com.zifang.ctc.web.api;
+
+import com.zifang.ctc.common.vo.PageResponseVO;
+import com.zifang.ctc.core.domain.entity.MembershipDO;
+import com.zifang.ctc.core.domain.entity.TenantDO;
+import com.zifang.ctc.core.init.SiteInitOrchestrator;
+import com.zifang.ctc.core.init.TenantInitContext;
+import com.zifang.ctc.core.init.TenantInitOrchestrator;
+import com.zifang.ctc.core.init.TenantInitReport;
+import com.zifang.ctc.core.service.MembershipService;
+import com.zifang.ctc.core.service.PlatformAdminService;
+import com.zifang.ctc.core.service.TenantService;
+import com.zifang.ctc.core.tenant.TenantContext;
+import com.zifang.ctc.core.vo.TenantVO;
+import com.zifang.util.core.meta.Result;
+import com.zifang.util.core.meta.ResultCode;
+import com.zifang.z.meta.api.annotation.BizApi;
+import com.zifang.z.meta.api.annotation.BizField;
+import com.zifang.z.meta.api.annotation.BizParam;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * 租户 CRUD Controller.
+ * <p>
+ * API 基础路径: /api/ctc/ac/tenants
+ * 所属模块: z-ctc-ac
+ * 鉴权: 由 SsoInterceptor 统一拦截; 平台级写操作 (status/update/delete) 与全量视图
+ * (list/page) 要求平台管理员 — 判定口径见 {@link PlatformAdminService}
+ * (持有系统管理员角色 SUPER_ADMIN / PLATFORM_ADMIN). create 允许平台管理员或
+ * 游离态用户自助开通 (OrphanGuard 白名单依赖). 修改类操作通过 X-User-Id 头识别操作者
+ *
+ * <p>主要端点:
+ * <ul>
+ *   <li>POST /api/ctc/ac/tenants — 新建租户</li>
+ *   <li>GET /api/ctc/ac/tenants?tenantCode=xxx — 按编码查询租户详情 (请求参数)</li>
+ *   <li>POST /api/ctc/ac/tenants/status?tenantCode=&status= — 修改租户启用/停用状态 (请求参数)</li>
+ *   <li>GET /api/ctc/ac/tenants/list — 全量租户列表 (无分页)</li>
+ *   <li>GET /api/ctc/ac/tenants/page — 关键字分页查询 (租户编码/名称, 不区分大小写)</li>
+ *   <li>PUT /api/ctc/ac/tenants?tenantCode=xxx — 按编码更新租户字段 (请求参数)</li>
+ *   <li>DELETE /api/ctc/ac/tenants?tenantCode=xxx — 按编码删除租户 (请求参数)</li>
+ * </ul>
+ *
+ * <p>设计说明/关键约束:
+ * <ul>
+ *   <li>bean 名为 acTenantController, 避免与其他模块同名 Controller 冲突</li>
+ *   <li>租户是 z-ctc-ac 多租户体系的顶层实体, tenantCode 是跨表关联键</li>
+ *   <li>update 与 delete 按 tenantCode 而不是主键 id 定位资源, 与 Org/Dept/Group 的设计保持一致</li>
+ * </ul>
+ */
+@RestController("acTenantController")
+@RequestMapping("/api/ctc/ac/tenants")
+public class TenantController {
+
+    private static final Logger log = LogManager.getLogger(TenantController.class);
+
+    private final TenantService tenantService;
+    private final TenantInitOrchestrator tenantInitOrchestrator;
+    private final PlatformAdminService platformAdminService;
+    private final SiteInitOrchestrator siteInitOrchestrator;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private MembershipService membershipService;
+
+    public TenantController(TenantService tenantService, TenantInitOrchestrator tenantInitOrchestrator,
+                            PlatformAdminService platformAdminService, SiteInitOrchestrator siteInitOrchestrator) {
+        this.tenantService = tenantService;
+        this.tenantInitOrchestrator = tenantInitOrchestrator;
+        this.platformAdminService = platformAdminService;
+        this.siteInitOrchestrator = siteInitOrchestrator;
+    }
+
+    /**
+     * 当前登录用户是否平台管理员.
+     */
+    private boolean isPlatformAdmin() {
+        return platformAdminService.isPlatformAdmin(TenantContext.getUserId());
+    }
+
+    /**
+     * 构造 403 拒绝响应体.
+     */
+    private <T> Result<T> forbidden() {
+        return Result.<T>fail("需要平台管理员权限").code(ResultCode.REQ_REJECT.getCode());
+    }
+
+    /**
+     * 新建租户. tenantCode 与 tenantName 必填.
+     *
+     * @param tenant 租户实体 (含 tenantCode / tenantName / 描述 / 状态等)
+     * @param userId 操作者账号 id, 来自请求头 X-User-Id, 可选
+     * @return 成功返回新建租户主键 id ; 必填字段缺失返回 400
+     */
+    @PostMapping
+    @BizApi(summary = "新建租户. tenantCode 与 tenantName 必填", description = "新建租户. tenantCode 与 tenantName 必填.", tags = { "z-ctc" })
+    public Result<Long> create(@RequestBody @BizParam(name = "tenant", type = BizField.FieldType.STRING, description = "租户实体 (含 tenantCode / tenantName / 描述 / 状态等)", position = BizParam.Position.BODY) TenantDO tenant,
+                               @RequestHeader(value = "X-User-Id", required = false)
+                               @BizParam(name = "X-User-Id", type = BizField.FieldType.STRING, description = "操作者账号 id, 来自请求头 X-User-Id, 可选", position = BizParam.Position.HEADER) String userId) {
+        if (tenant == null || tenant.getTenantCode() == null || tenant.getTenantName() == null) {
+            return Result.<Long>fail("参数错误").code(ResultCode.PARAM_VALID_ERROR.getCode());
+        }
+        Long id = tenantService.createTenant(tenant, userId);
+
+        // FEATURE049: 同步建立 owner membership (userId 来自 header, 由 onboarding/create-tenant-with-owner 触发)
+        Long ownerUserId = null;
+        if (userId != null && !userId.isEmpty()) {
+            try {
+                ownerUserId = Long.parseLong(userId);
+                membershipService.createOwner(ownerUserId, tenant.getTenantCode());
+                log.info("TenantController.create FEATURE049: auto-create owner membership, tenantCode={}, userId={}",
+                        tenant.getTenantCode(), ownerUserId);
+            } catch (NumberFormatException nfe) {
+                log.warn("TenantController.create X-User-Id 不是数字, 跳过 membership 自动建立: {}", userId);
+            } catch (Exception e) {
+                log.error("TenantController.create FEATURE049: 建租户时建 owner membership 失败, 租户已建立, userId={}, tenantCode={}, err={}",
+                        userId, tenant.getTenantCode(), e.getMessage());
+                // 不影响租户创建返回, 但记录日志
+            }
+        }
+
+        // FEATURE050: 触发各模块 TenantInitializer 完成新租户的默认数据初始化
+        // (菜单/角色/默认配置/OSS bucket/工作流模板 等)
+        // Orchestrator 内部已 try/catch 单个失败, 不会因为某个模块缺失而阻断租户创建.
+        try {
+            TenantInitContext ctx = TenantInitContext.of(tenant.getTenantCode(), id, ownerUserId);
+            TenantInitReport report = tenantInitOrchestrator.runAfterTenantCreated(ctx);
+            log.info("TenantController.create 新租户初始化完成: tenantCode={} 成功={} 失败={}",
+                    tenant.getTenantCode(), report.getSuccessCount(), report.getFailureCount());
+        } catch (Exception e) {
+            log.error("TenantController.create TenantInit 编排异常 (不影响租户创建): tenantCode={}, err={}",
+                    tenant.getTenantCode(), e.getMessage(), e);
+        }
+
+        // 建站板块 · 自动路径 (2026-11-25 CEO 裁定「一般是自动」): 本地初始化完成后,
+        // 已注册的远程域 (z-meta=100 / z-kb=200 / …) 异步跟上, 不阻塞建站请求,
+        // 失败不影响租户创建 —— 建站管理控制台的「执行」按钮是非自动的补齐入口。
+        try {
+            java.util.Map<String, Object> initParams = new java.util.HashMap<>();
+            initParams.put("tenantName", tenant.getTenantName());
+            siteInitOrchestrator.runAsync(tenant.getTenantCode(), id, initParams, userId, null);
+            log.info("TenantController.create 建站初始化 (远程域) 已异步触发: tenantCode={}", tenant.getTenantCode());
+        } catch (Exception e) {
+            log.error("TenantController.create 建站初始化触发异常 (不影响租户创建): tenantCode={}, err={}",
+                    tenant.getTenantCode(), e.getMessage(), e);
+        }
+
+        return Result.success(id);
+    }
+
+    /**
+     * 按编码查询租户详情. 不存在时返回 404.
+     *
+     * @param tenantCode 租户编码, 请求参数 (?tenantCode=xxx)
+     * @return Tenant VO; 不存在时返回 404
+     */
+    @GetMapping
+    @BizApi(summary = "按编码查询租户详情. 不存在时返回 404", description = "按编码查询租户详情. 不存在时返回 404.", tags = { "z-ctc" })
+    public Result<TenantVO> findByCode(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 请求参数 (?tenantCode=xxx)", position = BizParam.Position.QUERY) String tenantCode) {
+        // 详情: 平台管理员可看任意租户; 普通用户只能看自己所属租户
+        if (!isPlatformAdmin()) {
+            Long userId = TenantContext.getUserId();
+            boolean member = userId != null && membershipService
+                    .findByUserAndTenant(userId, tenantCode)
+                    .filter(ms -> ms.getMemberStatus() != null && ms.getMemberStatus() == 1)
+                    .isPresent();
+            if (!member) {
+                return Result.<TenantVO>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
+            }
+        }
+        return tenantService.findByTenantCode(tenantCode)
+                .map(tenant -> Result.<TenantVO>success(TenantVO.from(tenant)))
+                .orElseGet(() -> Result.<TenantVO>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode()));
+    }
+
+    /**
+     * 修改租户启用/停用状态. 资源不存在返回 404.
+     *
+     * @param tenantCode 租户编码, 请求参数 (?tenantCode=xxx)
+     * @param status     目标状态值, 业务定义 (例如 1 启用, 0 停用)
+     * @return 成功返回空体, 资源不存在返回 404
+     */
+    @PostMapping("/status")
+    @BizApi(summary = "修改租户启用/停用状态. 资源不存在返回 404", description = "修改租户启用/停用状态. 资源不存在返回 404.", tags = { "z-ctc" })
+    public Result<Void> updateStatus(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 请求参数 (?tenantCode=xxx)", position = BizParam.Position.QUERY) String tenantCode,
+                                     @RequestParam("status")
+                                     @BizParam(name = "status", type = BizField.FieldType.INTEGER, description = "目标状态值, 业务定义 (例如 1 启用, 0 停用)", position = BizParam.Position.QUERY) int status) {
+        // 平台级操作: 仅平台管理员可启停任意租户
+        if (!isPlatformAdmin()) {
+            return forbidden();
+        }
+        boolean ok = tenantService.updateStatus(tenantCode, status);
+        return ok ? Result.<Void>success() : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
+    }
+
+    // ===== FEATURE014 补齐 CRUD =====
+
+    /**
+     * 列出当前用户有 membership 的租户 (FEATURE049 多租户隔离).
+     * <p>
+     * 不再返回所有平台租户 — 普通用户只能看到他所属的租户,
+     * 平台管理员 (roleCode=admin 且无 tenantCode 限制) 才看全部.
+     *
+     * @return 当前用户所属的 Tenant VO 列表
+     */
+    @GetMapping("/list")
+    @BizApi(summary = "列出当前用户有 membership 的租户 (FEATURE049 多租户隔离)", description = "列出当前用户有 membership 的租户 (FEATURE049 多租户隔离). 不再返回所有平台租户 — 普通用户只能看到他所属的租户, 平台管理员 (roleCode=admin 且无 tenantCode 限制) 才看全部.", tags = { "z-ctc" })
+    public Result<List<TenantVO>> listAll() {
+        Long userId = TenantContext.getUserId();
+        String ctxTenant = TenantContext.getTenantCode();
+        String ctxRole = TenantContext.getRoleCode();
+        List<TenantDO> data;
+        // === 多租户隔离 (FEATURE049) ===
+        // 1. 平台超级管理员 (无 tenant, role=admin) → 返回所有
+        // 2. 已有选中租户 → 仅返回该租户
+        // 3. 其他情况 → 按 user 的 active membership 过滤
+        if (userId == null) {
+            return Result.success(java.util.Collections.<TenantVO>emptyList());
+        }
+        // 平台管理员: 返回所有租户 (补齐注释中声明但未实现的分支)
+        if (isPlatformAdmin()) {
+            data = tenantService.listAll();
+            return Result.success(data.stream().map(TenantVO::from).collect(Collectors.toList()));
+        }
+        if (ctxTenant == null || ctxTenant.isEmpty()) {
+            // 没有选中租户, 按 membership 列表
+            List<MembershipDO> memberships = membershipService.listActiveByUserId(userId);
+            if (memberships.isEmpty()) {
+                return Result.success(java.util.Collections.<TenantVO>emptyList());
+            }
+            data = memberships.stream()
+                    .map(m -> tenantService.findByTenantCode(m.getTenantCode()).orElse(null))
+                    .filter(t -> t != null)
+                    .collect(Collectors.toList());
+        } else {
+            // 仅当前选中的租户
+            data = tenantService.findByTenantCode(ctxTenant)
+                    .map(java.util.Collections::singletonList)
+                    .orElse(java.util.Collections.emptyList());
+        }
+        return Result.success(data.stream().map(TenantVO::from).collect(Collectors.toList()));
+    }
+
+    /**
+     * 平台管理员专用的全量租户列表 (系统租户面板).
+     * <p>
+     * 与 {@link #listAll()} 是两个问题, 不要合并:
+     * 那个回答「我登录后能看哪些租户」(按 membership 分层, 谁都能调),
+     * 这个回答「平台上一共有哪些租户」(只有平台管理员能问).
+     * 非平台管理员一律 403 而不是静默返回空表 —— 否则前端会把
+     * 「我只有 1 个租户」误当成「全平台只有 1 个租户」, 这类静默降级比报错难查得多.
+     *
+     * @return 平台全部租户; 非平台管理员 403
+     */
+    @GetMapping("/list-all")
+    @BizApi(summary = "平台管理员专用的全量租户列表 (系统租户面板)", description = "平台管理员专用的全量租户列表 (系统租户面板). 与 {@link #listAll()} 是两个问题, 不要合并: 那个回答「我登录后能看哪些租户」(按 membership 分层, 谁都能调), 这个回答「平台上一共有哪些租户」(只有平台管理员能问). 非平台管理员一律 403 而不是静默返回空表 —— 否则前端会把 「我只有 1 个租户」误当成「全平台只有 1 个租户」, 这类静默降级比报错难查得多.", tags = { "z-ctc" })
+    public Result<List<TenantVO>> listAllForPlatform() {
+        if (!isPlatformAdmin()) {
+            return forbidden();
+        }
+        List<TenantVO> all = tenantService.listAll().stream()
+                .map(TenantVO::from)
+                .collect(Collectors.toList());
+        return Result.success(all);
+    }
+
+    /**
+     * 关键字分页查询: 按租户编码/名称做不区分大小写的子串匹配, 然后内存分页.
+     *
+     * @param keyword  关键字, 可选; 匹配 tenantCode/tenantName, 不区分大小写
+     * @param pageNum  页码, 默认 1
+     * @param pageSize 每页大小, 默认 20
+     * @return 分页响应 VO, 含当前页数据与总记录数
+     */
+    @GetMapping("/page")
+    @BizApi(summary = "关键字分页查询: 按租户编码/名称做不区分大小写的子串匹配, 然后内存分页", description = "关键字分页查询: 按租户编码/名称做不区分大小写的子串匹配, 然后内存分页.", tags = { "z-ctc" })
+    public Result<PageResponseVO<TenantVO>> page(
+            @RequestParam(value = "keyword", required = false)
+            @BizParam(name = "keyword", type = BizField.FieldType.STRING, description = "关键字, 可选; 匹配 tenantCode/tenantName, 不区分大小写", position = BizParam.Position.QUERY) String keyword,
+            @RequestParam(value = "pageNum", defaultValue = "1")
+            @BizParam(name = "pageNum", type = BizField.FieldType.INTEGER, description = "页码, 默认 1", position = BizParam.Position.QUERY) int pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "20")
+            @BizParam(name = "pageSize", type = BizField.FieldType.INTEGER, description = "每页大小, 默认 20", position = BizParam.Position.QUERY) int pageSize) {
+        // === 多租户隔离 (FEATURE049) + 平台管理员例外 ===
+        // 平台管理员: 分页查全部租户; 普通用户: 只显示所属租户
+        Long userId = TenantContext.getUserId();
+        List<TenantDO> all;
+        if (userId == null) {
+            return Result.success(new PageResponseVO<>(java.util.Collections.emptyList(), 0, pageNum, pageSize));
+        }
+        if (isPlatformAdmin()) {
+            all = tenantService.listAll();
+        } else {
+            List<MembershipDO> memberships = membershipService.listActiveByUserId(userId);
+            if (memberships.isEmpty()) {
+                return Result.success(new PageResponseVO<>(java.util.Collections.emptyList(), 0, pageNum, pageSize));
+            }
+            all = memberships.stream()
+                    .map(m -> tenantService.findByTenantCode(m.getTenantCode()).orElse(null))
+                    .filter(t -> t != null)
+                    .collect(Collectors.toList());
+        }
+        List<TenantDO> filtered = all.stream()
+                .filter(t -> {
+                    if (keyword == null || keyword.isEmpty()) {
+                        return true;
+                    }
+                    String k = keyword.toLowerCase();
+                    return (t.getTenantCode() != null && t.getTenantCode().toLowerCase().contains(k))
+                            || (t.getTenantName() != null && t.getTenantName().toLowerCase().contains(k));
+                })
+                .collect(Collectors.toList());
+        long total = filtered.size();
+        int from = Math.min((pageNum - 1) * pageSize, filtered.size());
+        int to = Math.min(from + pageSize, filtered.size());
+        List<TenantVO> pageData = filtered.subList(from, to).stream()
+                .map(TenantVO::from)
+                .collect(Collectors.toList());
+        return Result.success(new PageResponseVO<>(pageData, total, pageNum, pageSize));
+    }
+
+    /**
+     * 按编码更新租户字段. patch 中为 null 的字段由 Service 决定是否保留原值.
+     *
+     * @param tenantCode 租户编码, 请求参数 (?tenantCode=xxx)
+     * @param patch      待更新字段 (TenantDO)
+     * @return 成功返回空体, 资源不存在返回 404
+     */
+    @PutMapping
+    @BizApi(summary = "按编码更新租户字段. patch 中为 null 的字段由 Service 决定是否保留原值", description = "按编码更新租户字段. patch 中为 null 的字段由 Service 决定是否保留原值.", tags = { "z-ctc" })
+    public Result<Void> update(
+            @RequestParam("tenantCode")
+            @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 请求参数 (?tenantCode=xxx)", position = BizParam.Position.QUERY) String tenantCode,
+            @RequestBody @BizParam(name = "patch", type = BizField.FieldType.STRING, description = "待更新字段 (TenantDO)", position = BizParam.Position.BODY) TenantDO patch) {
+        // 平台级操作: 仅平台管理员可改任意租户字段
+        if (!isPlatformAdmin()) {
+            return forbidden();
+        }
+        boolean ok = tenantService.updateTenant(tenantCode, patch);
+        return ok ? Result.<Void>success() : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
+    }
+
+    /**
+     * 按编码删除租户. 资源不存在返回 404.
+     *
+     * @param tenantCode 租户编码, 请求参数 (?tenantCode=xxx)
+     * @return 成功返回空体, 资源不存在返回 404
+     */
+    @DeleteMapping
+    @BizApi(summary = "按编码删除租户. 资源不存在返回 404", description = "按编码删除租户. 资源不存在返回 404.", tags = { "z-ctc" })
+    public Result<Void> delete(@RequestParam("tenantCode") @BizParam(name = "tenantCode", type = BizField.FieldType.STRING, description = "租户编码, 请求参数 (?tenantCode=xxx)", position = BizParam.Position.QUERY) String tenantCode) {
+        // 平台级操作: 仅平台管理员可删除租户
+        if (!isPlatformAdmin()) {
+            return forbidden();
+        }
+        boolean ok = tenantService.deleteTenant(tenantCode);
+        return ok ? Result.<Void>success() : Result.<Void>fail("资源不存在").code(ResultCode.NOT_FOUND.getCode());
+    }
+}
+
+
+

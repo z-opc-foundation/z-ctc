@@ -1,0 +1,39 @@
+# Z-CTC admin 后端镜像（Mode 1 合体 / Mode 2/3 后端共用）
+# 输入：mvn 出来的 z-ctc-admin-{ver}-exec.jar
+# 输出：JRE 17 + jar + 健康检查
+#
+# 构建前置：
+#   cd .. && mvn -B -DskipTests -pl z-ctc-admin -am package
+#
+# 构建命令：
+#   docker build -f deploy/Dockerfile.backend \
+#     --build-arg JAR_FILE=z-ctc-admin/target/z-ctc-admin-1.0.1-exec.jar \
+#     -t ghcr.io/yuku123/z-ctc-admin:1.0.1 ..
+#
+# 端口：8080（Spring Boot），context-path /ctc
+
+FROM eclipse-temurin:17-jre-jammy
+
+ARG JAR_FILE=z-ctc-admin/target/z-ctc-admin-1.0.1-exec.jar
+ENV JAVA_OPTS="-Xms512m -Xmx1g"
+ENV SERVER_PORT=8080
+ENV SERVER_SERVLET_CONTEXT_PATH=/ctc
+
+WORKDIR /app
+
+# 拷 jar
+COPY ${JAR_FILE} /app/app.jar
+
+# 健康检查（Spring Boot Actuator）
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:${SERVER_PORT}${SERVER_SERVLET_CONTEXT_PATH}/actuator/health || exit 1
+
+EXPOSE 8080
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
+
+# 元信息（供 docker inspect / labels 使用）
+LABEL org.opencontainers.image.title="z-ctc-admin" \
+      org.opencontainers.image.description="Z-CTC 分布式任务调度 — 后端单体 + 内嵌前端" \
+      org.opencontainers.image.source="https://github.com/yuku123/z-ctc" \
+      org.opencontainers.image.licenses="MIT"

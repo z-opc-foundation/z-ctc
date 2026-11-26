@@ -1,0 +1,41 @@
+# Mode 1：合体部署（单容器，后端 jar 内嵌前端）
+# 适用：试用 / PoC / 个人开发 / 中小团队
+#
+# 启动：cd deploy && docker compose up -d
+# 访问：http://localhost:8080/ctc
+# 停止：docker compose down
+
+services:
+  z-ctc-admin:
+    container_name: z-ctc-admin
+    image: ghcr.io/yuku123/z-ctc-admin:1.0.1
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+      args:
+        JAR_FILE: z-ctc-admin/target/z-ctc-admin-1.0.1-exec.jar
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # 数据库凭证（明文敏感，仅本地试用用。生产用 docker secret / k8s Secret）
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:zschedule;DB_CLOSE_DELAY=-1
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ""
+      # JVM
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes: []   # 可选挂载（如 H2 数据持久化），需要时启用
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/ctc/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+# volumes:                       # 持久化卷（按需启用）
+#   z-ctc-data:
+
+# 验证步骤：
+# 1. 等待健康检查通过：docker compose ps
+# 2. 访问：http://localhost:8080/ctc（应看到 V2 骨架页面）
+# 3. 访问 API：http://localhost:8080/ctc/actuator/health（应返回 {"status":"UP"}）

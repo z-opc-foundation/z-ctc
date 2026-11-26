@@ -1,0 +1,106 @@
+# ============ Java / Maven ============
+*.class
+/build/
+**/target/
+**/*.flattened-pom.xml
+.flattened-pom.xml
+**/*.lst
+**/*.jar
+dependency-reduced-pom.xml
+release.properties
+pom.xml.releaseBackup
+mvnw
+mvnw.cmd
+
+# ============ IDE ============
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.project
+.classpath
+.settings/
+
+# ============ OS ============
+.DS_Store
+**/.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============ Node / 前端 ============
+**/node_modules/
+**/dist/
+**/.vite/
+**/.cache/
+**/.parcel-cache/
+**/.next/
+**/.nuxt/
+**/.output/
+**/coverage/
+**/*.tsbuildinfo
+
+# ============ Logs ============
+**/logs/
+**/*.log
+
+# ============ Maven Central 发布凭证 (本地) ============
+.env
+.env.local
+.env.*.local
+.gnupg/
+.gpg-keyring/
+
+# ============ Docker ============
+.build-context/
+docker-compose.override.yml
+
+# ============ 系统与临时 ============
+*~
+*.bak
+*.tmp
+*.pid.lock
+.cache/
+.tmp/
+.temp/
+.playwright-mcp/
+*.swp
+*.swo
+# ===== Git 本地备份目录 (历史塌缩用) =====
+.git.bak.*/
+
+# ---------- Frontend (_frontend/) ----------
+_frontend/**/node_modules/
+_frontend/**/dist/
+_frontend/**/.vite/
+
+# ---------- Deploy (deploy/) ----------
+deploy/v4-test/node_modules/
+
+# ---------- Admin static/ ----------
+# V2 改造后 src/main/resources/static/ 只放 .gitkeep 占位
+# 实际 dist 由 frontend-maven-plugin 生成到 target/classes/static/（不进 git）
+z-*/src/main/resources/static/assets/
+
+/.cache/
+**/__pycache__/
+*.pyc
+
+# ---------- Maven Central 发布凭证与 GPG 私钥环 ----------
+# .env 存 Central User Token 与 GPG passphrase；.gnupg 是本地私钥环。
+# 两者都绝不能入库（z-util / z-mcp / z-lc / z-agent 同款）。
+.env
+.gnupg/
+
+# ---------- 构建备份目录（本机 safe-delete 闸的产物：只移不删） ----------
+dist.bak-*/
+**/dist.bak-*/
+
+# ============ vite 构建旧产物（沙箱删除闸 ⇒ 只移不删，遗留带时间戳的兄弟目录） ============
+dist.stale-*/
+**/dist.stale-*/
+
+# ---- 构建产物治理（2026-11-03）----
+# 编译/打包产物一律不入库：可再生、体积大、多仓重复。
+# Rust target / 前端 node_modules / Python 缓存。
+node_modules/

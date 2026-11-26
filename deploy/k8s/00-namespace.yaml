@@ -1,0 +1,42 @@
+# 00-namespace.yaml
+# Z-Schedule 命名空间 + ServiceAccount + RBAC
+# 占位符：${NAMESPACE}（默认值 z-ctc），${INGRESS_DOMAIN}（如 ctc.example.com）
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/part-of: z-opc-foundation
+    z.opc.io/middleware: z-ctc
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: z-ctc
+  namespace: ${NAMESPACE}
+---
+# （可选）ConfigMap reader 权限，给需要读 ConfigMap 的 admin 模块用
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: z-ctc-config-reader
+  namespace: ${NAMESPACE}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: z-ctc-config-reader
+  namespace: ${NAMESPACE}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: z-ctc-config-reader
+subjects:
+  - kind: ServiceAccount
+    name: z-ctc
+    namespace: ${NAMESPACE}

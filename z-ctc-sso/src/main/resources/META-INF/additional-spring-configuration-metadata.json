@@ -1,0 +1,15 @@
+{
+  "properties": [
+    {
+      "name": "my.messaging.addresses",
+      "defaultValue": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "name": "my.messaging.container-type",
+      "defaultValue": "simple"
+    }
+  ]
+}

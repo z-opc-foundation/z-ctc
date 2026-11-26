@@ -1,0 +1,110 @@
+/* z-ctc 认知范本收口（lead 008 §26）。
+ * 颜色、圆角、间距与浮层阴影只消费基座 blocks.css 的 --zfc-* 变量，
+ * 不在此重复定义 token。CSS Module / JSX 内联样式仍由各页面直接修正。 */
+html,
+body,
+#root {
+    min-height: 100%;
+    margin: 0;
+    background: #fff;
+    color: var(--zfc-ink);
+    font-family: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB",
+        "Microsoft YaHei", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    min-width: 320px;
+}
+
+#root {
+    min-height: 100vh;
+}
+
+/* 外壳保持白底、零阴影；不重排 AntD 的 stacking context。 */
+.zfc-app-shell {
+    background: #fff;
+    box-shadow: none !important;
+}
+
+.zfc-app-header,
+.zfc-app-main {
+    background: #fff;
+    box-shadow: none !important;
+}
+
+.zfc-app-header {
+    border-radius: 0;
+}
+
+.zfc-app-main {
+    padding: 0 var(--zfc-page-x);
+}
+
+/* Outlet 的唯一页面根节点反向吃掉壳体内距，贴到侧栏与视口边缘。 */
+.zfc-app-main > * {
+    min-width: 0;
+    margin-inline: calc(-1 * var(--zfc-page-x));
+    border-radius: 0;
+    box-shadow: none !important;
+}
+
+/* 页面、面板、卡片、表格一律零阴影；hover 也不抬升。 */
+.ant-card,
+.ant-card-hoverable,
+.ant-table-wrapper,
+.ant-tabs,
+.ant-statistic,
+.ant-descriptions,
+.ant-pro-card {
+    box-shadow: none !important;
+    border-radius: 0;
+}
+
+.ant-card {
+    border-radius: var(--zfc-radius-sm);
+}
+
+.ant-btn {
+    border-radius: var(--zfc-radius-sm);
+    box-shadow: none !important;
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-select-selector,
+.ant-picker {
+    /* AntD CSS-in-JS 可能后注入同优先级规则，控件圆角需稳定收口。 */
+    border-radius: 9px !important;
+}
+
+/* 仅浮层允许阴影，统一 10px 圆角；侧抽屉保持贴边直角。
+ * 不覆盖根节点 z-index，弹窗内下拉/气泡仍由 AntD 自行计算层级。 */
+.ant-modal-content,
+.ant-select-dropdown,
+.ant-picker-dropdown,
+.ant-dropdown .ant-dropdown-menu,
+.ant-popover .ant-popover-inner,
+.ant-tooltip .ant-tooltip-inner,
+.ant-message .ant-message-notice-content,
+.ant-notification .ant-notification-notice {
+    border: 1px solid var(--zfc-line);
+    border-radius: var(--zfc-radius);
+    box-shadow: var(--zfc-overlay-shadow) !important;
+}
+
+.ant-drawer-content {
+    border-radius: 0;
+    box-shadow: var(--zfc-overlay-shadow) !important;
+}
+
+.ant-modal-mask,
+.ant-drawer-mask,
+.ant-popover .ant-popover-arrow::before,
+.ant-tooltip .ant-tooltip-arrow::before {
+    box-shadow: none;
+}

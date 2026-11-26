@@ -1,0 +1,213 @@
+# 本地 dev 启动端口(standalone 模式, 与 docker-compose.yml 一致: 8888)。
+# 可通过 --server.port=... 覆盖。
+#
+# 这里**刻意不配** server.forward-headers-strategy=framework。
+# 试过, 后果是 SSO 闸整个失效: framework 策略会注册 ForwardedHeaderFilter, 而它
+# 接管 X-Forwarded-Prefix, 把 getRequestURI() 从 /api/ctc/** 改写成 /kapi/z-ctc/api/ctc/**
+# —— 于是 SsoInterceptor 的 exclude-paths / intercept-paths(口径都是 /api/ctc/**)一个都
+# 匹配不上, 请求直接穿过闸门进 controller。症状是 whoami 从 401 JSON 变成
+# HTTP 200 + {"code":401,"message":"处理失败|未登录"}, 看着像"闸松了"而不是"闸错了"。
+# 回跳 URL 的 scheme 改在 SsoInterceptor 里单独处理, 见那里的 originalUrl()。
+server:
+  port: 8888
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: z-ctc-admin
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+# z-ctc 数据源走 z.base.db.ctc.* 模块化配置 (ZCompanyCtcWebAutoConfiguration#buildDataSource).
+# 当 z.base.db.ctc.* 缺省时回退到 z.base.db.default.*. 所有凭据通过环境变量注入,
+# 避免硬编码密码进 jar / 镜像层.
+z:
+  # z-ext 预置埋点自登记控制台（运行期可被控制台切换扩展点实现）
+  ext:
+    console:
+      enabled: true
+      url: ${ZEXT_CONSOLE_URL:http://192.168.31.136:8888}
+  base:
+    db:
+      ctc:
+        # 2026-10-04: 原来是写死的字面量 RDS URL（主机名与口令都不进仓，真值见 lead 004_重要秘钥），
+        # 与下面 default.* 的 host/port/database 两条配置各走各的 —— 后果有二：
+        #   1) 改 .env 里的 DB_HOST 只切得动 default.*，切不动这条字面量；
+        #   2) 凭据读的是 CTC_DB_USERNAME / CTC_DB_PASSWORD，而 compose 的 ctc 服务只注入
+        #      DB_USERNAME / DB_PASSWORD，全仓没有一处定义过 CTC_DB_* ⇒ 密码恒为空字符串，
+        #      连生产库必然认证失败。
+        # 现在统一从 compose/.env 的同一组参数取值（DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/
+        # DB_PASSWORD），切库只改 .env 一处。默认值保留为本机 mysql 容器，
+        # 保持「没配环境变量时不要连生产」。
+        # 固定串：阿里云 RDS 直连，allowPublicKeyRetrieval=true 解决 mysql 8 公钥问题。
+        # ⚠ 2026-10-22 (TASK-20261021-026): 这条是 **url 直接覆盖** (z-ctc-web 的
+        #   ZCompanyCtcWebAutoConfiguration 读到 z.base.db.ctc.url 就用它建池,
+        #   **不经过** ModuleDataSourceTemplate 拼 URL 的那条路) ⇒ 模板里加的
+        #   connectTimeout/socketTimeout 覆盖不到这里 ⇒ 必须在这条 URL 上自己带。
+        #   缺这两个参数时 Connector/J 默认 0 = 无限等待 ⇒ RDS 抖动 ⇒ 建连接挂住
+        #   ⇒ /actuator/health 挂 15.9 分钟 ⇒ 探针判死 ⇒ 容器重启。
+        url: jdbc:mysql://${DB_HOST:mysql.zopc.local}:${DB_PORT:3306}/${DB_DATABASE:oc}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&connectTimeout=3000&socketTimeout=10000
+        username: ${DB_USERNAME:zopc}
+        password: ${DB_PASSWORD:}
+        initial-size: 5
+        min-idle: 5
+        max-active: 20
+        max-wait: 60000
+      # 兼容其他模块 (z-ctc-core 等) 通过 host/port/database 拼 URL 的回退
+      default:
+        host: ${DB_HOST:localhost}
+        port: ${DB_PORT:3306}
+        database: ${DB_DATABASE:oc}
+        username: ${DB_USERNAME:root}
+        password: ${DB_PASSWORD:}
+  # 自助认证端点的**频率限制** (卡 TASK-20261022-027)
+  # ⚠ 为什么必须限流: send-code / register / phone-login / register-phone 这几个端点
+  #   **设计上必须免登录** (否则用户登不进去 / 注册不了) ⇒ 不能靠 SSO 闸门挡
+  #   ⇒ 只能用频率限制收敛「对任意手机号/邮箱狂发码」「批量建号」两个滥用面。
+  #   下面是**非敏感**的限额参数 (可用环境变量覆盖), 这里只登记键名与默认值。
+  ctc:
+    authn:
+      send-code:
+        # 同一客户端 IP 每分钟最多发码次数
+        max-per-minute-per-ip: ${Z_CTC_AUTHN_SEND_CODE_MAX_PER_MINUTE_PER_IP:10}
+        # 同一接收方每小时最多发码次数 (**跨 scene 计数**, 防换 scene 绕过 60s 冷却)
+        max-per-hour-per-receiver: ${Z_CTC_AUTHN_SEND_CODE_MAX_PER_HOUR_PER_RECEIVER:5}
+      reset-password:
+        # 同一接收方每小时最多改密尝试次数 (闸门内 + 验证码 + 本项 = 三层)
+        max-per-hour-per-receiver: ${Z_CTC_AUTHN_RESET_PASSWORD_MAX_PER_HOUR_PER_RECEIVER:10}
+    # FEATURE-OAUTH (2026-11-01): OAuth2 授权服务器 —— 接入方（client）注册表（配置表方案）。
+    # 家族桌面客户端（z-biz-tool）从这里拿 4 个 SSO 参数：
+    #   authorize = {外部可达地址}/api/ctc/oauth/authorize
+    #   token     = {外部可达地址}/api/ctc/oauth/token
+    #   userinfo  = {外部可达地址}/api/ctc/oauth/userinfo
+    #   client_id = 下表里的某一项
+    # redirect_uri 是**精确匹配**；端口位写 `*` 表示 loopback 任意端口（桌面端动态端口形态）。
+    # clients 为空 = 没有接入方 = 三个端点全部拒绝 —— 「未配置」是一等状态。
+    oauth:
+      clients:
+        - client-id: z-biz-tool-remote
+          redirect-uris:
+            # 桌面客户端回环回调，端口由内核动态分配（loopback 任意端口形态）
+            - "http://127.0.0.1:*/callback"
+            # 固定端口形态（若 ctc 侧将来要求 redirect_uri 精确到端口，启用这条并通知客户端）
+            # - "http://127.0.0.1:17888/callback"
+          scope: "openid profile email"
+        - client-id: z-biz-tool-mind
+          redirect-uris:
+            - "http://127.0.0.1:*/callback"
+          scope: "openid profile email"
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.zifang.ctc.core.domain.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.log4j2.Log4j2Impl
+
+# FEATURE: z-ctc-adam 启动后, druid 连接阿里云 RDS 需 allowPublicKeyRetrieval=true
+# 直接覆盖 z.base.db.ctc.url 路径在 ModuleDataSourceTemplate 里没暴露, 通过 druid.connection-properties
+# 注入到所有连接(虽然已建的 url 不变,但 mysql connector 8 会优先用 connection-properties)
+druid:
+  initial-size: 5
+  min-idle: 5
+  max-active: 20
+  max-wait: 60000
+  # 通过 connection-properties 给已建连接追加 allowPublicKeyRetrieval=true
+  connection-properties: allowPublicKeyRetrieval=true;useSSL=false;serverTimezone=Asia%2FShanghai
+
+# z-ctc SSO 配置 (SsoAutoConfiguration 读取 sso.* 前缀)
+# 生产部署需在容器环境变量里覆盖 callback-url 等
+sso:
+  enabled: ${SSO_ENABLED:true}
+  callback-url: ${SSO_CALLBACK_URL:http://localhost:8080/api/sso/callback}
+  # 登录成功下发的 sso_token cookie 写到 .zopc.local 二级域下,
+  # 这样 opc.zopc.local / team.zopc.local / api.opc / api.team 共用同一个 cookie。
+  # 默认是当前 host (request.host),浏览器跨子域时不发送 → 鉴权失败 → 反复重定向 login。
+  # 生产环境应改为 .your-domain.com 等真实根域。
+  cookie-domain: ${SSO_COOKIE_DOMAIN:.zopc.local}
+  cookie-secure: ${SSO_COOKIE_SECURE:false}
+  # 登录入口 (SsoInterceptor.sendRedirect 跳这里)。这个值是**发给浏览器**的,
+  # 不是给服务端自己连的 —— 所以绝不能填 127.0.0.1/localhost/NodePort:
+  # 浏览器侧的回环指向终端用户自己的机器, 会表现成「打开就挂」。
+  # 生产环境用 https://opc.zopc.top/login —— z-opc 主壳那个登录页真调
+  # /ctc/authn/login 并已实现读 ?redirect= 回跳。不要指 ctc.zopc.top,
+  # 那个域服务的是 z-ctc-suit 的 mock 登录页, 登完拿不到 SSO cookie。
+  login-url: ${SSO_LOGIN_URL:http://opc.zopc.local:8088/login}
+  exclude-paths:
+    # FEATURE: 本地 z-ctc-admin 启动需要放行登录端点
+    - /api/ctc/authn/login
+    # 卡 TASK-20261022-027: 自助认证端点 —— 设计上必须免登录（否则用户登不进去 / 注册不了）
+    # ⇒ **逐条显式登记**, 不用 /api/ctc/authn/** 宽前缀。
+    # ⚠ 为什么不用宽前缀: exclude-paths 是**纯路径前缀**匹配 (AntPathMatcher, 没有 HTTP 方法维度)
+    #   ⇒ 宽前缀会把 /api/ctc/authn/reset-password (找回密码; 匿名可改密 = 账号接管面)
+    #   以及 verify / whoami / my-tenants / select-tenant / switch-tenant 一起豁免。
+    #   回归断言 (反向钉) 见
+    #   z-ctc-admin/src/test/java/com/zifang/ctc/admin/authz/SsoExcludePathsBoundaryTest.java
+    #   —— 谁把宽前缀加回来, 那条测试必须红。
+    - /api/ctc/authn/send-code
+    - /api/ctc/authn/phone-login
+    - /api/ctc/authn/register
+    - /api/ctc/authn/register-phone
+    # ⚠ /api/ctc/authn/reset-password **刻意不在** exclude-paths:
+    #   匿名可改密 = 账号接管面 ⇒ 留在 SSO 闸门内 (卡 TASK-20261022-027 §三.1 拍板结论)。
+    #   已登录用户改密仍可用 (闸门放行 + 验证码 + 频率限制, 见 AuthnController#resetPassword)。
+    # FEATURE: whoami 需要 SsoInterceptor 注入 ssoUser, 不能 exclude
+    # - /api/ctc/authn/whoami
+    - /api/auth/login
+    - /api/auth/register
+    - /api/auth/reset-password
+    - /api/sso/callback
+    - /api/sso/login
+    - /api/uc/login
+    - /api/uc/register
+    - /api/uc/phone-login
+    - /api/uc/reset-password
+    - /doc.html
+    - /webjars/**
+    - /swagger-resources/**
+    - /v3/api-docs/**
+    - /actuator/**
+    # FEATURE: 员工名录免登录端点（服务端到服务端调用）—— **显式登记为豁免**。
+    # 之前它落在「既不在 sso.intercept-paths(/api/**) 内、也没登记进 exclude-paths」的
+    # 灰色区 ⇒ 巡检无法判断它是设计还是漏网（卡 TASK-20261021-034）。
+    # ⚠ 该端点出网字段已收窄（剔除 telephone / jobNumber / extend.email / extend.userNo），
+    #   但**仍不要求登录态** ⇒ 是否限制调用来源（限内网 / 服务令牌）仍待人工拍板，
+    #   在那之前它就是「匿名可读的最小名录」。
+    - /ctc-osc/staff/getStaffSimpleListWithoutLogin
+    # FEATURE-OAUTH (2026-11-01): OAuth2 授权服务器的**程序调用**端点 —— 显式登记为豁免。
+    #   /api/ctc/oauth/token 与 /userinfo 的调用方是家族桌面客户端 / 各产品服务端，
+    #   凭 code / access_token 自证身份，浏览器登录态（sso_token cookie）对它们无意义
+    #   ⇒ 必须豁免，否则 SSO 闸门 302 到登录页，客户端拿到 HTML 当 JSON 解析。
+    #   ⚠ /api/ctc/oauth/authorize **刻意不豁免**：它是浏览器交互端点，
+    #     未登录时要被 SsoInterceptor 带去登录页 —— 这正是我们要的行为。
+    #     （controller 里还有一层「读 cookie 判登录态」的兜底，双保险。）
+    - /api/ctc/oauth/token
+    - /api/ctc/oauth/userinfo
+  intercept-paths:
+    - /api/**
+
+# knife4j
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    enable-version: false
+
+# 健康检查详情
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.zifang.ctc: DEBUG
+    org.springframework: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

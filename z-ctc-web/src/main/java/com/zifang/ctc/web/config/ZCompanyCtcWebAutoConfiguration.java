@@ -1,0 +1,198 @@
+package com.zifang.ctc.web.config;
+
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
+import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zifang.ctc.core.tenant.TenantLineHandlerImpl;
+import com.zifang.ctc.web.tenant.OrphanGuardInterceptor;
+import com.zifang.z.boot.datasource.starter.ModuleDataSourceTemplate;
+import org.apache.ibatis.plugin.Interceptor;
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGenerator;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.resource.PathResourceResolver;
+
+import javax.sql.DataSource;
+import java.io.IOException;
+
+/**
+ * z-ctc-web 自动配置 (4A 中心 - 主装配点).
+ * <p>
+ * 职责：
+ * <ul>
+ *   <li>注册 ctc 主数据源（{@code dataSourceCtc}） + SqlSessionFactory（{@code sqlSessionFactoryCtc}）</li>
+ *   <li>@MapperScan z-ctc-core 全部 mapper 包，复用 sqlSessionFactoryCtc</li>
+ *   <li>@ComponentScan z-ctc-web/api + z-ctc-core/service/domain + z-ctc-common 下的 Service / Controller / Properties</li>
+ *   <li>注册 MyBatis-Plus 分页拦截器（{@link PaginationInnerInterceptor}），否则 {@code BaseMapper.selectPage()} 会抛 {@code BadSqlGrammarException}</li>
+ *   <li>启用 OAuth2 接入方配置表（{@link OAuthClientProperties}，z.ctc.oauth.*）</li>
+ * </ul>
+ * <p>
+ * 使用 {@link FullyQualifiedAnnotationBeanNameGenerator} 避免同名 Bean 冲突。
+ */
+@Configuration
+@EnableConfigurationProperties(OAuthClientProperties.class)
+@MapperScan(
+        basePackages = "com.zifang.ctc.core.domain.mapper",
+        sqlSessionFactoryRef = "sqlSessionFactoryCtc",
+        nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class
+)
+@ComponentScan(
+        value = {
+                "com.zifang.ctc.web.api",
+                "com.zifang.ctc.web.service",  // 验证码服务 (注册/验证码登录/找回密码)
+                "com.zifang.ctc.web.tenant",  // FEATURE049: 游离态守卫拦截器
+                "com.zifang.ctc.web.init",    // FEATURE050: z-ctc 内置 TenantInitializer
+                "com.zifang.ctc.core.service",
+                "com.zifang.ctc.core.domain",
+                "com.zifang.ctc.core.init",   // FEATURE050: 租户初始化器 (TenantInitOrchestrator + 各模块 Initializer)
+                "com.zifang.ctc.common"
+        },
+        nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class
+)
+// 请求侧命名模块 (@Import 而非进上面 @ComponentScan): 上面的扫描清单**不含 web.config 包**，
+// CtcEntityNamingModuleConfig (4A DO 的 camelCase 请求 mixin) 在独立部署 (z-ctc-admin 扫
+// com.zifang.ctc) 能被扫到，在内嵌 all-in-one 形态却是死类 ⇒ POST /api/ctc/ac/** 的
+// camelCase body 全绑 null、「tenantCode 必填」误报 (2026-11-11 实测)。@Import 与组件扫描
+// 按同一 @Configuration 类去重，两种形态恰好各注册一次。
+@Import(CtcEntityNamingModuleConfig.class)
+public class ZCompanyCtcWebAutoConfiguration extends ModuleDataSourceTemplate implements WebMvcConfigurer {
+
+    /**
+     * FEATURE049: 游离态守卫拦截器 (Bean 而非依赖 @ComponentScan)
+     */
+    @Bean("orphanGuardInterceptor")
+    public OrphanGuardInterceptor orphanGuardInterceptor() {
+        return new OrphanGuardInterceptor();
+    }
+
+    /**
+     * 4A 响应字段命名适配 — 宿主全局 Jackson 若被改成 SNAKE_CASE (all-in-one 主壳的
+     * z-team JacksonConfig 就是), 本 Bean 把 ctc 控制器的响应钉回 camelCase 契约.
+     * 见 {@link CtcResponseNamingAdvice}.
+     */
+    @Bean("ctcResponseNamingAdvice")
+    public CtcResponseNamingAdvice ctcResponseNamingAdvice(ObjectMapper objectMapper) {
+        return new CtcResponseNamingAdvice(objectMapper);
+    }
+
+    /**
+     * FEATURE049: 注册游离态守卫拦截器.
+     * <p>
+     * 在所有 /api/** 请求前检查游离态, 拒绝访问非白名单接口.
+     * SsoInterceptor 已经在 Spring MVC 拦截器链中, 本拦截器在 Sso 之后.
+     */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(orphanGuardInterceptor())
+                // ⚠ 2026-11-07 (4A 内嵌 all-in-one 主壳) 收窄到 /api/ctc/**:
+                //   游离态守卫的职责是「4A 用户先选租户才能进业务」—— 独立部署 z-ctc-admin 时
+                //   /api/** 与 /api/ctc/** 等价（admin 的 controller 全在 /api/ctc 下）;
+                //   内嵌后 /api/** 还包含主壳全部业务模块（个人 agent / 技能市场 / 工单…），
+                //   那些域有自己的权限模型，不该被 4A 租户守卫统一拦（实测把 0-membership
+                //   账号的全部业务接口 403 掉 ⇒ 行为与内嵌前不兼容）。
+                .addPathPatterns("/api/ctc/**")
+                .order(0);  // 高优先级, 在业务 controller 之前
+    }
+
+    /**
+     * SPA history fallback: 前端是 BrowserRouter, 刷新 /home /audit 这类路径时
+     * Spring 找不到静态资源就直接 404 (返回 JSON), 浏览器拿不到 index.html 就白屏。
+     * vite dev / vite preview 自带 fallback, 把这个洞完全掩盖了, 只有线上才现形。
+     * <p>
+     * 排除 /api/** 与真实静态资源(/assets/**、/icon.png 等), 其余一律 forward 到 index.html。
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/**")
+                .addResourceLocations("classpath:/static/")
+                .resourceChain(true)
+                .addResolver(new PathResourceResolver() {
+                    @Override
+                    protected Resource getResource(String resourcePath, Resource location) throws IOException {
+                        Resource requested = location.createRelative(resourcePath);
+                        if (requested.exists() && requested.isReadable()) {
+                            return requested;
+                        }
+                        // 命中不了就当 SPA 路由, 交回 index.html
+                        if (resourcePath.startsWith("api/") || resourcePath.startsWith("assets/")) {
+                            return null;
+                        }
+                        // 带扩展名的不是前端路由：vite base 配错时 index.html 会去请求
+                        // /xxx/assets/x.js，回 index.html 会得到一个 200 text/html 的假成功，
+                        // 浏览器只报 "Failed to fetch dynamically imported module"，看不出是 base 错了。
+                        if (resourcePath.lastIndexOf('.') > resourcePath.lastIndexOf('/')) {
+                            return null;
+                        }
+                        return location.createRelative("index.html");
+                    }
+                });
+    }
+
+    @Bean("dataSourceCtc")
+    @ConditionalOnMissingBean(name = "dataSourceCtc")
+    public DataSource dataSourceCtc(org.springframework.core.env.Environment env) {
+        // FEATURE: 支持 z.base.db.ctc.url 直接覆盖(避免阿里云 RDS Public Key Retrieval 问题)
+        String overrideUrl = env.getProperty("z.base.db.ctc.url");
+        if (overrideUrl != null && !overrideUrl.isEmpty()) {
+            com.alibaba.druid.pool.DruidDataSource ds = new com.alibaba.druid.pool.DruidDataSource();
+            ds.setUrl(overrideUrl);
+            ds.setUsername(env.getProperty("z.base.db.ctc.username", "root"));
+            ds.setPassword(env.getProperty("z.base.db.ctc.password", ""));
+            int initialSize = env.getProperty("z.base.db.ctc.initial-size", Integer.class, 5);
+            int minIdle = env.getProperty("z.base.db.ctc.min-idle", Integer.class, 5);
+            int maxActive = env.getProperty("z.base.db.ctc.max-active", Integer.class, 20);
+            int maxWait = env.getProperty("z.base.db.ctc.max-wait", Integer.class, 60000);
+            ds.setInitialSize(initialSize);
+            ds.setMinIdle(minIdle);
+            ds.setMaxActive(maxActive);
+            ds.setMaxWait(maxWait);
+            ds.setDriverClassName("com.mysql.cj.jdbc.Driver");
+            return ds;
+        }
+        return buildDataSource(env, "ctc");
+    }
+
+    /**
+     * MyBatis-Plus 拦截器 — 注册分页拦截器。
+     * <p>
+     * 没有 {@link PaginationInnerInterceptor} 时，{@code BaseMapper.selectPage(IPage, Wrapper)}
+     * 不会自动拼接 {@code LIMIT ...} 子句，会触发 {@code BadSqlGrammarException}。
+     * 历史原因：{@code ModuleDataSourceTemplate#buildSqlSessionFactory} 只设了 mapper/typeAliases，
+     * 没设 plugins；Controller 调 {@code pageResourcesByApp(...)} 触发 {@code selectPage} 时就炸。
+     */
+    @Bean("mybatisPlusInterceptorCtc")
+    @ConditionalOnMissingBean(name = "mybatisPlusInterceptorCtc")
+    public MybatisPlusInterceptor mybatisPlusInterceptorCtc() {
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        // 分页拦截器
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
+        // FEATURE049: 租户隔离拦截器 — 自动追加 WHERE tenant_code = ? / INSERT 注入 tenant_code
+        interceptor.addInnerInterceptor(new TenantLineInnerInterceptor(new TenantLineHandlerImpl()));
+        return interceptor;
+    }
+
+    @Bean("sqlSessionFactoryCtc")
+    @ConditionalOnMissingBean(name = "sqlSessionFactoryCtc")
+    public MybatisSqlSessionFactoryBean sqlSessionFactoryCtc(
+            DataSource dataSourceCtc,
+            MybatisPlusInterceptor mybatisPlusInterceptorCtc) throws Exception {
+        MybatisSqlSessionFactoryBean factoryBean = new MybatisSqlSessionFactoryBean();
+        factoryBean.setDataSource(dataSourceCtc);
+        factoryBean.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:/mapper/**/*.xml"));
+        factoryBean.setTypeAliasesPackage("com.zifang.ctc.core.domain.entity");
+        factoryBean.setPlugins(new Interceptor[]{mybatisPlusInterceptorCtc});
+        return factoryBean;
+    }
+}

@@ -1,0 +1,458 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        z-ctc 自包含 parent — 不依赖 monorepo 内部 parent,
+        改造为 io.github.yuku123 namespace (Maven Central 命名空间).
+        使用 ${revision} (CI-friendly versions) + flatten-maven-plugin 发版自动替换.
+    -->
+    <!-- 消费入口统一走 z-boot-parent（1.0.19 起全组织口径，试点 z-cache）：一行 parent 白拿第三方
+         地板 z-boot-dependencies:1.0.19 + 兄弟仓权威 z-boot-fleet:1.0.0 + Java 8 的 pluginManagement。
+         迁移前本仓没有 parent，根 pom 自己养一版版本表；逐格处置见下面 properties 的注释与提交说明。
+         relativePath 必须留空：parent 不在磁盘上，在 repo1。 -->
+    <parent>
+        <groupId>io.github.yuku123</groupId>
+        <artifactId>z-boot-parent</artifactId>
+        <version>1.2.6</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>io.github.yuku123</groupId>
+    <artifactId>z-ctc</artifactId>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+    <name>z-ctc :: root</name>
+    <description>Z-CTC: 4A Center - Authentication, Authorization, Accounting, Audit for Spring Boot. / 4A Center Aggregator</description>
+
+    <url>https://github.com/yuku123/z-ctc</url>
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <id>yuku123</id>
+            <name>yuku123</name>
+            <email>1340947819@qq.com</email>
+            <organization>z-team</organization>
+            <organizationUrl>https://github.com/yuku123</organizationUrl>
+            <timezone>+08:00</timezone>
+            <roles>
+                <role>owner</role>
+            </roles>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:https://github.com/yuku123/z-ctc.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/yuku123/z-ctc.git</developerConnection>
+        <url>https://github.com/yuku123/z-ctc</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <modules>
+        <module>z-ctc-common</module>
+        <module>z-ctc-core</module>
+        <module>z-ctc-sso</module>
+        <module>z-ctc-web</module>
+        <!--
+            z-ctc-client: 4A 中心授权数据 (authz 域) 的 HTTP SDK, **裸能力**, 零 Spring 依赖。
+            存在的理由: k8s 下各板块自成分离工作负载后, 消费方不再内嵌 z-ctc-web
+            (那会让每个进程长出第二份 RBAC, 且各自 @MapperScan 的 bean 名互相污染),
+            改为只依赖本 SDK 走 HTTP 调过来。与 z-team-bench-client 同风格。
+            注意范围: 只管「这个用户有哪些权限点」。登录态 (token 验签) 是 z-ctc-sso 的事,
+            那条链路打 /api/ctc/authn/verify 且不查库, 故障域与本 SDK 必须分开。
+        -->
+        <module>z-ctc-client</module>
+        <!--
+            z-ctc-spring-boot-starter: 上面那个裸 SDK 的 Spring Boot 装配层,
+            只做「配了就给 bean」这一件事, 不含业务逻辑。非 Spring 场景用 z-ctc-client。
+        -->
+        <module>z-ctc-spring-boot-starter</module>
+        <!--
+            z-ctc-site-init-starter: 建站初始化协议的域侧装配层。
+            域实现 z-ctc-common 的 SiteInitProvider 并引本依赖后, 自动暴露标准协议端点
+            并把自己登记到 4A 中心 (ctc 感知注册表并按协议编排初始化)。
+        -->
+        <module>z-ctc-site-init-starter</module>
+        <!--
+            z-ctc-admin: 留 reactor 以享受统一构建，但 maven.deploy.skip=true，
+            永远不上 Maven Central（产物仅作 docker 镜像源 / 本地 java -jar 演示）。
+            详见 lead/005_技术架构/005_前端工程与中间件部署架构规范.md §2
+        -->
+        <module>z-ctc-admin</module>
+        <!-- bootstrap 不参与 Maven 发布 -->
+    </modules>
+
+    <properties>
+        <z-meta.version>1.0.2</z-meta.version>
+        <!-- 项目自身版本（CI-friendly versions 根，发版改这一处即可）。
+             1.0.6: **SB3 火车全量迁移**（2026-10-30）——
+             parent 抬到 z-boot-parent 1.2.0（Boot 3.3.13 地板）、javax.* → jakarta.*、
+             spring.factories → AutoConfiguration.imports。
+             ⚠ 1.0.5 已被 2026-10-17 那次发布占位（Central 上 z-ctc-sso:1.0.5 在列），
+             **同版本号不可重发** ⇒ 本次必须跳到 1.0.6。
+             1.0.5: **z-ctc-sso 的 HS256 签名密钥不再有内置默认值**（commit bf2b781）——
+             改由 `sso.jwt-secret`（env SSO_JWT_SECRET）注入，签发方缺失即启动失败（fail-closed）。
+             ⚠ **必须抬版本号**：Central 上 z-ctc-sso:1.0.4（2026-10-17 发布）已把旧密钥
+             编译进 class 常量池，而**中央的已发布坐标不可撤回、同版本号不可重发**
+             ⇒ 修复只能落在新坐标 1.0.5 上（1.0.5 在中央尚未存在）。
+             1.0.4: 装配层改名后首发 —— z-ctc-client-spring-boot-starter → z-ctc-spring-boot-starter。
+             这是新坐标在 Central 上的首个版本，1.0.3 的旧坐标不再维护。
+             1.0.3: 修 SsoAutoConfiguration 把 null TokenService 交给 SsoInterceptor
+             （addInterceptors 早于 @Bean 方法执行）→ Bearer 路径必 500。 -->
+        <revision>1.0.10</revision>
+
+        <!-- 删掉的版本键逐格按**坐标**判过（parent_preflight.py 第 2/5 节），父链都供得到：
+             java.version=8→1.8、maven.compiler.source/target=8、project.build.sourceEncoding=UTF-8、
+             spring-boot.version=2.7.18、flatten-maven-plugin.version=1.7.3、z-util.version=1.0.13
+             （fleet 按 z-util-core/-http 同供 1.0.13）、maven-compiler-plugin.version 3.10.1→3.11.0、
+             z-boot.version 1.0.17→1.0.19（repo1 两版 z-boot-web-starter pom 逐行 diff 只差
+             spring-boot-starter* 2.7.12→2.7.18，knife4j/springdoc 一族零变动）、z-ctc.version
+             ${revision}→改由下面自家坐标的 ${project.version} 自钉。所有引用点留着，值落在父链上。 -->
+        <!-- 留下的 6 格：maven-source-plugin 3.3.0 是**刻意与父链不同值**（地板 1.0.19 供的属性是
+             3.2.1，跟着走等于把出 sources.jar 的插件往回降级）；其余 5 件（deploy/javadoc/gpg/
+             central-publishing/versions）父链连属性都不供——parent 的 pluginManagement 只管
+             compiler/surefire/failsafe/jar/resources/spring-boot 六件——删键当场引用点悬空。 -->
+        <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
+        <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
+        <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
+        <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
+        <central-publishing-plugin.version>0.7.0</central-publishing-plugin.version>
+        <versions-maven-plugin.version>2.17.1</versions-maven-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- z-util 抬到 1.2.0（去 Jackson 那版）：OrphanGuardInterceptor / RemoteTokenService
+                 改用自研 JsonUtil（com.zifang.util.json.*），JsonMapperFactory 已从 z-util 删除。
+                 继承来的 z-boot 车队 BOM 仍把 z-util 钉在 1.0.22，那版里 JsonMapperFactory
+                 还在、JsonCursor 也没有 ⇒ 不显式钉 1.2.0 就编译不过。
+                 ⚠ dsl-kernel 必须同笔钉：parser-json 1.2.0 的 pom 依赖 dsl-kernel 1.2.0，
+                 而 DM 对**传递依赖**同样生效，只钉 parser-json 会被车队 BOM 压回旧版，
+                 造成运行期版本裂开。 -->
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-util-core</artifactId>
+                <version>1.2.1</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-util-parser-json</artifactId>
+                <version>1.2.1</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-util-dsl-kernel</artifactId>
+                <version>1.2.1</version>
+            </dependency>
+            <!-- 自家 6 个 reactor 坐标钉 ${project.version}（z-boot README「消费模型」步骤 4）。
+                 不是装饰：继承来的 DM 会改写**传递依赖**，而 fleet 的 z-ctc 那一格钉的是 repo1 上的
+                 已发布件 1.0.1 ⇒ 不补这一批，z-ctc-web/admin 就会把 1.0.1 的 sibling 字节码当
+                 本工程编进 1.0.2 的产物。z-ctc-admin 永不发布（excludeArtifacts），写它只为让
+                 "自家坐标一律 ${project.version}"不再有例外。 -->
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-ctc</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-ctc-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-ctc-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-ctc-sso</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-ctc-web</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-ctc-admin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- 与地板**不同值**、按坐标留着的直接条目：jsqlparser 本仓 4.6 / 地板直接钉 4.9。
+                 z-ctc-core 的 TenantLineHandler（provided）与 z-ctc-admin 那批 mybatis-plus 3.5.3.1
+                 都按 4.6 编（admin pom 里那条 InstantiationError 注释就是它的出处）；抬到 4.9 是
+                 功能改动、不是"换构建模型"这一刀要顺手做的事。`import` 顶不过继承来的直接 DM，
+                 所以必须是直接条目。 -->
+            <dependency>
+                <groupId>com.github.jsqlparser</groupId>
+                <artifactId>jsqlparser</artifactId>
+                <version>4.6</version>
+            </dependency>
+
+            <!-- ⚠ **不是版本分歧，是 Boot 受管项自带的 exclusion**：迁移前 mysql-connector-j 由
+                 本仓 import 的 spring-boot-dependencies 供 8.0.33，而**那条受管项自己排掉了
+                 com.google.protobuf:protobuf-java**；删掉 import 后版本落到地板的 8.4.0（同值，本仓
+                 bootstrap 那份属性早就是 8.4.0），但 exclusion 跟着 import 一起没了 ⇒ 实测
+                 protobuf-java:3.25.5 从 mysql 底下冒进 core/web/admin 三棵树（基线里 0 行）。
+                 直接 DM 条目是**整条替换**，只写版本不带 exclusion 补不回来，所以照抄 Boot 那一格。
+                 版本写成字面 8.4.0：与本仓 bootstrap/pom.xml:38 那份同名属性同值，但那个键定义在
+                 **不参与 reactor** 的 bootstrap 里，根上引用它只会造出悬空占位符。
+                 根修在地板 1.0.20（z-boot README 消费模型步骤 10），届时这一格可整条收掉。 -->
+            <dependency>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>8.4.0</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.protobuf</groupId>
+                        <artifactId>protobuf-java</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <!-- 迁移删掉的条目（逐条按坐标对过 preflight 第 2/5 节，同值就整条收掉）：
+                 spring-boot-dependencies:${spring-boot.version} 的 import —— 地板 1.0.19 自己 import
+                   同一坐标同一格 2.7.18，本仓再 import 只会和地板的 jackson-bom/spring-framework-bom/
+                   netty-bom 抢优先级；
+                 z-boot-web-starter / z-boot-datasource-starter（原 1.0.17）—— parent 按坐标供 1.0.19；
+                 z-util-core / z-util-http（原 1.0.13）—— fleet 同坐标同值；
+                 mybatis-plus-boot-starter 3.5.7、druid-spring-boot-starter 1.2.23、
+                 knife4j-openapi3-spring-boot-starter 4.1.0 —— 三条与地板直接条目面值逐字相同。 -->
+            <dependency>
+                <groupId>io.github.yuku123</groupId>
+                <artifactId>z-meta-api</artifactId>
+                <version>${z-meta.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+<dependency><groupId>io.swagger</groupId><artifactId>swagger-annotations</artifactId></dependency>
+    
+        <dependency><groupId>jakarta.annotation</groupId><artifactId>jakarta.annotation-api</artifactId></dependency>
+    
+        <!-- 迁移实测：父链的 pluginManagement 把 surefire 从"没钉⇒浮动到最新"（基线抓到 3.5.4，
+             它会自己补引擎）压成 2.22.2，而本仓只声明了 junit-jupiter-api 没有引擎 ⇒ z-ctc-sso
+             那 12 个 Jupiter @Test 静默变成 0 个（JwtCompatCrossCheckTest 连跑都没跑）。
+             补这一条把测试面还原，版本由地板 import 的 junit-bom 5.9.3 下发。 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 全仓只剩这一条 compiler 声明（sso/web/admin 那三处字面 3.10.1 已删），两个值现在都
+                 读父链：maven-compiler-plugin.version 3.10.1→3.11.0、java.version 8→1.8。
+                 parent 的 pluginManagement 还额外下发 encoding=UTF-8 与 -parameters（本条 <configuration>
+                 只覆盖 source/target，其余按父链合并）—— 后者是迁移带来的字节码新增 MethodParameters，
+                 不是版本变化。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>${maven-deploy-plugin.version}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <version>${versions-maven-plugin.version}</version>
+                <configuration>
+                    <generateBackupPoms>false</generateBackupPoms>
+                </configuration>
+            </plugin>
+            <!--
+                flatten-maven-plugin: ${revision} 在 deploy 前替换为字面版本号
+                - updatePomFile=true 写入原 pom（子模块继承 ${revision} 才能 compile）
+                - flattenMode=resolveCiFriendliesOnly 只解析 ${revision}/${sha1}/${changelist} 等 CI 友好占位符
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>${flatten-maven-plugin.version}</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!--
+          内部 Nexus: 默认激活, 所以「换台机器只要改 settings.xml 的凭据」就能 deploy。
+          ⚠ activeByDefault 有个反直觉的性质: **同一 pom 里只要有任一 profile 被显式激活
+          (-Pcentral), 所有 activeByDefault 的 profile 全部失效**。这正好是我们要的 ——
+          发中央时 nexus 这段自动让位, 不会出现两个 distributionManagement 打架。
+          server id 要与 settings.xml 里的 <server> 对上, 否则报 id does not match。
+          凭据真源 lead/004_重要秘钥/nexus.env 的 NEXUS_CI_DEPLOYER*, 不要写进仓。
+        -->
+        <profile>
+            <id>nexus</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <distributionManagement>
+                <repository>
+                    <id>nexus-releases</id>
+                    <url>http://192.168.31.231:30820/repository/maven-releases/</url>
+                </repository>
+                <snapshotRepository>
+                    <id>nexus-snapshots</id>
+                    <url>http://192.168.31.231:30820/repository/maven-snapshots/</url>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <id>central</id>
+            <properties>
+                <maven.javadoc.skip>false</maven.javadoc.skip>
+                <central.gpg.skip>false</central.gpg.skip>
+            </properties>
+            <distributionManagement>
+                <repository>
+                    <id>central</id>
+                    <url>https://central.sonatype.com</url>
+                </repository>
+                <snapshotRepository>
+                    <id>central</id>
+                    <url>https://central.sonatype.com</url>
+                </snapshotRepository>
+            </distributionManagement>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-deploy-plugin</artifactId>
+                        <version>${maven-deploy-plugin.version}</version>
+                        <configuration><skip>true</skip></configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>${maven-source-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals><goal>jar-no-fork</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>${maven-javadoc-plugin.version}</version>
+                        <configuration>
+                            <doclint>none</doclint>
+                            <failOnError>false</failOnError>
+                            <failOnWarnings>false</failOnWarnings>
+                            <quiet>true</quiet>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <phase>verify</phase>
+                                <goals><goal>jar</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven-gpg-plugin.version}</version>
+                        <configuration>
+                            <skip>${central.gpg.skip}</skip>
+                            <!-- 2026-10-30 修 gpg 签名失败（与 z-util 1.2.11 实发同款根因）：
+                                 ① maven-gpg-plugin 会自己传 pinentry-mode 参数（值 error），
+                                    gpg 对同一选项取最后一次出现的值 ⇒ 调用方的 error 盖掉
+                                    wrapper 自己的 loopback ⇒ 报 "No pinentry" / Exit code: 2。
+                                    修法：wrapper 先剔除入参里的 pinentry-mode 整组，
+                                    再以 loopback 追加（见 _doc/003_script/gpg-with-passphrase.sh）。
+                                 ② 插件默认按 local-user=default 找密钥，本机密钥环里没有
+                                    名为 default 的密钥（只有 uid yuku123 / key A403FCCFD7EF5DA6）
+                                    ⇒ 显式钉 keyname。
+                                 注：XML 注释里不能出现连续两个减号，下面刻意用「pinentry-mode 参数」
+                                 /「local-user=default」措辞。 -->
+                            <keyname>A403FCCFD7EF5DA6</keyname>
+                            <executable>${maven.multiModuleProjectDirectory}/_doc/003_script/gpg-with-passphrase.sh</executable>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals><goal>sign</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>${central-publishing-plugin.version}</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <tokenAuth>true</tokenAuth>
+                            <autoPublish>true</autoPublish>
+                            <waitUntil>uploaded</waitUntil>
+                            <waitMaxTime>1800</waitMaxTime>
+                            <waitPollingInterval>10</waitPollingInterval>
+                            <!--
+                                admin 永远不上 Central(见 z-ctc-admin/pom.xml 的 maven.deploy.skip 注释),
+                                但 central-publishing-maven-plugin 不看 maven.deploy.skip —— 实测 1.0.2 那次
+                                它照样把 admin 的 pom/jar/exec.jar 全打进 bundle,而 admin 的 pom 缺 <name>
+                                直接让整批发被 Central 判 FAILED。excludeArtifacts 按 artifactId 精确匹配。
+                            -->
+                            <excludeArtifacts>
+                                <excludeArtifact>z-ctc-admin</excludeArtifact>
+                            </excludeArtifacts>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

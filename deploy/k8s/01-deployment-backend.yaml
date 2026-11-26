@@ -1,0 +1,68 @@
+# 01-statefulset-backend.yaml
+# 后端 Deployment（无状态，replicas 可调，HPA 友好）
+# 占位符：${NAMESPACE}, ${OCI_REGISTRY}, ${IMAGE_VERSION}, ${DB_PASSWORD}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: z-ctc-backend
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: z-ctc
+    app.kubernetes.io/component: backend
+    z.opc.io/layer: L3
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: z-ctc
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: z-ctc
+        app.kubernetes.io/component: backend
+        z.opc.io/layer: L3
+    spec:
+      serviceAccountName: z-ctc
+      containers:
+        - name: z-ctc
+          image: ${OCI_REGISTRY}/yuku123/z-ctc-admin:${IMAGE_VERSION}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms512m -Xmx1g"
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: z-ctc-db-credentials
+                  key: password
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /ctc/actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ctc/actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+# 数据库凭证 Secret（部署前手动 kubectl apply）
+# kubectl -n ${NAMESPACE} create secret generic z-ctc-db-credentials \
+#     --from-literal=password='YOUR_DB_PASSWORD'
+# 此处不直接定义 Secret 内容（避免凭证入 Git）
