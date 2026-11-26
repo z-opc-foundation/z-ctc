@@ -325,11 +325,30 @@ export default function OrgManagement({
         })
 
     // ── 节点选中 ──
+    // ⚠ meta 兜底（CEO 2026-11-26 复审：点了树右栏一直是空态）：事件形态在
+    //   antd/rc-tree 版本间漂移过（info.node.data ⇄ info.node.props.data），
+    //   取不到时用 key（= nodeKey(type, code)）+ orgMap/deptMap/groupMap 反推，
+    //   保证「点了就有右栏」，任何事件形态都不再哑掉。
     const onSelect = (keys, info) => {
         if (!keys || keys.length === 0) return
         const k = keys[0]
         setSelectedKey([k])
-        const meta = info.node.data
+        let meta = info?.node?.data || info?.node?.props?.data || null
+        if (!meta) {
+            for (const [prefix, type, map] of [
+                ['org-', 'org', orgMap],
+                ['dept-', 'dept', deptMap],
+                ['group-', 'group', groupMap],
+            ]) {
+                if (typeof k !== 'string' || !k.startsWith(prefix)) continue
+                const code = k.slice(prefix.length)
+                const records = map[selectedDomain] || []
+                const record = (Array.isArray(records) ? records : Object.values(records).flat()).find(
+                    (r) => r && (r.orgCode === code || r.deptCode === code || r.groupCode === code))
+                if (record) { meta = {type, data: record}; break }
+            }
+        }
+        if (!meta) return
         setSelectedNode(meta)
         setConfigData(parseExtConfig(meta.data?.extConfig))
         if (meta.type === 'org') {
