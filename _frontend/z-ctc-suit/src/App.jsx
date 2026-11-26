@@ -69,7 +69,7 @@ function ProtectedShell() {
             appVersion={appVersion}
             appIcon={{
                 icon: <img src="/icon.png" alt="z-ctc 4A 中心" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />,
-                color: '#0ea5e9',
+                color: '#0052d9',
                 label: 'z-ctc 4A 中心',
             }}
             appUser={user}
@@ -88,7 +88,7 @@ export default function App() {
         <ErrorBoundary>
             <BrowserRouter basename={basename}>
                 {/* 页面按路由懒加载（见 pages-manifest.jsx），首次进入某页时补一个居中加载态。 */}
-                <Suspense fallback={<div style={{ padding: 96, textAlign: 'center' }}><Spin size="large" /></div>}>
+                <Suspense fallback={<div style={{minHeight: '100%', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center'}}><Spin size="large" /></div>}>
                     <Routes>
                         <Route path={at('/login')} element={<LoginRoute />} />
                         <Route element={<ProtectedShell />}>

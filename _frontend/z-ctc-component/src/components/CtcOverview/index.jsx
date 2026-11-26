@@ -42,22 +42,22 @@ export default function CtcOverview({apiBaseURL}) {
     }, [])
 
     return (
-        <div style={{padding: 24}}>
-            <Row gutter={[16, 16]}>
+        <div style={{padding: 0}}>
+            <Row gutter={[0, 0]}>
                 <Col xs={24} sm={12} lg={6}>
-                    <Card loading={loading}><Statistic title="账号数" value={stats.account}
+                    <Card loading={loading} style={{marginTop: -1, marginLeft: -1}}><Statistic title="账号数" value={stats.account}
                                                        prefix={<TeamOutlined/>}/></Card>
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <Card loading={loading}><Statistic title="角色数" value={stats.role}
+                    <Card loading={loading} style={{marginTop: -1, marginLeft: -1}}><Statistic title="角色数" value={stats.role}
                                                        prefix={<SafetyCertificateOutlined/>}/></Card>
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <Card loading={loading}><Statistic title="租户数" value={stats.tenant}
+                    <Card loading={loading} style={{marginTop: -1, marginLeft: -1}}><Statistic title="租户数" value={stats.tenant}
                                                        prefix={<AppstoreOutlined/>}/></Card>
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <Card loading={loading}><Statistic title="短链数" value={stats.surl}
+                    <Card loading={loading} style={{marginTop: -1, marginLeft: -1}}><Statistic title="短链数" value={stats.surl}
                                                        prefix={<LinkOutlined/>}/></Card>
                 </Col>
             </Row>

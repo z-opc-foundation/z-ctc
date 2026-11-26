@@ -59,7 +59,7 @@ const STATUS_MAP = {
 }
 
 const TYPE_LABEL = {
-    org: {label: '组织', color: '#1677ff'},
+    org: {label: '组织', color: '#0052d9'},
     dept: {label: '部门', color: '#52c41a'},
     group: {label: '组别', color: '#fa8c16'},
 }
@@ -659,7 +659,7 @@ export default function OrgManagement({
                 本面板就是当前租户/域下的组织树。归属上下文见 openEntityModal。 */}
 
             {/* 左树 + 右表 */}
-            <div style={{display: 'flex', gap: 16, flex: 1, minHeight: 0}}>
+            <div style={{display: 'flex', gap: 0, flex: 1, minHeight: 0}}>
                 <Card
                     size="small"
                     style={{width: 340, overflow: 'auto', flexShrink: 0}}
@@ -704,7 +704,7 @@ export default function OrgManagement({
                     )}
                 </Card>
 
-                <Card size="small" style={{flex: 1, overflow: 'auto'}}>
+                <Card size="small" style={{flex: 1, overflow: 'auto', marginLeft: -1}}>
                     {!selectedNode ? (
                         <Empty description="请从左侧选择组织/部门/组"/>
                     ) : (
@@ -846,7 +846,7 @@ export default function OrgManagement({
                     marginTop: 12,
                     padding: '8px 12px',
                     background: '#f7f8fa',
-                    borderRadius: 6,
+                    borderRadius: 8,
                     fontSize: 12,
                     color: '#666',
                     display: 'flex',
@@ -871,7 +871,7 @@ export default function OrgManagement({
                     </Form.Item>
                     <Form.Item name="status" label="状态" initialValue={1}>
                         <select
-                            style={{width: '100%', padding: '4px 8px', border: '1px solid #d9d9d9', borderRadius: 4}}>
+                            style={{width: '100%', padding: '4px 8px', border: '1px solid #d3d6dc', borderRadius: 9}}>
                             <option value={1}>正常</option>
                             <option value={0}>停用</option>
                         </select>

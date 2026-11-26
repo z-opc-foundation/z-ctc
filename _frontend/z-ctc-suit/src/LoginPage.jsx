@@ -68,13 +68,13 @@ export default function LoginPage() {
     return (
         <div style={{
             height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center',
-            background: 'linear-gradient(135deg, #eef2ff 0%, #f5f3ff 50%, #eff6ff 100%)',
+            background: '#fff',
         }}>
-            <Card style={{ width: 400, boxShadow: '0 10px 40px rgba(124,58,237,0.12)' }}>
+            <Card style={{ width: 400, borderRadius: 8, boxShadow: 'none' }}>
                 <div style={{ textAlign: 'center', marginBottom: 20 }}>
                     <div style={{
-                        width: 48, height: 48, borderRadius: 12, margin: '0 auto 12px',
-                        background: 'linear-gradient(135deg, #2563eb, #6d28d9)',
+                        width: 48, height: 48, borderRadius: 9, margin: '0 auto 12px',
+                        background: '#0052d9',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: '#fff', fontSize: 24, fontWeight: 700,
                     }}>z</div>
@@ -88,12 +88,11 @@ export default function LoginPage() {
                         <Input.Password prefix={<LockOutlined />} placeholder="密码" />
                     </Form.Item>
                     <Form.Item style={{ marginBottom: 8 }}>
-                        <Button type="primary" htmlType="submit" loading={loading} block
-                                style={{ background: 'linear-gradient(135deg, #2563eb 0%, #6d28d9 100%)', border: 'none' }}>
+                        <Button type="primary" htmlType="submit" loading={loading} block>
                             登 录
                         </Button>
                     </Form.Item>
-                    <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
+                    <div style={{ textAlign: 'center', color: '#8a9099', fontSize: 12 }}>
                         账号密码登录（构建期注入 mock 账号时走离线演示）
                     </div>
                 </Form>

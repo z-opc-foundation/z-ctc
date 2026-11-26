@@ -124,7 +124,7 @@ export default function ResourcePage({apiBaseURL}) {
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
 
-            <Card size="small" style={{marginBottom: 16}} styles={{body: {padding: '12px 16px'}}}>
+            <Card size="small" style={{marginBottom: -1}} styles={{body: {padding: '12px 16px'}}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12}}>
                 <Form form={searchForm} layout="inline">
                     <Form.Item name="appCode" label="应用">

@@ -242,7 +242,7 @@ export default function DictPage({apiBaseURL}) {
     return (
         // flex:1 + minWidth:0 —— 宿主的内容区是 flex 容器，页面根节点不撑满就会被
         // 挤成内容宽（曾把右侧「字典条目」压成 120px，列表列也被裁掉）。
-        <div style={{display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0, width: '100%'}}>
+        <div style={{display: 'flex', flexDirection: 'column', gap: 0, flex: 1, minWidth: 0, width: '100%'}}>
             {/* 两步走（CEO 2026-11-11）：第一步是字典分类列表，点进去才是这个字典的条目。
                 原先是左右并列，右侧长期挂一个「请在左侧选择…」的空面板，且两栏被挤。 */}
             {selectedCategory ? (
@@ -272,7 +272,7 @@ export default function DictPage({apiBaseURL}) {
                         loading={entriesLoading}
                         searchKeys={['dictKey', 'dictValue']}
                         searchPlaceholder="按条目键 / 显示值过滤"
-                        cardProps={{size: 'small'}}
+                        cardProps={{size: 'small', style: {marginTop: -1}}}
                         columns={entryColumns}
                         emptyTitle="这个字典还没有条目"
                         emptyDescription="条目是字典的取值明细（例如 启用 / 停用）。"

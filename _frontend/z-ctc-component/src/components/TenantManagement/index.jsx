@@ -461,7 +461,7 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
                 <Card
                     title="租户 / 域"
                     size="small"
-                    style={{width: leftWidth, minWidth: leftWidth, flexShrink: 0}}
+                    style={{width: leftWidth, minWidth: leftWidth, flexShrink: 0, borderRight: 0}}
                     styles={{body: {padding: 8, overflow: 'auto', height: 'calc(100% - 40px)'}}}
                     extra={
                         <Space size={4}>
@@ -498,19 +498,20 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
 
                 {/* 中缝拖拽条: 拖动调左树宽度 (220~640), 松手落 localStorage */}
                 <div
+                    className="zfc-split-handle"
                     onMouseDown={handleSplitterMouseDown}
                     title="拖动调整宽度"
                     style={{
-                        width: 5,
+                        width: 1,
                         flexShrink: 0,
                         cursor: 'col-resize',
-                        borderRadius: 2,
-                        background: '#eef0f3',
+                        borderRadius: 0,
+                        background: 'var(--zfc-line, #e2e4e8)',
                     }}
                 />
 
                 {/* 右：详情 + K-V 配置 */}
-                <Card size="small" style={{flex: 1, overflow: 'auto'}} styles={{body: {padding: 16}}}>
+                <Card size="small" style={{flex: 1, overflow: 'auto', borderLeft: 0}} styles={{body: {padding: 16}}}>
                     {!selectedNode ? (
                         <Empty description="请从左侧选择租户或域" style={{marginTop: 80}}/>
                     ) : (
@@ -691,7 +692,7 @@ export default function TenantManagement({apiBaseURL, platformView = false}) {
                     </Form.Item>
                     <Form.Item name="status" label="状态" initialValue={1}>
                         <select
-                            style={{width: '100%', padding: '4px 8px', border: '1px solid #d9d9d9', borderRadius: 4}}>
+                            style={{width: '100%', padding: '4px 8px', border: '1px solid #d3d6dc', borderRadius: 9}}>
                             <option value={1}>正常</option>
                             <option value={0}>停用</option>
                         </select>

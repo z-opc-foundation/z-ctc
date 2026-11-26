@@ -19,36 +19,38 @@ export default function HomePage() {
     const cards = menuItems.filter((m) => m.key !== at('/home'))
 
     return (
-        <div>
-            <Card style={{ marginBottom: 16, background: 'linear-gradient(135deg, #2563eb 0%, #6d28d9 100%)', border: 'none' }}>
-                <Space direction="vertical" size={4} style={{ color: '#fff' }}>
-                    <Title level={3} style={{ color: '#fff', margin: 0 }}>
+        <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
+            <Card style={{background: '#fff', border: '1px solid #e2e4e8', boxShadow: 'none'}}>
+                <Space direction="vertical" size={4} style={{ color: 'rgba(0,0,0,0.9)' }}>
+                    <Title level={3} style={{ color: 'rgba(0,0,0,0.9)', margin: 0 }}>
                         欢迎{user?.name ? `，${user.name}` : ''}
                     </Title>
-                    <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: 0 }}>
+                    <Paragraph style={{ color: 'rgba(0,0,0,0.6)', margin: 0 }}>
                         z-ctc 4A 中心 管理台
                     </Paragraph>
                     {user?.role && (
-                        <Tag style={{ marginTop: 8, background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none' }}>{user.role}</Tag>
+                        <Tag color="blue" style={{ marginTop: 8 }}>{user.role}</Tag>
                     )}
                 </Space>
             </Card>
 
-            <Row gutter={[16, 16]}>
+            <Row gutter={[0, 0]}>
                 {cards.map((m) => (
                     <Col key={m.key} xs={24} sm={12} md={12} lg={8}>
-                        <Card hoverable onClick={() => navigate(m.key)} style={{ borderTop: '3px solid #2563eb' }}>
+                        <Card hoverable onClick={() => navigate(m.key)} style={{
+                            marginTop: -1, marginLeft: -1, borderTop: '1px solid #0052d9', boxShadow: 'none',
+                        }}>
                             <Space align="start" size={12}>
                                 <div style={{
                                     width: 44, height: 44, borderRadius: 8, flexShrink: 0,
-                                    background: 'rgba(124,58,237,0.08)', color: '#2563eb',
+                                    background: '#e8f3ff', color: '#0052d9',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
                                 }}>
                                     {m.icon}
                                 </div>
                                 <div style={{ minWidth: 0 }}>
-                                    <div style={{ fontSize: 15, fontWeight: 600, color: '#0f172a' }}>{m.label}</div>
-                                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{m.desc || '进入'}</div>
+                                    <div style={{ fontSize: 15, fontWeight: 600, color: 'rgba(0,0,0,0.9)' }}>{m.label}</div>
+                                    <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.48)', marginTop: 2 }}>{m.desc || '进入'}</div>
                                 </div>
                             </Space>
                         </Card>

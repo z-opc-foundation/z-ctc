@@ -177,7 +177,7 @@ export default function SurlManagement({apiBaseURL}) {
                 {lastResult && (
                     <div style={{
                         marginTop: 16, padding: 16, background: '#f6ffed',
-                        border: '1px solid #b7eb8f', borderRadius: 6,
+                        border: '1px solid #b7eb8f', borderRadius: 8,
                     }}>
                         <div style={{marginBottom: 8}}>
                             <b>生成结果：</b>
@@ -206,7 +206,7 @@ export default function SurlManagement({apiBaseURL}) {
                 )}
             </Card>
 
-            <Card title="历史短链" style={{marginTop: 16}}
+            <Card title="历史短链" style={{marginTop: -1}}
                   extra={
                       <Input.Search
                           allowClear

@@ -13,19 +13,19 @@
 const STYLE_ID = 'zdict-style'
 
 const CSS = `
-.zdict-modal .ant-modal-content{padding:22px 26px 18px;border-radius:12px;box-shadow:0 12px 40px rgba(15,23,42,.14)}
+.zdict-modal .ant-modal-content{padding:22px 26px 18px;border-radius:10px;box-shadow:0 14px 34px rgba(15,27,45,.14)}
 .zdict-modal .ant-modal-header{margin-bottom:16px}
 .zdict-modal .ant-modal-body{padding-top:0}
 .zdict-modal .ant-modal-footer{margin-top:20px;padding-top:14px;border-top:1px solid #f0f1f3}
 .zdict-modal .ant-modal-footer .ant-btn{min-width:76px;border-radius:8px}
 .zdict-title{display:inline-flex;align-items:center;gap:10px;font-size:16px;font-weight:600;color:#1f2329}
 .zdict-title-ic{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;
-  background:#eef3ff;color:#0052d9;font-size:14px}
+  background:#e8f3ff;color:#0052d9;font-size:14px}
 .zdict-form .ant-form-item{margin-bottom:16px}
 .zdict-form .ant-form-item-label{padding:0 0 6px}
 .zdict-form .ant-form-item-label>label{font-size:13px;font-weight:500;color:#1f2329;height:auto}
 .zdict-form .ant-form-item-extra{font-size:12px;line-height:1.5;color:#8a9099;margin-top:5px}
-.zdict-form .ant-input,.zdict-form .ant-input-number,.zdict-form .ant-select-selector{border-radius:8px}
+.zdict-form .ant-input,.zdict-form .ant-input-number,.zdict-form .ant-select-selector{border-radius:9px !important}
 .zdict-form .ant-input,.zdict-form .ant-input-affix-wrapper,.zdict-form .ant-select-selector{font-size:13px}
 .zdict-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
 .zdict-full{grid-column:1/-1}

@@ -152,29 +152,29 @@ function LoginLogTab() {
     ]
 
     return (
-        <Space orientation="vertical" size={12} style={{width: '100%'}}>
-            <Row gutter={12}>
+        <div style={{display: 'flex', flexDirection: 'column', gap: 0, width: '100%'}}>
+            <Row gutter={[0, 0]}>
                 <Col span={6}>
-                    <Card size="small">
+                    <Card size="small" style={{marginTop: -1, marginLeft: -1}}>
                         <Statistic title="最近成功登录 (10 条内)" value={recentSuccess}
                                    styles={{content: {color: '#52c41a', fontSize: 20}}}
                                    prefix={<LoginOutlined/>}/>
                     </Card>
                 </Col>
                 <Col span={6}>
-                    <Card size="small">
+                    <Card size="small" style={{marginTop: -1, marginLeft: -1}}>
                         <Statistic title="最近失败登录 (10 条内)" value={recentFail}
                                    styles={{content: {color: '#ff4d4f', fontSize: 20}}}/>
                     </Card>
                 </Col>
                 <Col span={6}>
-                    <Card size="small">
+                    <Card size="small" style={{marginTop: -1, marginLeft: -1}}>
                         <Statistic title="最近 10 条" value={recent.length}
                                    styles={{content: {fontSize: 20}}}/>
                     </Card>
                 </Col>
                 <Col span={6}>
-                    <Card size="small">
+                    <Card size="small" style={{marginTop: -1, marginLeft: -1}}>
                         <Statistic title="总日志数" value={total} loading={loading}
                                    styles={{content: {fontSize: 20}}}/>
                     </Card>
@@ -183,6 +183,7 @@ function LoginLogTab() {
 
             <Card
                 size="small"
+                style={{marginTop: -1}}
                 title={
                     <Space>
                         <span>登录日志</span>
@@ -231,6 +232,6 @@ function LoginLogTab() {
                     }}
                 />
             </Card>
-        </Space>
+        </div>
     )
 }

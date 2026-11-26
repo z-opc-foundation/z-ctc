@@ -376,7 +376,7 @@ export default function SiteInitManagement({apiBaseURL}) {
     )
 
     return (
-        <>
+        <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
             <Tabs
                 defaultActiveKey="status"
                 items={[
@@ -387,6 +387,6 @@ export default function SiteInitManagement({apiBaseURL}) {
                 ]}
             />
             {manifestDrawer}
-        </>
+        </div>
     )
 }

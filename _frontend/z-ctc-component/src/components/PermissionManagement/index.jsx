@@ -526,7 +526,7 @@ export default function PermissionManagement({apiBaseURL}) {
     }, [])
 
     const renderRoles = () => (
-        <div style={{display: 'flex', gap: 16, alignItems: 'stretch', height: '100%', minHeight: 0}}>
+        <div style={{display: 'flex', gap: 0, alignItems: 'stretch', height: '100%', minHeight: 0}}>
             {/* 左：角色列表 —— 顶部搜索 + 新增，下面就是角色条目（CEO 2026-11-11 定版，
                 不再上表格/多条件筛选：角色量级几十条，一张清单扫一眼就够了） */}
             <div style={{width: 320, flexShrink: 0, display: 'flex'}}>
@@ -561,8 +561,8 @@ export default function PermissionManagement({apiBaseURL}) {
                                         padding: '8px 10px',
                                         borderRadius: 8,
                                         cursor: 'pointer',
-                                        background: selected ? '#e6f4ff' : 'transparent',
-                                        border: selected ? '1px solid #91caff' : '1px solid transparent',
+                                        background: selected ? '#e8f3ff' : 'transparent',
+                                        border: selected ? '1px solid #bcd8ff' : '1px solid transparent',
                                     }}
                                 >
                                     <div style={{flex: 1, minWidth: 0}}>
@@ -629,7 +629,7 @@ export default function PermissionManagement({apiBaseURL}) {
             </div>
 
             {/* 右：选中角色的权限点树 */}
-            <div style={{flex: 1, minWidth: 0, display: 'flex'}}>
+            <div style={{flex: 1, minWidth: 0, display: 'flex', marginLeft: -1}}>
                 <Card
                     size="small"
                     style={{width: '100%', display: 'flex', flexDirection: 'column'}}
@@ -681,7 +681,7 @@ export default function PermissionManagement({apiBaseURL}) {
     )
 
     const renderPoints = () => (
-        <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+        <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
             <Card size="small" styles={{body: {padding: '12px 16px'}}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12}}>
                     <Form form={pointSearchForm} layout="inline">
@@ -745,6 +745,7 @@ export default function PermissionManagement({apiBaseURL}) {
 
             <ProTable
                 actionRef={pointActionRef}
+                style={{marginTop: -1}}
                 rowKey="id"
                 columns={pointColumns}
                 request={pointRequest}
@@ -789,7 +790,7 @@ export default function PermissionManagement({apiBaseURL}) {
     const treeDetailChildren = treeDetail ? resources.filter((r) => r.parentId === treeDetail.id) : []
 
     const renderTree = () => (
-        <div style={{display: 'flex', gap: 16, alignItems: 'stretch', height: '100%', minHeight: 0}}>
+        <div style={{display: 'flex', gap: 0, alignItems: 'stretch', height: '100%', minHeight: 0}}>
             {/* 左：权限树，拉到底部（CEO 2026-11-12 定版） */}
             <div style={{width: 460, flexShrink: 0, display: 'flex'}}>
                 <Card size="small"
@@ -823,7 +824,7 @@ export default function PermissionManagement({apiBaseURL}) {
             </div>
 
             {/* 右：选中条目的详情与扩展字段 */}
-            <div style={{flex: 1, minWidth: 0, display: 'flex'}}>
+            <div style={{flex: 1, minWidth: 0, display: 'flex', marginLeft: -1}}>
                 <Card
                     size="small"
                     style={{width: '100%', display: 'flex', flexDirection: 'column'}}
@@ -1000,7 +1001,7 @@ export default function PermissionManagement({apiBaseURL}) {
     }, [authUsers, authUserKeyword])
 
     const renderAuth = () => (
-        <div style={{display: 'flex', gap: 16, alignItems: 'stretch', height: '100%', minHeight: 0}}>
+        <div className="perm-auth-columns" style={{display: 'flex', gap: 0, alignItems: 'stretch', height: '100%', minHeight: 0}}>
             {/* 左：人 */}
             <div style={{width: 300, flexShrink: 0, display: 'flex'}}>
                 <Card size="small"
@@ -1026,8 +1027,8 @@ export default function PermissionManagement({apiBaseURL}) {
                                         padding: '8px 10px',
                                         borderRadius: 8,
                                         cursor: 'pointer',
-                                        background: selected ? '#e6f4ff' : 'transparent',
-                                        border: selected ? '1px solid #91caff' : '1px solid transparent',
+                                        background: selected ? '#e8f3ff' : 'transparent',
+                                        border: selected ? '1px solid #bcd8ff' : '1px solid transparent',
                                     }}
                                 >
                                     <div style={{flex: 1, minWidth: 0}}>
@@ -1051,7 +1052,7 @@ export default function PermissionManagement({apiBaseURL}) {
             </div>
 
             {/* 中：角色勾选 —— 真调 grant/revoke */}
-            <div style={{width: 300, flexShrink: 0, display: 'flex'}}>
+            <div style={{width: 300, flexShrink: 0, display: 'flex', marginLeft: -1}}>
                 <Card size="small"
                       title={`角色 (${authUserRoleIds.length})`}
                       loading={authRolesLoading && authUserId != null}
@@ -1090,7 +1091,7 @@ export default function PermissionManagement({apiBaseURL}) {
 
             {/* 右：该人的有效权限树 —— 权限点随角色叠加，勾选态只读；
                 改勾选请去「角色」tab（后端只支持 角色↔资源 挂载，人通过角色拿权限） */}
-            <div style={{flex: 1, minWidth: 0, display: 'flex'}}>
+            <div style={{flex: 1, minWidth: 0, display: 'flex', marginLeft: -1}}>
                 <Card
                     size="small"
                     style={{width: '100%', display: 'flex', flexDirection: 'column'}}
@@ -1131,6 +1132,22 @@ export default function PermissionManagement({apiBaseURL}) {
                 .perm-mgmt-fullheight .ant-tabs-content-holder { flex: 1; min-height: 0; }
                 .perm-mgmt-fullheight .ant-tabs-content,
                 .perm-mgmt-fullheight .ant-tabs-tabpane { height: 100%; }
+                @media (max-width: 1100px) {
+                    .perm-mgmt-fullheight .perm-auth-columns {
+                        flex-direction: column;
+                        overflow-y: auto;
+                    }
+                    .perm-mgmt-fullheight .perm-auth-columns > div {
+                        width: 100% !important;
+                        min-width: 0 !important;
+                        min-height: 220px;
+                        flex: 0 0 auto !important;
+                        margin-left: 0 !important;
+                    }
+                    .perm-mgmt-fullheight .perm-auth-columns > div + div {
+                        margin-top: -1px !important;
+                    }
+                }
             `}</style>
             {/* 顶部横排三个 tab：角色 / 权限点 / 权限树（CEO 2026-11-11 定版） */}
             <Tabs

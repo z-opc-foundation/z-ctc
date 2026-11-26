@@ -145,7 +145,7 @@ export default function UserPermissionPage({apiBaseURL}) {
     }, [roles, roleKeyword])
 
     return (
-        <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+        <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
 
             <TableToolbar
                 left={
@@ -164,7 +164,7 @@ export default function UserPermissionPage({apiBaseURL}) {
                 right={<Button icon={<ReloadOutlined/>} onClick={loadAccounts}>刷新用户</Button>}
             />
 
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16}}>
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0}}>
                 <Card size="small" title={`用户角色 (${roles.length})`} loading={rolesLoading}
                       extra={
                           <Input.Search
@@ -226,10 +226,10 @@ export default function UserPermissionPage({apiBaseURL}) {
                             render: (_, r) => r.name || r.resourceName || '-'
                         },
                     ]}
-                    cardProps={{size: 'small', loading: permissionsLoading}}
+                    cardProps={{size: 'small', loading: permissionsLoading, style: {marginLeft: -1}}}
                 />
 
-                <Card size="small" title={
+                <Card size="small" style={{marginLeft: -1}} title={
                     activeRoleId
                         ? `角色资源 (${resourceTree.reduce((s, n) => s + (n.children?.length || 0), 0)})`
                         : '角色资源'

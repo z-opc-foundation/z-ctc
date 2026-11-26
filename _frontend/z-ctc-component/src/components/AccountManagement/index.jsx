@@ -459,9 +459,9 @@ export default function AccountManagement({apiBaseURL}) {
     ]
 
     return (
-        <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+        <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
 
-            <Card size="small" styles={{body: {padding: '12px 16px'}}}>
+            <Card size="small" style={{marginBottom: -1}} styles={{body: {padding: '12px 16px'}}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12}}>
                     <Form form={searchForm} layout="inline">
                     <Form.Item name="username" label="用户名">
@@ -642,7 +642,7 @@ export default function AccountManagement({apiBaseURL}) {
                                 key: 'roles',
                                 label: `角色与权限${accountRoles.length ? `（${accountRoles.length}）` : ''}`,
                                 children: (
-                                    <div style={{display: 'flex', gap: 16, alignItems: 'flex-start'}}>
+                                    <div style={{display: 'flex', gap: 0, alignItems: 'flex-start'}}>
                                         <Card size="small" style={{flex: '0 0 340px'}}
                                               title={`角色（${accountRoles.length}）`}
                                               loading={rolesLoading}>
@@ -667,6 +667,7 @@ export default function AccountManagement({apiBaseURL}) {
                                         </Card>
                                         <ListTable
                                             cardTitle={`直接权限（${accountPerms.length}）`}
+                                            cardProps={{style: {marginLeft: -1, flex: 1, minWidth: 0}}}
                                             rows={accountPerms}
                                             rowKey={(r, i) => r.code || r.resourceCode || r.id || i}
                                             // 后端权限对象两套字段名都可能出现（code/name 与

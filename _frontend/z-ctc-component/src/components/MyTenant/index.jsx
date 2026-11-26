@@ -222,7 +222,7 @@ export default function MyTenant({apiBaseURL}) {
     }
 
     return (
-        <div style={{display: 'flex', flexDirection: 'column', gap: 16}}>
+        <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
             <Card
                 size="small"
                 title="我的租户"
@@ -269,6 +269,7 @@ export default function MyTenant({apiBaseURL}) {
             <Card
                 size="small"
                 title="域"
+                style={{marginTop: -1}}
                 extra={
                     <Space size={4}>
                         <Button

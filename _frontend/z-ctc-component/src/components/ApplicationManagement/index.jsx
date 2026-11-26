@@ -246,7 +246,7 @@ export default function ApplicationManagement({apiBaseURL}) {
                 return (
                     <div style={{
                         padding: '4px 0',
-                        borderLeft: active ? '3px solid #1677ff' : '3px solid transparent',
+                        borderLeft: active ? '3px solid #0052d9' : '3px solid transparent',
                         paddingLeft: 8,
                     }}>
                         <div style={{fontWeight: 500}}>{r.appName}</div>
@@ -366,7 +366,7 @@ export default function ApplicationManagement({apiBaseURL}) {
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
 
-            <Card size="small" styles={{body: {padding: '12px 16px'}}}>
+            <Card size="small" style={{marginBottom: -1}} styles={{body: {padding: '12px 16px'}}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12}}>
                     <Form form={searchForm} layout="inline" size="small">
                         <Form.Item name="appCode" label="应用编码" style={{marginBottom: 8}}>
