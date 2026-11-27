@@ -325,9 +325,8 @@ export default function OrgManagement({
         })
 
     // ── 节点选中 ──
-    // ⚠ meta 兜底（CEO 2026-11-26 复审：点了树右栏一直是空态）：事件形态在
-    //   antd/rc-tree 版本间漂移过（info.node.data ⇄ info.node.props.data），
-    //   取不到时用 key（= nodeKey(type, code)）+ orgMap/deptMap/groupMap 反推，
+    // ⚠ meta 兜底：事件形态在 antd/rc-tree 版本间漂移过（info.node.data ⇄ info.node.props.data），
+    //   取不到时用 key（= nodeKey(type, code) = `${type}:${code}`）+ orgMap/deptMap/groupMap 反推，
     //   保证「点了就有右栏」，任何事件形态都不再哑掉。
     const onSelect = (keys, info) => {
         if (!keys || keys.length === 0) return
@@ -335,15 +334,18 @@ export default function OrgManagement({
         setSelectedKey([k])
         let meta = info?.node?.data || info?.node?.props?.data || null
         if (!meta) {
+            // ⚠ 分隔符是 ':'（nodeKey = `${type}:${code}`），不是 '-'。
+            //   另外三张表的键空间各不相同：orgMap 按 domainCode、deptMap 按 orgCode、groupMap 按 deptCode
+            //   ⇒ 兜底查找必须扫全表的所有值，不能只取 map[selectedDomain]。
             for (const [prefix, type, map] of [
-                ['org-', 'org', orgMap],
-                ['dept-', 'dept', deptMap],
-                ['group-', 'group', groupMap],
+                ['org:', 'org', orgMap],
+                ['dept:', 'dept', deptMap],
+                ['group:', 'group', groupMap],
             ]) {
                 if (typeof k !== 'string' || !k.startsWith(prefix)) continue
                 const code = k.slice(prefix.length)
-                const records = map[selectedDomain] || []
-                const record = (Array.isArray(records) ? records : Object.values(records).flat()).find(
+                const records = Object.values(map).flat()
+                const record = records.find(
                     (r) => r && (r.orgCode === code || r.deptCode === code || r.groupCode === code))
                 if (record) { meta = {type, data: record}; break }
             }
@@ -411,8 +413,12 @@ export default function OrgManagement({
                     : []
         const typeLabel = type ? (TYPE_LABEL[type]?.label || '节点') : '节点'
         return (
-            <span style={{display: 'flex', alignItems: 'center', gap: 6, width: '100%'}}
-                  onClick={e => e.stopPropagation()}>
+            // ⚠ 外层 span **不能**带 onClick={e=>e.stopPropagation()}：
+            //   它会把整行标题的点击吞掉，事件到不了 rc-tree 的 onSelect
+            //   ⇒ 点任何节点都不选中 ⇒ 右栏永远停在「请从左侧选择…」。
+            //   （租户管理页 TenantManagement 早就踩过同一个坑并修掉了，这里是漏改。）
+            //   真正需要隔离的只有标题右侧那两个操作按钮，它们各自 stopPropagation。
+            <span style={{display: 'flex', alignItems: 'center', gap: 6, width: '100%'}}>
                 <span style={{flex: 1}}>{nodeData.title}</span>
                 {addItems.length > 0 && (
                     <Dropdown
