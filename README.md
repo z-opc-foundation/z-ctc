@@ -13,8 +13,8 @@
 |------|-----|
 | **仓库** | `z-ctc`（Comprehensive-Tissue-Centre 缩写，历史上称 4A 中心） |
 | **Maven 坐标** | `io.github.yuku123:z-ctc:${revision}` |
-| **当前版本** | `1.0.8`（根 POM `<revision>`，CI-friendly versions + flatten-maven-plugin） |
-| **父项目** | `io.github.yuku123:z-boot-parent:1.2.4`（`<relativePath/>` 留空，parent 在 repo1 不在磁盘） |
+| **当前版本** | `1.0.10`（根 POM `<revision>`，CI-friendly versions + flatten-maven-plugin） |
+| **父项目** | `io.github.yuku123:z-boot-parent:1.2.6`（`<relativePath/>` 留空，parent 在 repo1 不在磁盘） |
 | **Maven Central** | 已发布：`z-ctc:1.0.2` / `z-ctc-web:1.0.2` 均可从 repo1 拉取（1.0.3 / 1.0.4 目前只有本地构建产物，未见 Central 下载记录） |
 | **默认端口** | `8888`（dev profile 下 context-path 为 `/ctc`） |
 | **运行口径** | Java 17 · Spring Boot 3.3.13（2026-10-30 SB3 火车全量迁移，`javax.*` → `jakarta.*`） |
@@ -24,7 +24,7 @@
 
 ## 🎯 能力清单
 
-全部能力都能从 `z-ctc-web/src/main/java/com/zifang/ctc/web/api/` 下的 **13 个** Controller 一一对应：
+全部能力都能从 `z-ctc-web/src/main/java/com/zifang/ctc/web/api/` 下的 **17 个** Controller 一一对应：
 
 | 能力 | 入口 | 说明 |
 |------|------|------|
@@ -40,6 +40,9 @@
 | OAuth2 接入 | `OAuthController` | 授权码端点（authorize/token），接入方注册走 `OAuthClientProperties` 配置表 |
 | OSC 部门 | `OscDeptController` | 部门树 / 部门列表；挂在 `/ctc-osc/dept`，**不在 `/api/ctc` 前缀下** |
 | OSC 员工 | `OscStaffController` | 员工简表；挂在 `/ctc-osc/staff`，**不在 `/api/ctc` 前缀下** |
+| 字典 | `DictController` | 字典分类 / 字典项 |
+| 建站初始化 | `SiteInitRegistrationController` / `SiteInitRunController` | 建站初始化域注册与执行 |
+| AK 台账 | `AkController` | AK 签发 / 验签 / scope 授权 / 调用日志（认证中心持有 AK 真源，明文 secret 仅签发那次响应返回，库里只存哈希） |
 
 跨子域免登由 `z-ctc-sso` 提供：`SsoInterceptor` 校验请求 → `TokenService` 有 **3** 种实现
 （`LocalTokenService` 本地解析 JWT、`RemoteTokenService` 回源校验、`CompositeTokenService` 组合两者），
@@ -52,13 +55,14 @@
 
 ```
 z-ctc/
-├── pom.xml                # 根聚合 POM：继承 z-boot-parent:1.2.4，<revision> 统一版本
+├── pom.xml                # 根聚合 POM：继承 z-boot-parent:1.2.6，<revision> 统一版本
 ├── z-ctc-common/          # 常量、DTO、跨模块共享的轻量类型
 ├── z-ctc-core/            # 4A 领域核心：实体、MyBatis-Plus Mapper、服务实现
 ├── z-ctc-sso/             # SSO：拦截器 + 令牌服务 + cookie 域 + JWT 门面
 ├── z-ctc-web/             # HTTP 层：Controller、自动装配（ZCompanyCtcWebAutoConfiguration）
 ├── z-ctc-client/          # 授权数据 HTTP SDK（裸能力，零 Spring 依赖）
 ├── z-ctc-spring-boot-starter/  # 上面那个 SDK 的 Spring Boot 装配层
+├── z-ctc-site-init-starter/  # 建站初始化：域侧 SPI + 4A 自登记装配
 ├── z-ctc-admin/           # 可启动演示应用（不进 Maven Central）
 ├── bootstrap/             # 脚手架产物目录（自带 pom，但不在根 POM 的 <modules> 里，不参与 Maven 发布）
 ├── _frontend/             # 配套前端 2 个 npm 工程
@@ -96,9 +100,9 @@ z-ctc/
 mvn clean install -DskipTests
 ```
 
-第三方版本一律由 `z-boot-parent:1.2.4` 供给（第三方地板与兄弟仓权威表均已并入 parent 自身），
+第三方版本一律由 `z-boot-parent:1.2.6` 供给（第三方地板与兄弟仓权威表均已并入 parent 自身），
 模块 POM 里不应再出现字面版本钉；若构建报找不到版本，先确认本地/镜像能解析到
-`io.github.yuku123:z-boot-parent:1.2.4`。
+`io.github.yuku123:z-boot-parent:1.2.6`。
 
 ### 本地跑起来（无需 MySQL）
 
@@ -144,6 +148,10 @@ MySQL 8 直连需 `allowPublicKeyRetrieval=true`，通过 `druid.connection-prop
 | `/api/ctc/ac` | 组织 |
 | `/api/ctc/app-menu` | 应用菜单 |
 | `/api/ctc/admin/tenant-init` | 租户初始化 |
+| `/api/ctc/ac/dict` | 字典 |
+| `/api/ctc/site-init` | 建站初始化 |
+| `/api/ctc/site-init/registrations` | 建站初始化域注册 |
+| `/api/ctc/v1/ak` | AK 台账（签发 / 验签 / scope / 调用日志） |
 | `/api/ctc/oauth` | OAuth2 授权服务器（家族桌面客户端 SSO 入口，见下节） |
 | `/ctc-osc/dept` | OSC 部门（**不在 `/api/ctc` 前缀下**） |
 | `/ctc-osc/staff` | OSC 员工（**不在 `/api/ctc` 前缀下**） |

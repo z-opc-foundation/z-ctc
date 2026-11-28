@@ -11,7 +11,9 @@ import com.zifang.z.boot.datasource.starter.ModuleDataSourceTemplate;
 import org.apache.ibatis.plugin.Interceptor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -44,7 +46,7 @@ import java.io.IOException;
 @Configuration
 @EnableConfigurationProperties(OAuthClientProperties.class)
 @MapperScan(
-        basePackages = "com.zifang.ctc.core.domain.mapper",
+        basePackages = {"com.zifang.ctc.core.domain.mapper", "com.zifang.ctc.core.ak.mapper"},
         sqlSessionFactoryRef = "sqlSessionFactoryCtc",
         nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class
 )
@@ -56,6 +58,7 @@ import java.io.IOException;
                 "com.zifang.ctc.web.init",    // FEATURE050: z-ctc 内置 TenantInitializer
                 "com.zifang.ctc.core.service",
                 "com.zifang.ctc.core.domain",
+                "com.zifang.ctc.core.ak",  // AK 台账域（签发 / 验签 / scope 授权 / 调用日志）
                 "com.zifang.ctc.core.init",   // FEATURE050: 租户初始化器 (TenantInitOrchestrator + 各模块 Initializer)
                 "com.zifang.ctc.common"
         },
@@ -75,6 +78,21 @@ public class ZCompanyCtcWebAutoConfiguration extends ModuleDataSourceTemplate im
     @Bean("orphanGuardInterceptor")
     public OrphanGuardInterceptor orphanGuardInterceptor() {
         return new OrphanGuardInterceptor();
+    }
+
+    /**
+     * AK 保护链路过滤器 — 受保护路径前缀用 {@code ctc.ak.protect-paths} 配（逗号分隔），
+     * 授权域用 {@code ctc.ak.domain} 配（缺省 SYSTEM）；
+     * 缺省不拦任何路径（认证中心自己不做 AK 判定，业务服务内嵌本过滤器时才生效）。
+     */
+    @Bean("ctcAkAccessFilter")
+    @ConditionalOnProperty(prefix = "ctc.ak", name = "enabled", havingValue = "true")
+    public com.zifang.ctc.web.filter.AkAccessFilter ctcAkAccessFilter(
+            com.zifang.ctc.core.ak.AkService akService,
+            @Value("${ctc.ak.protect-paths:}") String protectPaths,
+            @Value("${ctc.ak.domain:SYSTEM}") String domain) {
+        return new com.zifang.ctc.web.filter.AkAccessFilter(akService,
+                protectPaths == null ? new String[0] : protectPaths.split(","), domain);
     }
 
     /**

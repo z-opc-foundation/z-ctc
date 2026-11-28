@@ -7,6 +7,7 @@
   3. z-opc-schema.sql 摘录    建 z_ctc_app_menu / z_ctc_ac_domain / verify_code / surl_mapping
   4. z-ctc-authz-override    建 deny/grant, 并 ALTER z_ctc_app_menu -> 必须在 3 之后
   5. feature049              建 user/membership/invitation, 并 ALTER spc_user_role/ac_account -> 必须在 2 和 1 之后
+  6. z-ctc-ak                建 AK 台账三张表（签发 / 验签 / 调用日志）
 """
 import os
 import re
@@ -139,7 +140,10 @@ parts.append(strip_db(read(f"{ZCTC_ROOT}/_doc/002_deploy/init/z-ctc-authz-overri
 parts.append("-- ==== 5. user/membership/invitation (依赖 1、2) ====")
 parts.append(strip_db(read(f"{ZOPC_ROOT}/_doc/004_sql/feature049-membership-migration.sql")))
 
-parts.append("-- ==== 6. 建站初始化域注册 + 任务表 ====")
+parts.append("-- ==== 6. AK 台账域 ====")
+parts.append(strip_db(read(f"{ZCTC_ROOT}/_doc/002_deploy/init/z-ctc-ak.sql")))
+
+parts.append("-- ==== 7. 建站初始化域注册 + 任务表 ====")
 parts.append(strip_db(read(f"{ZCTC_ROOT}/_doc/002_deploy/init/z-ctc-site-init.sql")))
 
 body = "\n\n".join(parts)
