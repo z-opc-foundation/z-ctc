@@ -46,7 +46,7 @@ import java.io.IOException;
 @EnableConfigurationProperties(OAuthClientProperties.class)
 @MapperScan(
         basePackages = {"com.zifang.ctc.core.domain.mapper", "com.zifang.ctc.core.ak.mapper",
-                "com.zifang.ctc.core.service.session.mapper"},
+                "com.zifang.ctc.core.service.session.mapper", "com.zifang.ctc.core.approval.mapper"},
         sqlSessionFactoryRef = "sqlSessionFactoryCtc",
         nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class
 )
@@ -59,6 +59,7 @@ import java.io.IOException;
                 "com.zifang.ctc.core.service",
                 "com.zifang.ctc.core.domain",
                 "com.zifang.ctc.core.ak",  // AK 台账域（签发 / 验签 / scope 授权 / 调用日志）
+                "com.zifang.ctc.core.approval",  // 权限类审批引擎（模板 + 票流转 + 决策；授权副作用在宿主）
                 "com.zifang.ctc.core.init",   // FEATURE050: 租户初始化器 (TenantInitOrchestrator + 各模块 Initializer)
                 "com.zifang.ctc.common"
         },

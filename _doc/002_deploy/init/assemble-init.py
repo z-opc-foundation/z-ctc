@@ -9,6 +9,7 @@
   5. feature049              建 user/membership/invitation, 并 ALTER spc_user_role/ac_account -> 必须在 2 和 1 之后
   6. z-ctc-ak                建 AK 台账三张表（签发 / 验签 / 调用日志）
   7. z-ctc-service-session   建机器 / 服务账号会话表（设备控制台令牌真源）
+  7.5 z-ctc-approval         建权限类审批两张表（模板 + 票；授权副作用在宿主）
 """
 import os
 import re
@@ -146,6 +147,9 @@ parts.append(strip_db(read(f"{ZCTC_ROOT}/_doc/002_deploy/init/z-ctc-ak.sql")))
 
 parts.append("-- ==== 7. 机器 / 服务账号会话 ====")
 parts.append(strip_db(read(f"{ZCTC_ROOT}/_doc/002_deploy/init/z-ctc-service-session.sql")))
+
+parts.append("-- ==== 7.5 权限类审批（模板 + 票） ====")
+parts.append(strip_db(read(f"{ZCTC_ROOT}/_doc/002_deploy/init/z-ctc-approval.sql")))
 
 parts.append("-- ==== 8. 建站初始化域注册 + 任务表 ====")
 parts.append(strip_db(read(f"{ZCTC_ROOT}/_doc/002_deploy/init/z-ctc-site-init.sql")))
