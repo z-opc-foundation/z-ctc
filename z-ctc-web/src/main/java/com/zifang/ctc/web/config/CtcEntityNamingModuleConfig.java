@@ -70,11 +70,6 @@ public class CtcEntityNamingModuleConfig implements WebMvcConfigurer {
                     AccountDO.class, DeptDO.class, DomainDO.class, GroupDO.class,
                     MenuDO.class, OrgDO.class, ResourceDO.class, RoleDO.class, TenantDO.class,
                     DictCategoryDO.class, DictEntryDO.class,
-                    // AK 台账域 (2026-11-28 aio 联调: snake_case 宿主把 camelCase body 绑 null,
-                    // create 全报「归属类型必填」); core 的 Request/Query 模型按仓规零注解, 走 mixin。
-                    com.zifang.ctc.core.ak.model.AkPayload.class,
-                    com.zifang.ctc.core.ak.model.AkScopeSaveRequest.class,
-                    com.zifang.ctc.core.ak.model.AkCallLogQuery.class,
             };
             for (Class<?> entity : entities) {
                 context.setMixInAnnotations(entity, CamelNamingMixin.class);

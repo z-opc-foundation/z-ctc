@@ -1,8 +1,11 @@
 package com.zifang.ctc.core.ak.model;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import java.util.Map;
 
 /** 采集层输入；密钥不得进入本对象，敏感值必须在采集边界脱敏。 */
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class AkCallLogInput {
     private String traceId;
     private String httpMethod;

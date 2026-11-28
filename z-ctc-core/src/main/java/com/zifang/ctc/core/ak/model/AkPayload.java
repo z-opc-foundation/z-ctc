@@ -1,9 +1,12 @@
 package com.zifang.ctc.core.ak.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 
 /** AK 创建载荷与列表过滤参数。 */
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class AkPayload {
 
     /** 创建：PERSONAL / APPLICATION。 */

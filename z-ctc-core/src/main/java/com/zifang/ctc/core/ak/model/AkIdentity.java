@@ -1,6 +1,10 @@
 package com.zifang.ctc.core.ak.model;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+
 /** 验签结果：只含身份和范围，绝不携带 secret 或 hash。 */
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class AkIdentity {
     private String akId;
     private String akCode;
