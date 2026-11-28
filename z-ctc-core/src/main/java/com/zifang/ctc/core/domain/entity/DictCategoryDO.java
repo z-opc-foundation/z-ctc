@@ -8,6 +8,8 @@ import com.zifang.z.meta.api.annotation.BizModel;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 /**
  * DictCategoryDO —— 字典分类实体。
@@ -17,6 +19,7 @@ import java.time.LocalDateTime;
  */
 @TableName("z_ctc_dict_category")
 @BizModel(name = "字典分类", module = "z-ctc", description = "灵活字典的分类（可成树，作用域三级：全局/租户/域）")
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class DictCategoryDO implements Serializable {
 
     private static final long serialVersionUID = 1L;

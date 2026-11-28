@@ -11,6 +11,8 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 /**
  * 应用菜单 DO.
@@ -37,6 +39,7 @@ import java.util.List;
  */
 @BizModel(name = "应用菜单 DO", module = "z-ctc", description = "应用菜单 DO. 对应表 z_ctc_app_menu (CREATE TABLE 在生产 DB / _doc/002_deploy/init/z-ctc-authz-override.sql): id — PK app_code — 应用编码 (如 'z-opc') menu_code — 菜单编码 (在 app_code 内唯一, 如 'ctc-overview') menu_name — 菜单名称 parent_code — 父菜单编码 (一级菜单为空字符串 '' 或 NULL) menu_type — 类型: MENU / BUTTON / DIVIDER 等 icon — antd icon 名称 (如 'UserOutlined'), 由前端 iconMap 解析 path — 路由路径 (如 '/ctc/overview') sort_order — 同级排序, asc status — 1启用 / 0禁用 source_type — CODE / LOW_CODE page_id — LOW_CODE 类型对应的低代码 pageId component — 动态 component 名 (前端按需 import) description / created_at / updated_at 树形结构: {@link #children} 由 service 在构造 tree 时填充, 不入库.")
 @TableName("z_ctc_app_menu")
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class MenuDO implements Serializable {
 
     private static final long serialVersionUID = 1L;

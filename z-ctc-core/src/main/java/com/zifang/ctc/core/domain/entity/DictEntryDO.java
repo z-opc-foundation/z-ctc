@@ -8,6 +8,8 @@ import com.zifang.z.meta.api.annotation.BizModel;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 /**
  * DictEntryDO —— 字典条目实体。
@@ -17,6 +19,7 @@ import java.time.LocalDateTime;
  */
 @TableName("z_ctc_dictionary")
 @BizModel(name = "字典条目", module = "z-ctc", description = "灵活字典的条目（flat/tree 两种形状，支持有效期与跨分类引用）")
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class DictEntryDO implements Serializable {
 
     private static final long serialVersionUID = 1L;

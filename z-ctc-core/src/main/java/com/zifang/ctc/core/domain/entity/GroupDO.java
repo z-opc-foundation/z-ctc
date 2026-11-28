@@ -9,12 +9,15 @@ import com.zifang.z.meta.api.annotation.BizModel;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 /**
  * 组别实体 (挂在部门下).
  */
 @BizModel(name = "组别实体 (挂在部门下)", module = "z-ctc", description = "组别实体 (挂在部门下).")
 @TableName("z_ctc_ac_group")
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class GroupDO implements Serializable {
 
     private static final long serialVersionUID = 1L;

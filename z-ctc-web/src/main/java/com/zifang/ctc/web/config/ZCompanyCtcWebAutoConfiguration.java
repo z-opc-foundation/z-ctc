@@ -18,7 +18,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGenerator;
-import org.springframework.context.annotation.Import;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -65,12 +64,11 @@ import java.io.IOException;
         },
         nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class
 )
-// 请求侧命名模块 (@Import 而非进上面 @ComponentScan): 上面的扫描清单**不含 web.config 包**，
-// CtcEntityNamingModuleConfig (4A DO 的 camelCase 请求 mixin) 在独立部署 (z-ctc-admin 扫
-// com.zifang.ctc) 能被扫到，在内嵌 all-in-one 形态却是死类 ⇒ POST /api/ctc/ac/** 的
-// camelCase body 全绑 null、「tenantCode 必填」误报 (2026-11-11 实测)。@Import 与组件扫描
-// 按同一 @Configuration 类去重，两种形态恰好各注册一次。
-@Import(CtcEntityNamingModuleConfig.class)
+// 请求侧命名（2026-11-28）：4A DO 的 camelCase 绑定不再走 mixin 模块 —— mixin 经
+// extendMessageConverters 注册在 aio 形态实测不生效（模块注册成功但 DictCategoryDO 等
+// 请求体仍绑 null），而类级 @JsonNaming 直接生效 ⇒ 11 个 DO 已逐类直接钉
+// @JsonNaming(LowerCamelCase)，两种部署形态统一走注解；响应侧仍由
+// CtcResponseNamingAdvice 兜底。
 public class ZCompanyCtcWebAutoConfiguration extends ModuleDataSourceTemplate implements WebMvcConfigurer {
 
     /**

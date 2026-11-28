@@ -9,6 +9,8 @@ import com.zifang.z.meta.api.annotation.BizModel;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 /**
  * 域实体.
@@ -18,6 +20,7 @@ import java.time.LocalDateTime;
  */
 @BizModel(name = "域实体", module = "z-ctc", description = "域实体. 表: z_ctc_ac_domain — 每个租户下有多个域 (如 prod/staging/dev 环境隔离). domainCode 在 Org/Dept/Group 表中作为引用字段，用于组织架构的租户内分组.")
 @TableName("z_ctc_ac_domain")
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class DomainDO implements Serializable {
 
     private static final long serialVersionUID = 1L;

@@ -9,12 +9,15 @@ import com.zifang.z.meta.api.annotation.BizModel;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 /**
  * 租户实体.
  */
 @BizModel(name = "租户实体", module = "z-ctc", description = "租户实体.")
 @TableName("z_ctc_ac_tenant")
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class TenantDO implements Serializable {
 
     private static final long serialVersionUID = 1L;

@@ -9,9 +9,12 @@ import com.zifang.z.meta.api.annotation.BizModel;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 @BizModel(name = "z_ctc_spc_resource", module = "z-ctc", description = "z_ctc_spc_resource")
 @TableName("z_ctc_spc_resource")
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class ResourceDO implements Serializable {
 
     private static final long serialVersionUID = 1L;
