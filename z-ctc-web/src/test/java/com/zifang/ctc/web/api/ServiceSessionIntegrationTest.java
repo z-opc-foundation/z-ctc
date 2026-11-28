@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import com.zifang.ctc.core.service.session.ServiceSession;
 import com.zifang.ctc.core.service.session.ServiceSessionDO;
-import com.zifang.ctc.core.service.session.ServiceSessionMapper;
+import com.zifang.ctc.core.service.session.mapper.ServiceSessionMapper;
 import com.zifang.ctc.core.service.session.ServiceSessionService;
 import com.zifang.ctc.core.service.session.ServiceSessionServiceImpl;
 import org.apache.ibatis.session.SqlSession;

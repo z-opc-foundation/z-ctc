@@ -1,5 +1,7 @@
 package com.zifang.ctc.core.service.session;
 
+import com.zifang.ctc.core.service.session.mapper.ServiceSessionMapper;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -27,6 +27,7 @@ import com.zifang.ctc.core.ak.mapper.AkScopeMapper;
 import com.zifang.ctc.core.ak.entity.AkDO;
 import com.zifang.ctc.core.ak.mapper.AkMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
@@ -45,6 +46,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /** AK 台账实现（z-ctc 拥有）：secret 只参与创建响应和验签，不落日志。 */
+@Service
 public class AkServiceImpl implements AkService {
     private static final String OWNER_PERSONAL = "PERSONAL";
     private static final String OWNER_APPLICATION = "APPLICATION";
