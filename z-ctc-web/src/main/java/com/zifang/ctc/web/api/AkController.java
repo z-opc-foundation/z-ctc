@@ -188,6 +188,7 @@ public class AkController {
     }
 
     /** 验签入参（兼容历史 akCode 字段：只当待验 secret 用）。 */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class VerifyRequest {
         private String secret;
         private String akCode;
@@ -199,6 +200,7 @@ public class AkController {
     }
 
     /** 通行判定入参。 */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class GateRequest {
         private String secret;
         private String domain;
@@ -216,6 +218,7 @@ public class AkController {
     }
 
     /** 明细入参。 */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class DetailRequest {
         private String akCode;
         private String akId;
@@ -230,6 +233,7 @@ public class AkController {
     }
 
     /** 调用日志上报入参。 */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class RecordRequest {
         private AkIdentity identity;
         private AkCallLogInput input;

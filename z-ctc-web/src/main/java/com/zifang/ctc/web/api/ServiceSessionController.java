@@ -76,6 +76,7 @@ public class ServiceSessionController {
     }
 
     /** 会话数入参。 */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class CountRequest {
         private String tenantCode;
 
@@ -84,6 +85,7 @@ public class ServiceSessionController {
     }
 
     /** 签发入参。 */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class IssueRequest {
         private String tenantCode;
         private String subjectType;
@@ -101,6 +103,7 @@ public class ServiceSessionController {
     }
 
     /** 验签 / 吊销入参。 */
+    @com.fasterxml.jackson.databind.annotation.JsonNaming(com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public static class VerifyRequest {
         private String token;
 
