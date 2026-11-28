@@ -46,7 +46,8 @@ import java.io.IOException;
 @Configuration
 @EnableConfigurationProperties(OAuthClientProperties.class)
 @MapperScan(
-        basePackages = {"com.zifang.ctc.core.domain.mapper", "com.zifang.ctc.core.ak.mapper"},
+        basePackages = {"com.zifang.ctc.core.domain.mapper", "com.zifang.ctc.core.ak.mapper",
+                "com.zifang.ctc.core.service.session"},
         sqlSessionFactoryRef = "sqlSessionFactoryCtc",
         nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class
 )

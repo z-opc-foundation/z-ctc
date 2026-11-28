@@ -24,7 +24,7 @@
 
 ## 🎯 能力清单
 
-全部能力都能从 `z-ctc-web/src/main/java/com/zifang/ctc/web/api/` 下的 **17 个** Controller 一一对应：
+全部能力都能从 `z-ctc-web/src/main/java/com/zifang/ctc/web/api/` 下的 **18 个** Controller 一一对应：
 
 | 能力 | 入口 | 说明 |
 |------|------|------|
@@ -42,6 +42,7 @@
 | OSC 员工 | `OscStaffController` | 员工简表；挂在 `/ctc-osc/staff`，**不在 `/api/ctc` 前缀下** |
 | 字典 | `DictController` | 字典分类 / 字典项 |
 | 建站初始化 | `SiteInitRegistrationController` / `SiteInitRunController` | 建站初始化域注册与执行 |
+| 机器 / 服务账号会话 | `ServiceSessionController` | 设备控制台一类的机器访问：令牌签发 / 验签 / 吊销都在认证中心（库里只存哈希，明文仅签发那次响应返回） |
 | AK 台账 | `AkController` | AK 签发 / 验签 / scope 授权 / 调用日志（认证中心持有 AK 真源，明文 secret 仅签发那次响应返回，库里只存哈希） |
 
 跨子域免登由 `z-ctc-sso` 提供：`SsoInterceptor` 校验请求 → `TokenService` 有 **3** 种实现
@@ -152,6 +153,7 @@ MySQL 8 直连需 `allowPublicKeyRetrieval=true`，通过 `druid.connection-prop
 | `/api/ctc/site-init` | 建站初始化 |
 | `/api/ctc/site-init/registrations` | 建站初始化域注册 |
 | `/api/ctc/v1/ak` | AK 台账（签发 / 验签 / scope / 调用日志） |
+| `/api/ctc/v1/service-session` | 机器 / 服务账号会话（签发 / 验签 / 吊销 / 会话数） |
 | `/api/ctc/oauth` | OAuth2 授权服务器（家族桌面客户端 SSO 入口，见下节） |
 | `/ctc-osc/dept` | OSC 部门（**不在 `/api/ctc` 前缀下**） |
 | `/ctc-osc/staff` | OSC 员工（**不在 `/api/ctc` 前缀下**） |
