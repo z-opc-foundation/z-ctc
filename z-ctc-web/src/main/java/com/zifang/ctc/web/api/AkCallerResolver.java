@@ -20,7 +20,8 @@ public class AkCallerResolver {
     public AkCaller resolve(HttpServletRequest request) {
         String tenantCode = header(request, "X-Tenant-Code");
         String actorId = header(request, "X-Actor-Id");
-        String actorName = header(request, "X-Actor-Name");
+        // HTTP 头只允许 ASCII：kb 侧对中文姓名做百分号编码，这里解回（兼容历史裸 ASCII 值）
+        String actorName = decodeHeaderValue(header(request, "X-Actor-Name"));
         if (TenantContext.getTenantCode() != null && !TenantContext.getTenantCode().isEmpty()) {
             tenantCode = TenantContext.getTenantCode();
             if (TenantContext.getUserId() != null) {
@@ -36,5 +37,16 @@ public class AkCallerResolver {
         }
         String value = request.getHeader(name);
         return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    private static String decodeHeaderValue(String value) {
+        if (value == null || !value.contains("%")) {
+            return value;
+        }
+        try {
+            return java.net.URLDecoder.decode(value, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return value;
+        }
     }
 }
